@@ -12,6 +12,7 @@ BRANCH := $(shell git branch --show-current 2>/dev/null)
 help:
 	@echo "Usage: Docker"
 	@echo "  make up                  -> Build and start all containers"
+	@echo "  make up-d                -> Build and start all containers in background"
 	@echo "  make down                -> Stop containers"
 	@echo "  make clean               -> Stop containers and remove volumes"
 	@echo "  make fclean              -> Full clean: containers, volumes, images"
@@ -21,6 +22,8 @@ help:
 	@echo "  make logs-front          -> Follow frontend logs"
 	@echo "  make logs-db             -> Follow database logs"
 	@echo "  make ps                  -> Show running containers"
+	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
+	@echo "  make smoke-test          -> Run quick automated checks on the running stack"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
 	@echo "  make shell-db            -> Open shell in db container"
@@ -43,6 +46,9 @@ help:
 
 up:
 	$(COMPOSE) up --build
+
+up-d:
+	$(COMPOSE) up --build -d
 
 down:
 	$(COMPOSE) down
@@ -70,6 +76,15 @@ logs-db:
 
 ps:
 	$(COMPOSE) ps
+
+test-stack:
+	$(COMPOSE) ps
+	@echo "Frontend : http://localhost:$${FRONTEND_PORT:-3000}"
+	@echo "Backend  : http://localhost:$${BACKEND_PORT:-4000}/health"
+	@echo "Database : localhost:$${POSTGRES_PORT:-5432}"
+
+smoke-test:
+	bash scripts/smoke-test.sh
 
 shell-back:
 	docker exec -it quiz_backend sh
@@ -179,6 +194,6 @@ push-file-dev:
 # **************************************************************************** #
 
 .PHONY: help \
-	up down clean fclean restart logs logs-back logs-front logs-db ps \
+	up up-d down clean fclean restart logs logs-back logs-front logs-db ps test-stack smoke-test \
 	shell-back shell-front shell-db \
 	push branch branch-create branch-create-push status pull-dev rebase-dev
