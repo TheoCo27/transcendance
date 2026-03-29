@@ -34,6 +34,7 @@ help:
 	@echo "  make status              -> Git status"
 	@echo "  make pull-dev            -> Update local dev branch"
 	@echo "  make rebase-dev          -> Rebase current branch onto dev"
+	@echo "  make push-file-dev file=Makefile     -> Push one file to dev branch"
 
 # **************************************************************************** #
 #                                  DOCKER                                      #
@@ -154,6 +155,23 @@ rebase-dev:
 	fi; \
 	git fetch origin || exit 1; \
 	git rebase origin/dev
+
+push-file-dev:
+	@if [ -z "$(file)" ]; then \
+		echo "❌ Usage: make push-file-dev file=Makefile"; \
+		exit 1; \
+	fi; \
+	current=$$(git branch --show-current); \
+	echo "📦 Branche actuelle: $$current"; \
+	echo "📄 Fichier: $(file)"; \
+	git fetch origin || exit 1; \
+	git checkout dev || exit 1; \
+	git pull origin dev || exit 1; \
+	git checkout $$current -- $(file) || exit 1; \
+	git add $(file); \
+	git commit -m "chore: update $(file) from $$current" || exit 1; \
+	git push origin dev; \
+	git checkout $$current
 
 # **************************************************************************** #
 #                                   PHONY                                      #
