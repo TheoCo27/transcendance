@@ -66,6 +66,35 @@ Le fonctionnement actuel est le suivant :
 3. Vite proxifie ces routes vers le backend `http://backend:4000`
 4. Le backend interroge PostgreSQL via `DATABASE_URL`
 
+### Schema de communication
+
+```text
+                    Navigateur
+                         |
+                         v
+         http://localhost:3000
+                  frontend
+              React + Vite dev server
+                         |
+          proxy /api et /health via Vite
+                         |
+                         v
+         http://backend:4000
+                backend Express
+                         |
+        DATABASE_URL -> postgresql://db:5432
+                         |
+                         v
+                  PostgreSQL 16
+
+
+Exposition des ports cote hote :
+
+- frontend -> localhost:3000
+- backend  -> localhost:4000
+- db       -> localhost:5432
+```
+
 En developpement, `nginx` n'est pas obligatoire car Docker publie deja les ports vers l'hote.
 
 Un service `nginx` pourra etre ajoute plus tard si on veut :
