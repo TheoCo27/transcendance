@@ -10,7 +10,7 @@ BRANCH := $(shell git branch --show-current 2>/dev/null)
 # **************************************************************************** #
 
 help:
-	@echo "Usage:"
+	@echo "Usage: Docker"
 	@echo "  make up                  -> Build and start all containers"
 	@echo "  make down                -> Stop containers"
 	@echo "  make clean               -> Stop containers and remove volumes"
@@ -24,8 +24,9 @@ help:
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
 	@echo "  make shell-db            -> Open shell in db container"
+	@echo "Usage: Git"
 	@echo "  make branch              -> Show current git branch"
-	@echo "  make branch-create name=feature/xxx"
+	@echo "  make branch-create name=issue_1/feature/xxx"
 	@echo "                           -> Create a branch from dev"
 	@echo "  make branch-create-push name=feature/xxx"
 	@echo "                           -> Create and push a branch from dev"
