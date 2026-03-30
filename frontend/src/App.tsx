@@ -1,13 +1,38 @@
 import { useEffect, useState } from "react";
 
-const loadingState = {
+type HealthPayload = {
+  ok: boolean;
+  database?: {
+    configured: boolean;
+    ok: boolean;
+    error?: string;
+  };
+  [key: string]: unknown;
+};
+
+type HealthState = {
+  status: "loading" | "success" | "warning" | "error";
+  title: string;
+  detail: string;
+  payload?: HealthPayload;
+};
+
+const loadingState: HealthState = {
   status: "loading",
   title: "Connexion en cours",
   detail: "Le frontend verifie que le backend et PostgreSQL repondent.",
 };
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Erreur reseau inconnue";
+}
+
 export default function App() {
-  const [health, setHealth] = useState(loadingState);
+  const [health, setHealth] = useState<HealthState>(loadingState);
 
   useEffect(() => {
     let cancelled = false;
@@ -15,7 +40,7 @@ export default function App() {
     async function checkBackend() {
       try {
         const response = await fetch("/health");
-        const data = await response.json();
+        const data = (await response.json()) as HealthPayload;
 
         if (cancelled) {
           return;
@@ -25,7 +50,7 @@ export default function App() {
           status: data.ok ? "success" : "warning",
           title: data.ok ? "Stack disponible" : "Backend disponible, DB a verifier",
           detail: data.database?.ok
-            ? "Le backend Express parle bien a PostgreSQL."
+            ? "Le backend NestJS parle bien a PostgreSQL."
             : "Le backend tourne, mais la base ne repond pas encore correctement.",
           payload: data,
         });
@@ -37,13 +62,15 @@ export default function App() {
         setHealth({
           status: "error",
           title: "Backend indisponible",
-          detail: error.message,
+          detail: getErrorMessage(error),
         });
       }
     }
 
-    checkBackend();
-    const timer = window.setInterval(checkBackend, 5000);
+    void checkBackend();
+    const timer = window.setInterval(() => {
+      void checkBackend();
+    }, 5000);
 
     return () => {
       cancelled = true;
@@ -66,9 +93,7 @@ export default function App() {
             Ouvrir /health
           </a>
         </div>
-        {health.payload ? (
-          <pre>{JSON.stringify(health.payload, null, 2)}</pre>
-        ) : null}
+        {health.payload ? <pre>{JSON.stringify(health.payload, null, 2)}</pre> : null}
       </section>
     </main>
   );

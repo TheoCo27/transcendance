@@ -25,8 +25,8 @@ Il explique :
 ### Frontend
 
 - React
-- Vite
-- JavaScript
+- TypeScript
+- Webpack Dev Server
 - Le frontend tourne dans un container Node
 - Port par defaut : `3000`
 
@@ -34,15 +34,14 @@ Role actuel :
 
 - afficher une page de verification de la stack
 - interroger regulierement `/health`
-- proxifier les appels `/api` et `/health` vers le backend via Vite
+- proxifier les appels `/api` et `/health` vers le backend via Webpack Dev Server
 
 ### Backend
 
-- Express
+- NestJS
 - Node.js
-- JavaScript
+- TypeScript
 - `pg` pour parler a PostgreSQL
-- `cors` pour autoriser le frontend
 - Port par defaut : `4000`
 
 Role actuel :
@@ -62,8 +61,8 @@ Role actuel :
 Le fonctionnement actuel est le suivant :
 
 1. Le navigateur appelle le frontend sur `http://localhost:3000`
-2. Le frontend Vite appelle `/health` et `/api`
-3. Vite proxifie ces routes vers le backend `http://backend:4000`
+2. Le frontend React TypeScript appelle `/health` et `/api`
+3. Webpack Dev Server proxifie ces routes vers le backend `http://backend:4000`
 4. Le backend interroge PostgreSQL via `DATABASE_URL`
 
 ### Schema de communication
@@ -74,13 +73,13 @@ Le fonctionnement actuel est le suivant :
                          v
          http://localhost:3000
                   frontend
-              React + Vite dev server
+     React + TypeScript + Webpack Dev Server
                          |
-          proxy /api et /health via Vite
+      proxy /api et /health via Webpack
                          |
                          v
          http://backend:4000
-                backend Express
+                 backend NestJS
                          |
         DATABASE_URL -> postgresql://db:5432
                          |

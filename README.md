@@ -4,11 +4,11 @@ Base minimale pour avoir rapidement des containers fonctionnels et un point de t
 
 ## Services
 
-- `frontend`: React + Vite, accessible sur `http://localhost:3000`
-- `backend`: Express, accessible sur `http://localhost:4000`
+- `frontend`: React + TypeScript + Webpack Dev Server, accessible sur `http://localhost:3000`
+- `backend`: NestJS + TypeScript, accessible sur `http://localhost:4000`
 - `db`: PostgreSQL, accessible sur `localhost:5432`
 
-Le frontend proxifie `/api` et `/health` vers le backend. Pour un demarrage local rapide, `nginx` n'est pas necessaire.
+Le frontend proxifie `/api` et `/health` vers le backend via Webpack Dev Server. Pour un demarrage local rapide, `nginx` n'est pas necessaire.
 
 ## Demarrage
 

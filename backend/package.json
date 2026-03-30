@@ -1,15 +1,24 @@
 {
   "name": "transcendance-backend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "start:dev": "node --watch src/server.js"
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "pg": "^8.13.3"
+    "@nestjs/common": "^10.4.15",
+    "@nestjs/core": "^10.4.15",
+    "@nestjs/platform-express": "^10.4.15",
+    "pg": "^8.13.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "@types/pg": "^8.11.11",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.3"
   }
 }
