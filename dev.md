@@ -41,14 +41,14 @@ Role actuel :
 - NestJS
 - Node.js
 - TypeScript
-- `pg` pour parler a PostgreSQL
+- Prisma ORM pour parler a PostgreSQL
 - Port par defaut : `4000`
 
 Role actuel :
 
 - exposer un endpoint `/health`
 - exposer un endpoint `/api`
-- verifier la disponibilite de PostgreSQL
+- verifier la disponibilite de PostgreSQL via Prisma
 
 ### Base de donnees
 
@@ -108,6 +108,8 @@ Un service `nginx` pourra etre ajoute plus tard si on veut :
 - `docker-compose.yml` : orchestration des services
 - `Makefile` : commandes de travail rapides
 - `backend/` : application backend
+- `backend/prisma/` : schema Prisma et migrations SQL
+- `backend/prisma.config.ts` : configuration Prisma CLI pour les migrations et la datasource
 - `frontend/` : application frontend
 - `scripts/smoke-test.sh` : test rapide de la stack
 - `.env` : variables locales
@@ -156,6 +158,44 @@ make logs-back
 make logs-front
 make logs-db
 ```
+
+### Base de donnees
+
+Connexion directe a PostgreSQL :
+
+```bash
+make shell-db
+```
+
+Une fois dans `psql`, commandes utiles :
+
+```sql
+\l
+\c quizdb
+\dt
+\d "User"
+SELECT current_database();
+SELECT current_user;
+SELECT now();
+SELECT * FROM "User";
+SELECT COUNT(*) FROM "User";
+```
+
+Commandes pratiques `psql` :
+
+- `\l` : lister les bases de donnees
+- `\c nom_base` : se connecter a une base
+- `\dt` : lister les tables
+- `\d nom_table` : decrire une table
+- `\dn` : lister les schemas
+- `\du` : lister les roles
+- `\q` : quitter `psql`
+
+Important :
+
+- `SHOW DATABASES;` n'existe pas en PostgreSQL
+- pour lister les bases, utiliser `\l`
+- les noms sensibles a la casse comme `"User"` doivent etre entre guillemets
 
 ### Tester rapidement la stack
 
@@ -239,6 +279,7 @@ Exemples :
 Regles :
 
 - si tu modifies le code frontend ou backend, verifie que la stack redemarre toujours
+- si tu modifies `backend/prisma/schema.prisma`, pense a regenerer une migration adaptee
 - avant de pousser, lancer au minimum `make smoke-test`
 - ne pas modifier les ports par defaut sans bonne raison
 - si tu modifies `docker-compose.yml`, documenter l'impact dans ce fichier `dev.md` ou dans le `README.md`
