@@ -48,6 +48,7 @@ help:
 	@echo "                           -> Add, commit and push current branch"
 	@echo "  make status              -> Git status"
 	@echo "  make pull-dev            -> Update local dev branch"
+	@echo "  make merge-dev           -> Merge current branch into dev"
 	@echo "  make rebase-dev          -> Rebase current branch onto dev"
 	@echo "  make push-file-dev file=Makefile     -> Push one file to dev branch"
 
@@ -126,6 +127,25 @@ status:
 
 pull-dev:
 	git checkout dev && git pull origin dev
+
+merge-dev:
+	@branch=$$(git branch --show-current); \
+	if [ -z "$$branch" ]; then \
+		echo "❌ Impossible de détecter la branche courante"; \
+		exit 1; \
+	fi; \
+	if [ "$$branch" = "main" ] || [ "$$branch" = "dev" ]; then \
+		echo "❌ Cette commande est faite pour merger une branche feature/fix/chore vers dev"; \
+		exit 1; \
+	fi; \
+	if ! git diff --quiet || ! git diff --cached --quiet; then \
+		echo "❌ Working tree non clean. Commit ou stash tes changements avant le merge."; \
+		exit 1; \
+	fi; \
+	echo "📦 Branche source: $$branch"; \
+	git checkout dev || exit 1; \
+	git pull origin dev || exit 1; \
+	git merge --no-ff "$$branch" || exit 1
 
 branch-create:
 	@if [ -z "$(name)" ]; then \
@@ -217,4 +237,4 @@ push-file-dev:
 	compose-check \
 	up up-d down clean fclean re restart logs logs-back logs-front logs-db ps test-stack smoke-test \
 	shell-back shell-front shell-db \
-	push branch branch-create branch-create-push status pull-dev rebase-dev
+	push branch branch-create branch-create-push status pull-dev merge-dev rebase-dev
