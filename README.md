@@ -15,13 +15,14 @@ Le backend synchronise ses dependances, genere le client Prisma et applique les 
 ## Demarrage
 
 ```bash
-make up-d
+make up
 make test-stack
 make logs
 ```
 
 ## URLs utiles
 
+- Ports par defaut : frontend `3000`, backend `4000`, db `5432`
 - `http://localhost:3000`
 - `http://localhost:3000/api`
 - `http://localhost:3000/health`
