@@ -2,28 +2,41 @@
 #                                    CONFIG                                    #
 # **************************************************************************** #
 
-COMPOSE = docker compose
+COMPOSE := $(shell \
+	if docker compose version >/dev/null 2>&1; then \
+		printf '%s' 'docker compose'; \
+	else \
+		printf '%s' 'docker-compose'; \
+	fi \
+)
+
 BRANCH := $(shell git branch --show-current 2>/dev/null)
 
 # **************************************************************************** #
 #                                    HELP                                      #
 # **************************************************************************** #
 
+all: up
+
 help:
 	@echo "Usage: Docker"
-	@echo "  make up                  -> Build and start all containers"
+	@echo "  make up                  -> Build and start all containers in background"
 	@echo "  make down                -> Stop containers"
-	@echo "  make clean               -> Stop containers and remove volumes"
-	@echo "  make fclean              -> Full clean: containers, volumes, images"
+	@echo "  make clean               -> Remove containers and images, keep volumes"
+	@echo "  make fclean              -> Full clean: containers, images and volumes"
+	@echo "  make re                  -> Full clean then rebuild and start"
 	@echo "  make restart             -> Restart all containers with rebuild"
 	@echo "  make logs                -> Follow all docker logs"
 	@echo "  make logs-back           -> Follow backend logs"
 	@echo "  make logs-front          -> Follow frontend logs"
 	@echo "  make logs-db             -> Follow database logs"
+	@echo "  make page                -> Open the frontend in Firefox"
 	@echo "  make ps                  -> Show running containers"
+	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
+	@echo "  make smoke-test          -> Run quick automated checks on the running stack"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
-	@echo "  make shell-db            -> Open shell in db container"
+	@echo "  make shell-db            -> Open a psql session in the db container"
 	@echo "Usage: Git"
 	@echo "  make branch              -> Show current git branch"
 	@echo "  make branch-create name=issue_1/feature/xxx"
@@ -32,8 +45,11 @@ help:
 	@echo "                           -> Create and push a branch from dev"
 	@echo "  make push m=\"your message\""
 	@echo "                           -> Add, commit and push current branch"
+	@echo "  make push-dev m=\"your message\""
+	@echo "                           -> Add, commit and push dev branch"
 	@echo "  make status              -> Git status"
 	@echo "  make pull-dev            -> Update local dev branch"
+	@echo "  make merge-dev           -> Merge current branch into dev"
 	@echo "  make rebase-dev          -> Rebase current branch onto dev"
 	@echo "  make push-file-dev file=Makefile     -> Push one file to dev branch"
 
@@ -41,35 +57,55 @@ help:
 #                                  DOCKER                                      #
 # **************************************************************************** #
 
-up:
-	$(COMPOSE) up --build
+compose-check:
+	@$(COMPOSE) version >/dev/null 2>&1 || { \
+		echo "❌ Ni 'docker compose' ni 'docker-compose' n'est disponible sur cette machine."; \
+		exit 1; \
+	}
 
-down:
+up: compose-check
+	$(COMPOSE) up --build -d
+
+down: compose-check
 	$(COMPOSE) down
 
-clean:
-	$(COMPOSE) down -v
+clean: compose-check
+	$(COMPOSE) down --rmi all
 
-fclean:
+fclean: compose-check
 	$(COMPOSE) down -v --rmi all
 
-restart:
+re: fclean up
+
+restart: compose-check
 	$(COMPOSE) down && $(COMPOSE) up --build
 
-logs:
+logs: compose-check
 	$(COMPOSE) logs -f
 
-logs-back:
+logs-back: compose-check
 	$(COMPOSE) logs -f backend
 
-logs-front:
+logs-front: compose-check
 	$(COMPOSE) logs -f frontend
 
-logs-db:
+logs-db: compose-check
 	$(COMPOSE) logs -f db
 
-ps:
+page:
+	open -a Firefox "http://localhost:$${FRONTEND_PORT:-3000}"
+
+ps: compose-check
 	$(COMPOSE) ps
+
+test-stack: compose-check
+	$(COMPOSE) ps
+	@echo "Frontend : http://localhost:$${FRONTEND_PORT:-3000}"
+	@echo "Backend  : http://localhost:$${BACKEND_PORT:-4000}/health"
+	@echo "Database : localhost:$${POSTGRES_PORT:-5432}"
+
+smoke-test:
+	bash scripts/smoke-test.sh
 
 shell-back:
 	docker exec -it quiz_backend sh
@@ -78,7 +114,7 @@ shell-front:
 	docker exec -it quiz_frontend sh
 
 shell-db:
-	docker exec -it quiz_db sh
+	docker exec -it quiz_db sh -lc 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
 # **************************************************************************** #
 #                                    GIT                                       #
@@ -92,6 +128,25 @@ status:
 
 pull-dev:
 	git checkout dev && git pull origin dev
+
+merge-dev:
+	@branch=$$(git branch --show-current); \
+	if [ -z "$$branch" ]; then \
+		echo "❌ Impossible de détecter la branche courante"; \
+		exit 1; \
+	fi; \
+	if [ "$$branch" = "main" ] || [ "$$branch" = "dev" ]; then \
+		echo "❌ Cette commande est faite pour merger une branche feature/fix/chore vers dev"; \
+		exit 1; \
+	fi; \
+	if ! git diff --quiet || ! git diff --cached --quiet; then \
+		echo "❌ Working tree non clean. Commit ou stash tes changements avant le merge."; \
+		exit 1; \
+	fi; \
+	echo "📦 Branche source: $$branch"; \
+	git checkout dev || exit 1; \
+	git pull origin dev || exit 1; \
+	git merge --no-ff "$$branch" || exit 1
 
 branch-create:
 	@if [ -z "$(name)" ]; then \
@@ -148,6 +203,28 @@ push:
 	git commit -m "$(m)" || exit 1; \
 	git push origin $$branch
 
+push-dev:
+	@branch=$$(git branch --show-current); \
+	if [ -z "$$branch" ]; then \
+		echo "❌ Impossible de détecter la branche courante"; \
+		exit 1; \
+	fi; \
+	if [ "$$branch" != "dev" ]; then \
+		echo "❌ Cette commande push uniquement la branche dev (actuelle: $$branch)"; \
+		exit 1; \
+	fi; \
+	if [ -z "$(m)" ]; then \
+		echo "❌ Usage: make push-dev m=\"message\""; \
+		exit 1; \
+	fi; \
+	git add .; \
+	if git diff --cached --quiet; then \
+		echo "⚠️ Aucun changement à commit"; \
+		exit 1; \
+	fi; \
+	git commit -m "$(m)" || exit 1; \
+	git push origin dev
+
 rebase-dev:
 	@branch=$$(git branch --show-current); \
 	if [ "$$branch" = "main" ] || [ "$$branch" = "dev" ]; then \
@@ -179,6 +256,8 @@ push-file-dev:
 # **************************************************************************** #
 
 .PHONY: help \
-	up down clean fclean restart logs logs-back logs-front logs-db ps \
+	all \
+	compose-check \
+	up down clean fclean re restart logs logs-back logs-front logs-db page ps test-stack smoke-test \
 	shell-back shell-front shell-db \
-	push branch branch-create branch-create-push status pull-dev rebase-dev
+	push push-dev branch branch-create branch-create-push status pull-dev merge-dev rebase-dev push-file-dev
