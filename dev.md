@@ -54,7 +54,7 @@ Role actuel :
 
 - PostgreSQL 16 Alpine
 - Port par defaut : `5432`
-- Donnees persistees dans le volume `postgres_data`
+- Donnees persistees dans le volume Docker `postgres_volume`
 
 ## Architecture de dev
 
@@ -140,7 +140,7 @@ Regle d'equipe :
 ### Lancer le projet
 
 ```bash
-make up-d
+make up
 ```
 
 ### Voir l'etat des containers
@@ -171,7 +171,7 @@ Une fois dans `psql`, commandes utiles :
 
 ```sql
 \l
-\c quizdb
+\c nom_de_la_base
 \dt
 \d "User"
 SELECT current_database();
@@ -247,15 +247,15 @@ Conventions deja presentes dans le `Makefile` :
 
 Formats conseilles :
 
-- `feature/nom-court`
-- `fix/nom-court`
-- `chore/nom-court`
+- `issue_<n>/feature/nom-court`
+- `issue_<n>/fix/nom-court`
+- `issue_<n>/chore/nom-court`
 
 Commandes utiles :
 
 ```bash
-make branch-create name=feature/ma-feature
-make branch-create-push name=feature/ma-feature
+make branch-create name=issue_4/feature/ma-feature
+make branch-create-push name=issue_4/feature/ma-feature
 make rebase-dev
 make push m="feat: message clair"
 ```
