@@ -79,8 +79,11 @@ export default function StatusPage() {
   }, []);
 
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
-      <section
+    <section
+      id="status"
+      className="flex flex-1 items-center justify-center px-6 pb-16 pt-4"
+    >
+      <div
         className={[
           "w-full max-w-[760px] rounded-3xl border border-white/8 bg-[rgba(9,19,27,0.72)] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop-blur-[12px]",
           health.status === "success"
@@ -125,7 +128,7 @@ export default function StatusPage() {
             {JSON.stringify(health.payload, null, 2)}
           </pre>
         ) : null}
-      </section>
-    </main>
+      </div>
+    </section>
   );
 }
