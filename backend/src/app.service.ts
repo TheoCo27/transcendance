@@ -1,5 +1,5 @@
-import { Injectable, OnModuleDestroy } from "@nestjs/common";
-import { Pool } from "pg";
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "./prisma/prisma.service";
 
 type HealthStatus = {
   service: "backend";
@@ -14,18 +14,8 @@ type HealthStatus = {
 };
 
 @Injectable()
-export class AppService implements OnModuleDestroy {
-  private readonly pool: Pool | null;
-
-  constructor() {
-    const databaseUrl = process.env.DATABASE_URL;
-
-    this.pool = databaseUrl
-      ? new Pool({
-          connectionString: databaseUrl,
-        })
-      : null;
-  }
+export class AppService {
+  constructor(private readonly prismaService: PrismaService) {}
 
   async getHealth(): Promise<HealthStatus> {
     const status: HealthStatus = {
@@ -34,17 +24,17 @@ export class AppService implements OnModuleDestroy {
       ok: true,
       timestamp: new Date().toISOString(),
       database: {
-        configured: Boolean(this.pool),
+        configured: this.prismaService.isConfigured,
         ok: false,
       },
     };
 
-    if (!this.pool) {
+    if (!this.prismaService.isConfigured) {
       return status;
     }
 
     try {
-      await this.pool.query("SELECT 1");
+      await this.prismaService.ping();
       status.database.ok = true;
       return status;
     } catch (error) {
@@ -60,14 +50,9 @@ export class AppService implements OnModuleDestroy {
       name: "ft_transcendance starter",
       framework: "nestjs",
       language: "typescript",
+      orm: "prisma",
       message: "Backend NestJS accessible.",
       endpoints: ["/health", "/api"],
     };
-  }
-
-  async onModuleDestroy() {
-    if (this.pool) {
-      await this.pool.end();
-    }
   }
 }

@@ -5,10 +5,12 @@ Base minimale pour avoir rapidement des containers fonctionnels et un point de t
 ## Services
 
 - `frontend`: React + TypeScript + Webpack Dev Server, accessible sur `http://localhost:3000`
-- `backend`: NestJS + TypeScript, accessible sur `http://localhost:4000`
+- `backend`: NestJS + TypeScript + Prisma, accessible sur `http://localhost:4000`
 - `db`: PostgreSQL, accessible sur `localhost:5432`
 
 Le frontend proxifie `/api` et `/health` vers le backend via Webpack Dev Server. Pour un demarrage local rapide, `nginx` n'est pas necessaire.
+
+Le backend synchronise ses dependances, genere le client Prisma et applique les migrations presentes dans `backend/prisma/migrations` au demarrage du container.
 
 ## Demarrage
 

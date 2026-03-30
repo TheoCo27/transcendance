@@ -2,12 +2,13 @@
 #                                    CONFIG                                    #
 # **************************************************************************** #
 
-COMPOSE := docker compose
-
-#ifeq ($(shell docker compose version >/dev/null 2>&1; echo $$?),0)
-#else ifeq ($(shell docker-compose version >/dev/null 2>&1; echo $$?),0)
-COMPOSE := docker-compose
-#endif
+COMPOSE := $(shell \
+	if docker compose version >/dev/null 2>&1; then \
+		printf '%s' 'docker compose'; \
+	else \
+		printf '%s' 'docker-compose'; \
+	fi \
+)
 
 BRANCH := $(shell git branch --show-current 2>/dev/null)
 
@@ -30,12 +31,13 @@ help:
 	@echo "  make logs-back           -> Follow backend logs"
 	@echo "  make logs-front          -> Follow frontend logs"
 	@echo "  make logs-db             -> Follow database logs"
+	@echo "  make page                -> Open the frontend in Firefox"
 	@echo "  make ps                  -> Show running containers"
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
 	@echo "  make smoke-test          -> Run quick automated checks on the running stack"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
-	@echo "  make shell-db            -> Open shell in db container"
+	@echo "  make shell-db            -> Open a psql session in the db container"
 	@echo "Usage: Git"
 	@echo "  make branch              -> Show current git branch"
 	@echo "  make branch-create name=issue_1/feature/xxx"
@@ -88,6 +90,9 @@ logs-front: compose-check
 logs-db: compose-check
 	$(COMPOSE) logs -f db
 
+page:
+	open -a Firefox "http://localhost:$${FRONTEND_PORT:-3000}"
+
 ps: compose-check
 	$(COMPOSE) ps
 
@@ -107,7 +112,7 @@ shell-front:
 	docker exec -it quiz_frontend sh
 
 shell-db:
-	docker exec -it quiz_db sh
+	docker exec -it quiz_db sh -lc 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
 # **************************************************************************** #
 #                                    GIT                                       #
