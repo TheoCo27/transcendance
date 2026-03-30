@@ -39,9 +39,9 @@ help:
 	@echo "  make shell-db            -> Open a psql session in the db container"
 	@echo "Usage: Git"
 	@echo "  make branch              -> Show current git branch"
-	@echo "  make branch-create name=issue_1/feature/xxx"
+	@echo "  make branch-create name=issue_1/feature/ma-branche"
 	@echo "                           -> Create a branch from dev"
-	@echo "  make branch-create-push name=feature/xxx"
+	@echo "  make branch-create-push name=issue_1/feature/ma-branche"
 	@echo "                           -> Create and push a branch from dev"
 	@echo "  make push m=\"your message\""
 	@echo "                           -> Add, commit and push current branch"
@@ -64,7 +64,7 @@ compose-check:
 	}
 
 up: compose-check
-	$(COMPOSE) up --build -d
+	$(COMPOSE) up --build -d --wait
 
 down: compose-check
 	$(COMPOSE) down
@@ -150,7 +150,7 @@ merge-dev:
 
 branch-create:
 	@if [ -z "$(name)" ]; then \
-		echo "❌ Usage: make branch-create name=feature/ma-branche"; \
+		echo "❌ Usage: make branch-create name=issue_1/feature/ma-branche"; \
 		exit 1; \
 	fi; \
 	current=$$(git branch --show-current); \
@@ -164,7 +164,7 @@ branch-create:
 
 branch-create-push:
 	@if [ -z "$(name)" ]; then \
-		echo "❌ Usage: make branch-create-push name=feature/ma-branche"; \
+		echo "❌ Usage: make branch-create-push name=issue_1/feature/ma-branche"; \
 		exit 1; \
 	fi; \
 	current=$$(git branch --show-current); \

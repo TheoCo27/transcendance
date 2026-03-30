@@ -1,5 +1,6 @@
 services:
   frontend:
+    image: frontend_img
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -31,6 +32,7 @@ services:
     restart: unless-stopped
 
   backend:
+    image: backend_img
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -62,7 +64,10 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:16-alpine
+    image: db_img
+    build:
+      context: ./db
+      dockerfile: Dockerfile
     container_name: quiz_db
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -86,3 +91,8 @@ services:
 
 volumes:
   postgres_data:
+    name: postgres_volume
+
+networks:
+  default:
+    name: quiz_network
