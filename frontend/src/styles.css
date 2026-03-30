@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
-:root {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
-  color: #f6f1e8;
-  background:
-    radial-gradient(circle at top, rgba(255, 179, 71, 0.3), transparent 35%),
-    linear-gradient(135deg, #11212d 0%, #1f3b4d 55%, #264653 100%);
+@theme {
+  --color-background: #0B1220;
+  --color-surface: #121A2B;
+  --color-primary: #7C3AED;
+  --color-danger: #DC2626;
+  --color-text: #E5EEF8;
 }
 
 * {
@@ -14,6 +14,17 @@
 
 body {
   margin: 0;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--color-primary) 28%, transparent), transparent 35%),
+    linear-gradient(
+      135deg,
+      var(--color-background) 0%,
+      color-mix(in srgb, var(--color-background) 78%, white) 55%,
+      color-mix(in srgb, var(--color-surface) 88%, black) 100%
+    );
+  /* background: var(--color-background); */
 }
 
 a {
