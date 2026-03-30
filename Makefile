@@ -2,20 +2,29 @@
 #                                    CONFIG                                    #
 # **************************************************************************** #
 
-COMPOSE = docker compose
+COMPOSE := docker compose
+
+#ifeq ($(shell docker compose version >/dev/null 2>&1; echo $$?),0)
+#else ifeq ($(shell docker-compose version >/dev/null 2>&1; echo $$?),0)
+COMPOSE := docker-compose
+#endif
+
 BRANCH := $(shell git branch --show-current 2>/dev/null)
 
 # **************************************************************************** #
 #                                    HELP                                      #
 # **************************************************************************** #
 
+all: up
+
+
 help:
 	@echo "Usage: Docker"
-	@echo "  make up                  -> Build and start all containers"
-	@echo "  make up-d                -> Build and start all containers in background"
+	@echo "  make up                  -> Build and start all containers in background"
 	@echo "  make down                -> Stop containers"
-	@echo "  make clean               -> Stop containers and remove volumes"
-	@echo "  make fclean              -> Full clean: containers, volumes, images"
+	@echo "  make clean               -> Remove containers and images, keep volumes"
+	@echo "  make fclean              -> Full clean: containers, images and volumes"
+	@echo "  make re                  -> Full clean then rebuild and start"
 	@echo "  make restart             -> Restart all containers with rebuild"
 	@echo "  make logs                -> Follow all docker logs"
 	@echo "  make logs-back           -> Follow backend logs"
@@ -44,40 +53,45 @@ help:
 #                                  DOCKER                                      #
 # **************************************************************************** #
 
-up:
-	$(COMPOSE) up --build
+compose-check:
+	@$(COMPOSE) version >/dev/null 2>&1 || { \
+		echo "❌ Ni 'docker compose' ni 'docker-compose' n'est disponible sur cette machine."; \
+		exit 1; \
+	}
 
-up-d:
+up: compose-check
 	$(COMPOSE) up --build -d
 
-down:
+down: compose-check
 	$(COMPOSE) down
 
-clean:
-	$(COMPOSE) down -v
+clean: compose-check
+	$(COMPOSE) down --rmi all
 
-fclean:
+fclean: compose-check
 	$(COMPOSE) down -v --rmi all
 
-restart:
+re: fclean up
+
+restart: compose-check
 	$(COMPOSE) down && $(COMPOSE) up --build
 
-logs:
+logs: compose-check
 	$(COMPOSE) logs -f
 
-logs-back:
+logs-back: compose-check
 	$(COMPOSE) logs -f backend
 
-logs-front:
+logs-front: compose-check
 	$(COMPOSE) logs -f frontend
 
-logs-db:
+logs-db: compose-check
 	$(COMPOSE) logs -f db
 
-ps:
+ps: compose-check
 	$(COMPOSE) ps
 
-test-stack:
+test-stack: compose-check
 	$(COMPOSE) ps
 	@echo "Frontend : http://localhost:$${FRONTEND_PORT:-3000}"
 	@echo "Backend  : http://localhost:$${BACKEND_PORT:-4000}/health"
@@ -194,6 +208,8 @@ push-file-dev:
 # **************************************************************************** #
 
 .PHONY: help \
-	up up-d down clean fclean restart logs logs-back logs-front logs-db ps test-stack smoke-test \
+	all \
+	compose-check \
+	up up-d down clean fclean re restart logs logs-back logs-front logs-db ps test-stack smoke-test \
 	shell-back shell-front shell-db \
 	push branch branch-create branch-create-push status pull-dev rebase-dev

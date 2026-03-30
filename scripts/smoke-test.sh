@@ -22,6 +22,16 @@ check_command() {
 	command -v "$1" >/dev/null 2>&1 || fail "Commande manquante: $1"
 }
 
+compose() {
+	if docker compose version >/dev/null 2>&1; then
+		docker compose "$@"
+	elif command -v docker-compose >/dev/null 2>&1; then
+		docker-compose "$@"
+	else
+		fail "Ni docker compose ni docker-compose n'est disponible"
+	fi
+}
+
 container_health() {
 	docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$1" 2>/dev/null
 }
@@ -58,8 +68,8 @@ printf 'Backend  : http://localhost:%s\n' "$BACKEND_PORT"
 printf 'Database : localhost:%s\n' "$POSTGRES_PORT"
 
 check_command docker
-docker compose ps >/dev/null 2>&1 || fail "docker compose indisponible ou stack non accessible"
-pass "Docker compose accessible"
+compose ps >/dev/null 2>&1 || fail "Docker Compose indisponible ou stack non accessible"
+pass "Docker Compose accessible"
 
 check_container quiz_db
 check_container quiz_backend
@@ -78,15 +88,15 @@ if command -v curl >/dev/null 2>&1; then
 		check_http_inside_container quiz_frontend "http://127.0.0.1:3000/health" '"database":{"configured":true,"ok":true}'
 	fi
 
-	if check_http_with_curl "http://localhost:${FRONTEND_PORT}/api" 'Backend Express accessible'; then
+	if check_http_with_curl "http://localhost:${FRONTEND_PORT}/api" 'Backend NestJS accessible'; then
 		:
 	else
-		check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend Express accessible'
+		check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend NestJS accessible'
 	fi
 else
 	check_http_inside_container quiz_backend "http://127.0.0.1:4000/health" '"ok":true'
 	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/health" '"database":{"configured":true,"ok":true}'
-	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend Express accessible'
+	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend NestJS accessible'
 fi
 
 pass "Smoke test termine avec succes"

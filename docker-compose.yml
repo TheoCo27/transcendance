@@ -12,7 +12,7 @@ services:
     env_file:
       - .env
     environment:
-      VITE_BACKEND_TARGET: http://backend:4000
+      BACKEND_TARGET: http://backend:4000
     depends_on:
       backend:
         condition: service_healthy
