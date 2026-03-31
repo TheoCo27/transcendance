@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev
+      - "issue_*/**"
+      - "feature/*"
+      - "fix/*"
+      - "chore/*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/ci_db
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: backend
+            node_version: 22
+          - app: frontend
+            node_version: 20
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node_version }}
+
+      - name: Install dependencies
+        run: npm install --include=dev --no-package-lock
+
+      - name: Build application
+        run: npm run build
+
+  docker-smoke-test:
+    name: Docker smoke test
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Prepare CI environment
+        run: |
+          cat <<'EOF' > .env
+          POSTGRES_USER=ci_user
+          POSTGRES_PASSWORD=ci_password
+          POSTGRES_DB=ci_db
+          POSTGRES_PORT=5432
+          DATABASE_URL=postgresql://ci_user:ci_password@db:5432/ci_db
+          BACKEND_PORT=4000
+          FRONTEND_PORT=3000
+          JWT_SECRET=ci_jwt_secret
+          FRONTEND_ORIGIN=http://localhost:3000
+          EOF
+
+      - name: Build and start stack
+        run: docker compose up --build -d --wait
+
+      - name: Run smoke test
+        run: bash scripts/smoke-test.sh
+
+      - name: Show compose logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v --rmi local
