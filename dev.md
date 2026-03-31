@@ -134,6 +134,25 @@ Regle d'equipe :
 - ne jamais commit de secret reel
 - garder `.env.example` a jour quand une nouvelle variable est ajoutee
 - utiliser des valeurs locales simples pour le dev
+- lancer `make env-check` avant un push si tu modifies la configuration
+
+## GitHub Actions et secrets
+
+Le workflow `.github/workflows/ci.yml` accepte des secrets GitHub optionnels.
+
+Noms attendus si tu veux piloter la CI depuis l'interface GitHub :
+
+- `CI_POSTGRES_USER`
+- `CI_POSTGRES_PASSWORD`
+- `CI_POSTGRES_DB`
+- `CI_POSTGRES_PORT`
+- `CI_DATABASE_URL`
+- `CI_BACKEND_PORT`
+- `CI_FRONTEND_PORT`
+- `CI_JWT_SECRET`
+- `CI_FRONTEND_ORIGIN`
+
+Si ces secrets ne sont pas definis, la CI utilise des valeurs de secours dediees au test.
 
 ## Commandes utiles
 
