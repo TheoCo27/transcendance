@@ -20,6 +20,15 @@ make test-stack
 make logs
 ```
 
+## CI
+
+Le repo peut etre verifie via GitHub Actions avec :
+
+- le build du `backend`
+- le build du `frontend`
+- un demarrage complet de la stack Docker
+- le smoke test `scripts/smoke-test.sh`
+
 ## URLs utiles
 
 - Ports par defaut : frontend `3000`, backend `4000`, db `5432`
