@@ -154,6 +154,47 @@ Noms attendus si tu veux piloter la CI depuis l'interface GitHub :
 
 Si ces secrets ne sont pas definis, la CI utilise des valeurs de secours dediees au test.
 
+Les secrets GitHub ne sont jamais stockes dans le repo ni dans les branches.
+
+Ce qui est versionne :
+
+- le code source
+- `.env.example`
+- le workflow GitHub Actions
+
+Ce qui n'est pas versionne :
+
+- `.env`
+- les vraies valeurs de base de donnees
+- les tokens, mots de passe et secrets JWT
+
+Cycle de fonctionnement :
+
+- en local, le projet lit les variables depuis `.env`
+- sur GitHub Actions, le runner lit les secrets configures dans `Settings > Secrets and variables > Actions`
+- pendant le job CI, le workflow genere un `.env` temporaire a partir de ces secrets
+- a la fin du job, le runner temporaire est detruit et ce `.env` disparait
+
+Si tu merges sur `dev`, puis que tu crees une nouvelle branche depuis `dev` :
+
+- la nouvelle branche recupere le code et `.env.example`
+- elle ne recupere jamais les vraies valeurs secretes
+- si quelqu'un clone cette branche, il devra creer son propre `.env` local
+
+Pour faire fonctionner le projet apres un clone :
+
+- cloner le repo
+- lancer `make env-init`
+- remplir les vraies valeurs dans `.env`
+- lancer `make env-check`
+- lancer `make` ou `make up`
+
+Conclusion :
+
+- Git ne transporte pas les secrets
+- GitHub Actions peut utiliser des secrets sans les ecrire dans le repo
+- chaque machine locale doit avoir son propre `.env`
+
 ## Commandes utiles
 
 ### Lancer le projet
