@@ -44,7 +44,12 @@ jobs:
           node-version: ${{ matrix.node_version }}
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --include=dev --no-package-lock
+          fi
 
       - name: Build application
         run: npm run build
