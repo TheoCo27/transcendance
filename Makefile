@@ -16,7 +16,11 @@ BRANCH := $(shell git branch --show-current 2>/dev/null)
 #                                    HELP                                      #
 # **************************************************************************** #
 
-all: up
+all:
+	@if ! $(MAKE) env-check; then \
+		$(MAKE) env-init; \
+	fi
+	@$(MAKE) up
 
 help:
 	@echo "Usage: Docker"
@@ -34,6 +38,8 @@ help:
 	@echo "  make ps                  -> Show running containers"
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
 	@echo "  make smoke-test          -> Run quick automated checks on the running stack"
+	@echo "  make env-init            -> Create .env from .env.example if missing"
+	@echo "  make env-check           -> Check required variables in .env"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
 	@echo "  make shell-db            -> Open a psql session in the db container"
@@ -106,6 +112,17 @@ test-stack: compose-check
 
 smoke-test:
 	bash scripts/smoke-test.sh
+
+env-init:
+	@if [ -f .env ]; then \
+		echo "⚠️ .env existe deja, aucune action faite"; \
+	else \
+		cp .env.example .env; \
+		echo "✅ .env cree depuis .env.example"; \
+	fi
+
+env-check:
+	bash scripts/check-env.sh
 
 shell-back:
 	docker exec -it quiz_backend sh
