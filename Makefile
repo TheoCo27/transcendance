@@ -16,7 +16,11 @@ BRANCH := $(shell git branch --show-current 2>/dev/null)
 #                                    HELP                                      #
 # **************************************************************************** #
 
-all: up
+all:
+	@if ! $(MAKE) env-check; then \
+		$(MAKE) env-init; \
+	fi
+	@$(MAKE) up
 
 help:
 	@echo "Usage: Docker"
