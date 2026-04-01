@@ -62,7 +62,51 @@ check_http_inside_container() {
 	pass "Endpoint $url OK via $container"
 }
 
-printf '== Smoke test ft_transcendance ==\n'
+check_post_with_curl() {
+	url="$1"
+	data="$2"
+	expected="$3"
+
+	body="$(curl -fsS -X POST "$url" \
+		-H "Content-Type: application/json" \
+		-d "$data")" || return 1
+
+	printf '%s' "$body" | grep -q "$expected" || fail "Reponse inattendue sur $url"
+	pass "POST $url OK"
+}
+
+check_login_with_cookie() {
+	url="$1"
+	data="$2"
+
+	response="$(curl -i -s -X POST "$url" \
+		-H "Content-Type: application/json" \
+		-d "$data")" || return 1
+
+	echo "$response" | grep -qi "set-cookie: access_token" \
+		|| fail "Cookie access_token non trouvé"
+
+	pass "Login OK (cookie present)"
+}
+
+cleanup_user() {
+	email="$1"
+
+	docker exec -i quiz_db psql -U quizuser -d quizdb \
+		-c "DELETE FROM \"User\" WHERE email = '${email}';" >/dev/null 2>&1 || true
+}
+
+CLEANUP_NEEDED=0
+
+cleanup() {
+	if [ "$CLEANUP_NEEDED" -eq 1 ]; then
+		cleanup_user "$TEST_EMAIL"
+	fi
+}
+
+trap cleanup EXIT
+
+printf '== Smoke test ft_transcendence ==\n'
 printf 'Frontend : http://localhost:%s\n' "$FRONTEND_PORT"
 printf 'Backend  : http://localhost:%s\n' "$BACKEND_PORT"
 printf 'Database : localhost:%s\n' "$POSTGRES_PORT"
@@ -98,5 +142,27 @@ else
 	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/health" '"database":{"configured":true,"ok":true}'
 	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend NestJS accessible'
 fi
+
+# ---- AUTH TESTS ----
+
+TEST_EMAIL="smoke@test.com"
+TEST_PASSWORD="longsecuredpassword123!"
+
+REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","name":"smoke"}' "$TEST_EMAIL" "$TEST_PASSWORD")
+LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$TEST_EMAIL" "$TEST_PASSWORD")
+
+# Register
+check_post_with_curl \
+	"http://localhost:${BACKEND_PORT}/auth/register" \
+	"$REGISTER_PAYLOAD" \
+	"email"
+
+CLEANUP_NEEDED=1
+
+# Login
+check_login_with_cookie \
+	"http://localhost:${BACKEND_PORT}/auth/login" \
+	"$LOGIN_PAYLOAD"
+
 
 pass "Smoke test termine avec succes"

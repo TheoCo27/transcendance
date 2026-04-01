@@ -1,5 +1,7 @@
-import "reflect-metadata";
+import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import cookieParser from "cookie-parser";
+import "reflect-metadata";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
@@ -10,6 +12,16 @@ async function bootstrap() {
   app.enableCors({
     origin: frontendOrigin,
   });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  app.use(cookieParser());
 
   await app.listen(port, "0.0.0.0");
   console.log(`Backend listening on http://0.0.0.0:${port}`);
