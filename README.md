@@ -15,10 +15,31 @@ Le backend synchronise ses dependances, genere le client Prisma et applique les 
 ## Demarrage
 
 ```bash
+make env-init
+# edite .env puis verifie la config
+make env-check
 make up
 make test-stack
 make logs
 ```
+
+## Secrets et variables
+
+- Le projet charge ses variables depuis `.env`.
+- Le fichier versionne est `.env.example`.
+- Ne commit jamais une vraie valeur secrete dans `.env`.
+
+Variables attendues :
+
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
+- `POSTGRES_PORT`
+- `DATABASE_URL`
+- `BACKEND_PORT`
+- `FRONTEND_PORT`
+- `JWT_SECRET`
+- `FRONTEND_ORIGIN`
 
 ## CI
 
@@ -28,6 +49,11 @@ Le repo peut etre verifie via GitHub Actions avec :
 - le build du `frontend`
 - un demarrage complet de la stack Docker
 - le smoke test `scripts/smoke-test.sh`
+
+Le workflow peut fonctionner de deux facons :
+
+- sans secret GitHub, avec des valeurs CI de secours
+- avec des secrets de repo nommes `CI_POSTGRES_USER`, `CI_POSTGRES_PASSWORD`, `CI_POSTGRES_DB`, `CI_POSTGRES_PORT`, `CI_DATABASE_URL`, `CI_BACKEND_PORT`, `CI_FRONTEND_PORT`, `CI_JWT_SECRET`, `CI_FRONTEND_ORIGIN`
 
 ## URLs utiles
 
