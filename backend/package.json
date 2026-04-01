@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "npm run prisma:generate && tsc -p tsconfig.build.json",
-    "deps:sync": "npm install --include=dev --no-package-lock",
+    "deps:sync": "sh -c 'if [ -f package-lock.json ]; then npm ci; else npm install --include=dev --no-package-lock; fi'",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "start": "node dist/main.js",

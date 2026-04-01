@@ -16,7 +16,11 @@ BRANCH := $(shell git branch --show-current 2>/dev/null)
 #                                    HELP                                      #
 # **************************************************************************** #
 
-all: up
+all:
+	@if ! $(MAKE) env-check; then \
+		$(MAKE) env-init; \
+	fi
+	@$(MAKE) up
 
 help:
 	@echo "Usage: Docker"
@@ -34,6 +38,8 @@ help:
 	@echo "  make ps                  -> Show running containers"
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
 	@echo "  make smoke-test          -> Run quick automated checks on the running stack"
+	@echo "  make env-init            -> Create .env from .env.example if missing"
+	@echo "  make env-check           -> Check required variables in .env"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
 	@echo "  make shell-db            -> Open a psql session in the db container"
@@ -43,12 +49,16 @@ help:
 	@echo "                           -> Create a branch from dev"
 	@echo "  make branch-create-push name=issue_1/feature/ma-branche"
 	@echo "                           -> Create and push a branch from dev"
+	@echo "  make duplicate_branch name=issue_1/copy/ma-branche"
+	@echo "                           -> Duplicate current branch into a copy branch"
 	@echo "  make push m=\"your message\""
 	@echo "                           -> Add, commit and push current branch"
 	@echo "  make push-dev m=\"your message\""
 	@echo "                           -> Add, commit and push dev branch"
 	@echo "  make status              -> Git status"
-	@echo "  make pull-dev            -> Update local dev branch"
+	@echo "  make pull-dev            -> Update dev, then sync current branch with it"
+	@echo "  make pull-branch name=issue_1/feature/ma-branche"
+	@echo "                           -> Update target branch, then sync current branch with it"
 	@echo "  make merge-dev           -> Merge current branch into dev"
 	@echo "  make rebase-dev          -> Rebase current branch onto dev"
 	@echo "  make push-file-dev file=Makefile     -> Push one file to dev branch"
@@ -107,6 +117,17 @@ test-stack: compose-check
 smoke-test:
 	bash scripts/smoke-test.sh
 
+env-init:
+	@if [ -f .env ]; then \
+		echo "⚠️ .env existe deja, aucune action faite"; \
+	else \
+		cp .env.example .env; \
+		echo "✅ .env cree depuis .env.example"; \
+	fi
+
+env-check:
+	bash scripts/check-env.sh
+
 shell-back:
 	docker exec -it quiz_backend sh
 
@@ -127,7 +148,51 @@ status:
 	git status
 
 pull-dev:
-	git checkout dev && git pull origin dev
+	@branch=$$(git branch --show-current); \
+	if [ -z "$$branch" ]; then \
+		echo "❌ Impossible de détecter la branche courante"; \
+		exit 1; \
+	fi; \
+	if ! git diff --quiet || ! git diff --cached --quiet; then \
+		echo "❌ Working tree non clean. Commit ou stash tes changements avant d'utiliser pull-dev."; \
+		exit 1; \
+	fi; \
+	echo "📦 Branche actuelle: $$branch"; \
+	git checkout dev || exit 1; \
+	git pull --ff-only origin dev || exit 1; \
+	if [ "$$branch" = "dev" ]; then \
+		echo "✅ Branche dev mise à jour"; \
+		exit 0; \
+	fi; \
+	git checkout "$$branch" || exit 1; \
+	echo "🔄 Merge de dev dans $$branch"; \
+	git merge dev
+
+pull-branch:
+	@if [ -z "$(name)" ]; then \
+		echo "❌ Usage: make pull-branch name=issue_1/feature/ma-branche"; \
+		exit 1; \
+	fi; \
+	current=$$(git branch --show-current); \
+	if [ -z "$$current" ]; then \
+		echo "❌ Impossible de détecter la branche courante"; \
+		exit 1; \
+	fi; \
+	if ! git diff --quiet || ! git diff --cached --quiet; then \
+		echo "❌ Working tree non clean. Commit ou stash tes changements avant d'utiliser pull-branch."; \
+		exit 1; \
+	fi; \
+	echo "📦 Branche actuelle: $$current"; \
+	echo "🎯 Branche source: $(name)"; \
+	git checkout "$(name)" || exit 1; \
+	git pull --ff-only origin "$(name)" || exit 1; \
+	if [ "$$current" = "$(name)" ]; then \
+		echo "✅ Branche $(name) mise à jour"; \
+		exit 0; \
+	fi; \
+	git checkout "$$current" || exit 1; \
+	echo "🔄 Merge de $(name) dans $$current"; \
+	git merge "$(name)"
 
 merge-dev:
 	@branch=$$(git branch --show-current); \
@@ -176,6 +241,31 @@ branch-create-push:
 	git pull origin dev || exit 1; \
 	git checkout -b $(name) || exit 1; \
 	git push -u origin $(name)
+
+duplicate_branch:
+	@if [ -z "$(name)" ]; then \
+		echo "❌ Usage: make duplicate_branch name=issue_1/copy/ma-branche"; \
+		exit 1; \
+	fi; \
+	case "$(name)" in \
+		issue_*/copy/*) ;; \
+		*) \
+			echo "❌ Le nom doit respecter le format issue_X/copy/..."; \
+			exit 1; \
+			;; \
+	esac; \
+	current=$$(git branch --show-current); \
+	if [ -z "$$current" ]; then \
+		echo "❌ Impossible de détecter la branche courante"; \
+		exit 1; \
+	fi; \
+	if git show-ref --verify --quiet refs/heads/$(name); then \
+		echo "❌ La branche $(name) existe déjà en local"; \
+		exit 1; \
+	fi; \
+	echo "📦 Branche source: $$current"; \
+	echo "🪄 Nouvelle branche: $(name)"; \
+	git checkout -b $(name)
 
 push:
 	@branch=$$(git branch --show-current); \
@@ -260,4 +350,4 @@ push-file-dev:
 	compose-check \
 	up down clean fclean re restart logs logs-back logs-front logs-db page ps test-stack smoke-test \
 	shell-back shell-front shell-db \
-	push push-dev branch branch-create branch-create-push status pull-dev merge-dev rebase-dev push-file-dev
+	push push-dev branch branch-create branch-create-push duplicate_branch status pull-dev pull-branch merge-dev rebase-dev push-file-dev
