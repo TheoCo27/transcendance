@@ -16,7 +16,7 @@ export default function Navbar() {
               className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text"
               type="button"
             >
-              Se deconnecter
+              Se déconnecter
             </button>
           ) : (
             <>
@@ -27,7 +27,7 @@ export default function Navbar() {
                 className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text"
                 href="/register"
               >
-                S&apos;identifier
+                S'identifier
               </a>
             </>
           )}
