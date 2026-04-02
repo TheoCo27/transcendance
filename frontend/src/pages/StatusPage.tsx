@@ -20,7 +20,7 @@ type HealthState = {
 const loadingState: HealthState = {
   status: "loading",
   title: "Connexion en cours",
-  detail: "Le frontend verifie que le backend et PostgreSQL repondent.",
+  detail: "Le frontend vérifie que le backend et PostgreSQL répondent.",
 };
 
 function getErrorMessage(error: unknown): string {
@@ -28,7 +28,7 @@ function getErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return "Erreur reseau inconnue";
+  return "Erreur réseau inconnue";
 }
 
 export default function StatusPage() {
@@ -48,10 +48,10 @@ export default function StatusPage() {
 
         setHealth({
           status: data.ok ? "success" : "warning",
-          title: data.ok ? "Stack disponible" : "Backend disponible, DB a verifier",
+          title: data.ok ? "Stack disponible" : "Backend disponible, DB à vérifier",
           detail: data.database?.ok
-            ? "Le backend NestJS parle bien a PostgreSQL."
-            : "Le backend tourne, mais la base ne repond pas encore correctement.",
+            ? "Le backend NestJS parle bien à PostgreSQL."
+            : "Le backend tourne, mais la base ne répond pas encore correctement.",
           payload: data,
         });
       } catch (error) {
@@ -101,7 +101,7 @@ export default function StatusPage() {
           ft_transcendance quickstart
         </p>
         <h1 className="mb-4 text-[clamp(2rem,5vw,3.4rem)] leading-none">
-          Containers de dev prets a tester
+          Containers de dev prêts à tester
         </h1>
         <h2 className="mb-3 text-[#f4a261]">{health.title}</h2>
         <p className="max-w-[52ch] leading-[1.6]">{health.detail}</p>
