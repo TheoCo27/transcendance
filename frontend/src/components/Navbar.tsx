@@ -1,3 +1,5 @@
+import PrimaryButton from "./PrimaryButton";
+
 export default function Navbar() {
   const isAuthenticated = false;
 
@@ -12,12 +14,9 @@ export default function Navbar() {
         </a>
         <div className="flex items-center gap-5">
           {isAuthenticated ? (
-            <button
-              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text"
-              type="button"
-            >
+            <PrimaryButton className="px-4 py-2 text-sm">
               Se déconnecter
-            </button>
+            </PrimaryButton>
           ) : (
             <>
               <a className="text-sm font-medium text-text" href="/login">
