@@ -52,7 +52,21 @@ export class AppService {
       language: "typescript",
       orm: "prisma",
       message: "Backend NestJS accessible.",
-      endpoints: ["/health", "/api"],
+      endpoints: [
+        "/health",
+        "/api",
+        "/auth/register",
+        "/auth/login",
+        "/users/me",
+        "/users/:id",
+        "/rooms",
+        "/rooms/:roomId",
+        "/rooms/:roomId/join",
+        "/game/:roomId/state",
+        "/game/answer",
+        "/scores/leaderboard",
+        "/scores/users/:userId",
+      ],
     };
   }
 }

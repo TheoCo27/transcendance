@@ -63,6 +63,33 @@ Le workflow peut fonctionner de deux facons :
 - `http://localhost:3000/health`
 - `http://localhost:4000/health`
 
+## API v1 (Dev 3)
+
+Le backend expose maintenant une base d'API pour brancher le front:
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /users/me?email=<mail>`
+- `GET /users/:id`
+- `GET /rooms`
+- `POST /rooms`
+- `GET /rooms/:roomId`
+- `POST /rooms/:roomId/join`
+- `GET /game/:roomId/state`
+- `POST /game/answer`
+- `GET /scores/leaderboard?limit=10`
+- `GET /scores/users/:userId`
+
+Reponse de succes standard:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+
 ## Quand ajouter nginx
 
 Ajoute un service `nginx` plus tard si tu veux :
