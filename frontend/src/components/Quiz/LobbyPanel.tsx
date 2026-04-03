@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Card from "../Card";
 import PrimaryButton from "../PrimaryButton";
 import RulesPanel from "./RulesPanel";
 
@@ -25,7 +26,7 @@ export default function LobbyPanel({
 
   return (
     <div className="flex w-full gap-6">
-      <div className="flex min-h-[80vh] flex-1 flex-col rounded-2xl border border-white/10 bg-surface px-6 py-6">
+      <Card className="min-h-[80vh] flex-1 px-6 py-6">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-text">Parties en cours</h1>
           <button
@@ -47,8 +48,8 @@ export default function LobbyPanel({
             </PrimaryButton>
           </div>
         </div>
-      </div>
-      <div className="flex min-h-[80vh] w-[30%] min-w-[200px] flex-col rounded-2xl border border-white/10 bg-surface px-6 py-6">
+      </Card>
+      <Card className="min-h-[80vh] w-[30%] min-w-50 px-6 py-6">
         <h2 className="mb-5 text-2xl font-semibold text-text">
           Créer une partie
         </h2>
@@ -119,7 +120,7 @@ export default function LobbyPanel({
             Créer et jouer
           </PrimaryButton>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import Card from "../Card";
 import PrimaryButton from "../PrimaryButton";
 import RulesPanel from "./RulesPanel";
 
@@ -24,7 +25,7 @@ export default function GamePanel({
 
   return (
     <div className="flex w-full gap-6">
-      <div className="flex min-h-[80vh] min-w-[300px] w-[25%] flex-col rounded-2xl border border-white/10 bg-surface px-6 py-6">
+      <Card className="min-h-[80vh] min-w-75 w-[25%] px-6 py-6">
         <p className="mb-4 text-2xl font-semibold text-text">Chat</p>
         <div className="flex flex-1 flex-col gap-3 overflow-hidden">
           <div className="max-w-[75%] rounded-2xl bg-background px-4 py-3">
@@ -43,16 +44,16 @@ export default function GamePanel({
         </div>
         <div className="mt-4 flex items-center gap-3 rounded-2xl bg-background px-4 py-3">
           <input
-            className="flex-1 bg-transparent text-text outline-none placeholder:text-text/50"
+            className="min-w-0 flex-1 bg-transparent text-text outline-none placeholder:text-text/50"
             type="text"
             placeholder="Écrire un message..."
           />
-          <PrimaryButton className="px-4 py-2 text-sm">
+          <PrimaryButton className="shrink-0 px-4 py-2 text-sm">
             Envoyer
           </PrimaryButton>
         </div>
-      </div>
-      <div className="flex min-h-[80vh] min-w-[500px] flex-1 flex-col rounded-2xl border border-white/10 bg-surface px-8 py-6">
+      </Card>
+      <Card className="min-h-[80vh] min-w-125 flex-1 px-8 py-6">
         <div className="mb-6 flex items-center justify-end">
           <button
             className="rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
@@ -66,7 +67,7 @@ export default function GamePanel({
           <p className="text-center text-3xl font-semibold text-text">
             Question ?
           </p>
-          <div className="flex w-full max-w-[560px] flex-col gap-4">
+          <div className="flex w-full max-w-140 flex-col gap-4">
             <button
               className={[
                 "h-20 rounded-xl border text-base font-medium text-text transition",
@@ -117,8 +118,8 @@ export default function GamePanel({
             </button>
           </div>
         </div>
-      </div>
-      <aside className="min-h-[80vh] min-w-[200px] w-[25%] rounded-2xl border border-white/10 bg-surface px-6 py-6">
+      </Card>
+      <Card className="min-h-[80vh] min-w-50 w-[25%] px-6 py-6">
         <p className="mb-5 text-xl font-semibold text-text">Points</p>
         <div className="space-y-3">
           <div className="flex items-center justify-between rounded-xl bg-background px-4 py-3">
@@ -126,7 +127,7 @@ export default function GamePanel({
             <span>100</span>
           </div>
         </div>
-      </aside>
+      </Card>
     </div>
   );
 }

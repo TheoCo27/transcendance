@@ -1,10 +1,12 @@
+import Card from "../Card";
+
 type RulesPanelProps = {
   onClose: () => void;
 };
 
 export default function RulesPanel({ onClose }: RulesPanelProps) {
   return (
-    <div className="flex h-full w-full flex-col rounded-2xl border border-white/10 bg-surface px-8 py-6">
+    <Card className="h-full w-full px-8 py-6">
       <div className="mb-6 flex items-center justify-end">
         <button
           className="rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
@@ -25,6 +27,6 @@ export default function RulesPanel({ onClose }: RulesPanelProps) {
           </p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
