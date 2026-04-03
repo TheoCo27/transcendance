@@ -69,6 +69,7 @@ Le backend expose maintenant une base d'API pour brancher le front:
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/logout`
 - `GET /users/me?email=<mail>`
 - `GET /users/:id`
 - `GET /rooms`
