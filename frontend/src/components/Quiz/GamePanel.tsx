@@ -1,3 +1,4 @@
+import PrimaryButton from "../PrimaryButton";
 import RulesPanel from "./RulesPanel";
 
 type GamePanelProps = {
@@ -46,12 +47,9 @@ export default function GamePanel({
             type="text"
             placeholder="Écrire un message..."
           />
-          <button
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text"
-            type="button"
-          >
+          <PrimaryButton className="px-4 py-2 text-sm">
             Envoyer
-          </button>
+          </PrimaryButton>
         </div>
       </div>
       <div className="flex min-h-[80vh] min-w-[500px] flex-1 flex-col rounded-2xl border border-white/10 bg-surface px-8 py-6">

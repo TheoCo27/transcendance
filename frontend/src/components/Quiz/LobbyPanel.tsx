@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PrimaryButton from "../PrimaryButton";
 import RulesPanel from "./RulesPanel";
 
 type LobbyPanelProps = {
@@ -41,13 +42,9 @@ export default function LobbyPanel({
               <p className="m-0 text-text">Nom de salon 1</p>
               <p className="m-0 mt-1 text-sm text-text/60">3 joueurs • 5 manches</p>
             </div>
-            <button
-              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text"
-              type="button"
-              onClick={onPlay}
-            >
+            <PrimaryButton className="px-4 py-2 text-sm" onClick={onPlay}>
               Rejoindre
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       </div>
@@ -118,13 +115,9 @@ export default function LobbyPanel({
           ) : null}
         </div>
         <div className="mt-auto flex items-center justify-center pt-6">
-          <button
-            className="rounded-md bg-primary px-6 py-3 text-base font-semibold text-text"
-            type="button"
-            onClick={onPlay}
-          >
+          <PrimaryButton className="px-6 py-3 text-base" onClick={onPlay}>
             Créer et jouer
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     </div>
