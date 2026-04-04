@@ -1,3 +1,4 @@
+import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import { User } from "@generated/prisma/client";
 import {
@@ -7,12 +8,14 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  UseFilters,
 } from "@nestjs/common";
 import { UsersService } from "./users.service";
 
 type SafeUser = Omit<User, "password">;
 
 @Controller("users")
+@UseFilters(ApiExceptionFilter)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -52,4 +55,3 @@ export class UsersController {
     return safeUser;
   }
 }
-
