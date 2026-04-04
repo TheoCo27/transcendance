@@ -127,6 +127,7 @@ Les variables principales sont :
 - `BACKEND_PORT`
 - `FRONTEND_PORT`
 - `JWT_SECRET`
+- `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
 
 Regle d'equipe :
@@ -269,6 +270,8 @@ Ce test verifie :
 - que le backend repond sur `/health`
 - que le frontend atteint bien `/health`
 - que le frontend atteint bien `/api`
+- que `register -> login -> session -> /users/me -> logout` fonctionne
+- que les erreurs d'auth utilisent bien le format API standard
 
 ### Arreter et nettoyer
 
@@ -284,6 +287,114 @@ make fclean
 - `http://localhost:3000/health`
 - `http://localhost:3000/api`
 - `http://localhost:4000/health`
+
+## Auth API pour le front
+
+### Point important sur le proxy dev
+
+Aujourd'hui, Webpack Dev Server ne proxifie que :
+
+- `/api`
+- `/health`
+
+Les routes d'authentification et de session (`/auth/*`, `/users/me`) doivent donc etre appelees directement sur le backend en dev :
+
+- base URL backend : `http://localhost:4000`
+
+Si on veut tout appeler depuis `localhost:3000` plus tard, il faudra etendre le proxy frontend.
+
+### Regle obligatoire
+
+Pour que la session JWT en cookie fonctionne depuis le navigateur :
+
+- toujours appeler le backend avec `credentials: "include"`
+- ne jamais essayer de lire le cookie `access_token` en JavaScript : il est `httpOnly`
+- utiliser `/auth/session` ou `/users/me` pour savoir si l'utilisateur est connecte
+
+### Endpoints utiles
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `GET /auth/session`
+- `GET /users/me`
+- `GET /users/:id`
+
+### Reponse de succes standard
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+
+### Reponse d'erreur standard
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required"
+  }
+}
+```
+
+### Exemples front simples
+
+Exemple de base :
+
+```ts
+const API_BASE = "http://localhost:4000";
+
+async function apiFetch(path: string, init: RequestInit = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+
+  return response.json();
+}
+```
+
+Login :
+
+```ts
+await apiFetch("/auth/login", {
+  method: "POST",
+  body: JSON.stringify({
+    email: "user@test.com",
+    password: "longsecuredpassword123!",
+  }),
+});
+```
+
+Lire la session courante :
+
+```ts
+const session = await apiFetch("/auth/session");
+```
+
+Lire le vrai profil connecte :
+
+```ts
+const me = await apiFetch("/users/me");
+```
+
+Logout :
+
+```ts
+await apiFetch("/auth/logout", {
+  method: "POST",
+});
+```
 
 ## Regles d'equipe
 
