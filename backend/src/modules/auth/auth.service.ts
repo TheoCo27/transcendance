@@ -71,4 +71,9 @@ export class AuthService {
       throw error;
     }
   }
+
+  async logout(res: Response): Promise<{ success: boolean }> {
+    res.clearCookie("access_token");
+    return { success: true };
+  }
 }
