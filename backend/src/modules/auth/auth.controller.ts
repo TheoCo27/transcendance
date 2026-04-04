@@ -23,4 +23,11 @@ export class AuthController {
     const user = await this.authService.register(dto);
     return user;
   }
+
+  @Post("logout")
+  async logout(
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ success: boolean }> {
+    return await this.authService.logout(res);
+  }
 }
