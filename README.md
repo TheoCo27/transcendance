@@ -39,6 +39,7 @@ Variables attendues :
 - `BACKEND_PORT`
 - `FRONTEND_PORT`
 - `JWT_SECRET`
+- `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
 
 ## CI
@@ -69,7 +70,9 @@ Le backend expose maintenant une base d'API pour brancher le front:
 
 - `POST /auth/register`
 - `POST /auth/login`
-- `GET /users/me?email=<mail>`
+- `POST /auth/logout`
+- `GET /auth/session`
+- `GET /users/me`
 - `GET /users/:id`
 - `GET /rooms`
 - `POST /rooms`
@@ -89,6 +92,25 @@ Reponse de succes standard:
   "error": null
 }
 ```
+
+Reponse d'erreur standard:
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required"
+  }
+}
+```
+
+Important pour le front en dev:
+
+- le proxy frontend couvre seulement `/api` et `/health`
+- les routes `/auth/*` et `/users/me` doivent etre appelees sur `http://localhost:4000`
+- utiliser `credentials: "include"` pour que la session cookie fonctionne
 
 ## Quand ajouter nginx
 

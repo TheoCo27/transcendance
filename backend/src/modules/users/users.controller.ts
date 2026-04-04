@@ -1,4 +1,7 @@
 import { ok, type ApiResponse } from "@/common/http/api-response";
+import { CurrentUser } from "@/modules/auth/decorators/current-user.decorator";
+import { AuthGuard } from "@/modules/auth/guards/auth.guard";
+import { AuthPayload } from "@/modules/auth/types/auth-payload.type";
 import { User } from "@generated/prisma/client";
 import {
   Controller,
@@ -6,7 +9,7 @@ import {
   NotFoundException,
   Param,
   ParseIntPipe,
-  Query,
+  UseGuards,
 } from "@nestjs/common";
 import { UsersService } from "./users.service";
 
@@ -17,18 +20,14 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get("me")
-  async getMe(@Query("email") email?: string): Promise<ApiResponse<SafeUser>> {
-    const user = email
-      ? await this.usersService.findUserByEmail(email)
-      : (
-          await this.usersService.findUsers({
-            take: 1,
-            orderBy: { createdAt: "desc" },
-          })
-        )[0] ?? null;
+  @UseGuards(AuthGuard)
+  async getMe(
+    @CurrentUser() auth: AuthPayload,
+  ): Promise<ApiResponse<SafeUser>> {
+    const user = await this.usersService.findUser({ id: auth.sub });
 
     if (!user) {
-      throw new NotFoundException("No user found");
+      throw new NotFoundException(`User ${auth.sub} not found`);
     }
 
     return ok(this.sanitizeUser(user));
@@ -52,4 +51,3 @@ export class UsersController {
     return safeUser;
   }
 }
-

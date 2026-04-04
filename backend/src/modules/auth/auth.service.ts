@@ -5,11 +5,12 @@ import { Prisma, User } from "@generated/prisma/client";
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
-import { Response } from "express";
+import { CookieOptions, Response } from "express";
 import type { SafeUser } from "./types/safe-user.type";
 
 @Injectable()
@@ -21,33 +22,46 @@ export class AuthService {
 
   async validateUser(dto: LoginDto): Promise<User> {
     const user = await this.usersService.findUserByEmail(dto.email);
-    if (!user) throw new UnauthorizedException(); // 401 Unauthorized
+    if (!user) {
+      throw new UnauthorizedException("Invalid email or password");
+    }
 
     const isValidPassword = await bcrypt.compare(dto.password, user.password);
-    if (!isValidPassword) throw new UnauthorizedException(); // 401 Unauthorized
+    if (!isValidPassword) {
+      throw new UnauthorizedException("Invalid email or password");
+    }
 
     return user;
   }
 
   private sanitizeUser(user: User): SafeUser {
-    // On extrait password de user et on met tout le reste dans safeUser
     const { password, ...safeUser } = user;
     return safeUser;
   }
 
-  async login(user: User, res: Response): Promise<{ success: boolean }> {
-    const payload = { sub: user.id, username: user.name };
+  private getAuthCookieOptions(): CookieOptions {
+    const isSecureCookie = process.env.FRONTEND_ORIGIN?.startsWith("https://");
 
-    const access_token = await this.jwtService.signAsync(payload);
-
-    res.cookie("access_token", access_token, {
+    return {
       httpOnly: true,
-      secure: true,
-    });
-    res.send("L'utilisateur a bien été authentifié!");
+      path: "/",
+      sameSite: isSecureCookie ? "none" : "lax",
+      secure: Boolean(isSecureCookie),
+    };
+  }
 
-    // A verifier le type de return souhaite
-    return { success: true };
+  async login(user: User, res: Response): Promise<SafeUser> {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    res.cookie("access_token", accessToken, this.getAuthCookieOptions());
+
+    return this.sanitizeUser(user);
   }
 
   async register(dto: RegisterDto): Promise<SafeUser> {
@@ -65,10 +79,25 @@ export class AuthService {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
-      )
-        throw new ConflictException("L'email est deja existant"); // 409 (ressource deja existante)
+      ) {
+        throw new ConflictException("Email already exists");
+      }
 
       throw error;
     }
+  }
+
+  async logout(res: Response): Promise<void> {
+    res.clearCookie("access_token", this.getAuthCookieOptions());
+  }
+
+  async getSessionUser(userId: number): Promise<SafeUser> {
+    const user = await this.usersService.findUser({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    return this.sanitizeUser(user);
   }
 }
