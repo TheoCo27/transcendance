@@ -39,7 +39,15 @@ module.exports = {
     historyApiFallback: true,
     proxy: [
       {
-        context: ["/api", "/health"],
+        context: [
+          "/api",
+          "/health",
+          "/auth",
+          "/users",
+          "/rooms",
+          "/game",
+          "/scores",
+        ],
         target: backendTarget,
         changeOrigin: true,
       },
