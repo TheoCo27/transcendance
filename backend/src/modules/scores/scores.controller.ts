@@ -1,3 +1,4 @@
+import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import {
   Controller,
@@ -6,10 +7,12 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  UseFilters,
 } from "@nestjs/common";
 import { ScoresService, UserScore } from "./scores.service";
 
 @Controller("scores")
+@UseFilters(ApiExceptionFilter)
 export class ScoresController {
   constructor(private readonly scoresService: ScoresService) {}
 
@@ -27,4 +30,3 @@ export class ScoresController {
     return ok(this.scoresService.getUserScore(userId));
   }
 }
-
