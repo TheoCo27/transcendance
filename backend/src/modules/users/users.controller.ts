@@ -1,3 +1,4 @@
+import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import { CurrentUser } from "@/modules/auth/decorators/current-user.decorator";
 import { AuthGuard } from "@/modules/auth/guards/auth.guard";
@@ -10,12 +11,14 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
+  UseFilters,
 } from "@nestjs/common";
 import { UsersService } from "./users.service";
 
 type SafeUser = Omit<User, "password">;
 
 @Controller("users")
+@UseFilters(ApiExceptionFilter)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

@@ -108,8 +108,8 @@ Reponse d'erreur standard:
 
 Important pour le front en dev:
 
-- le proxy frontend couvre seulement `/api` et `/health`
-- les routes `/auth/*` et `/users/me` doivent etre appelees sur `http://localhost:4000`
+- le proxy frontend couvre `/api`, `/health`, `/auth`, `/users`, `/rooms`, `/game` et `/scores`
+- le front peut donc appeler ces routes directement sur `http://localhost:3000`
 - utiliser `credentials: "include"` pour que la session cookie fonctionne
 
 ## Quand ajouter nginx

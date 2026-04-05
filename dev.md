@@ -34,7 +34,7 @@ Role actuel :
 
 - afficher une page de verification de la stack
 - interroger regulierement `/health`
-- proxifier les appels `/api` et `/health` vers le backend via Webpack Dev Server
+- proxifier les appels `/api`, `/health`, `/auth`, `/users`, `/rooms`, `/game` et `/scores` vers le backend via Webpack Dev Server
 
 ### Backend
 
@@ -61,7 +61,7 @@ Role actuel :
 Le fonctionnement actuel est le suivant :
 
 1. Le navigateur appelle le frontend sur `http://localhost:3000`
-2. Le frontend React TypeScript appelle `/health` et `/api`
+2. Le frontend React TypeScript appelle le backend via des routes proxifiees comme `/health`, `/api`, `/auth/*` et `/users/*`
 3. Webpack Dev Server proxifie ces routes vers le backend `http://backend:4000`
 4. Le backend interroge PostgreSQL via `DATABASE_URL`
 
@@ -75,7 +75,7 @@ Le fonctionnement actuel est le suivant :
                   frontend
      React + TypeScript + Webpack Dev Server
                          |
-      proxy /api et /health via Webpack
+ proxy /api, /health, /auth, /users, /rooms, /game, /scores
                          |
                          v
          http://backend:4000
@@ -292,16 +292,19 @@ make fclean
 
 ### Point important sur le proxy dev
 
-Aujourd'hui, Webpack Dev Server ne proxifie que :
+Aujourd'hui, Webpack Dev Server proxifie :
 
 - `/api`
 - `/health`
+- `/auth`
+- `/users`
+- `/rooms`
+- `/game`
+- `/scores`
 
-Les routes d'authentification et de session (`/auth/*`, `/users/me`) doivent donc etre appelees directement sur le backend en dev :
+Pour le front en dev, on peut donc appeler ces routes directement depuis `http://localhost:3000`.
 
-- base URL backend : `http://localhost:4000`
-
-Si on veut tout appeler depuis `localhost:3000` plus tard, il faudra etendre le proxy frontend.
+Le backend direct `http://localhost:4000` reste utile pour du debug ou pour les tests shell.
 
 ### Regle obligatoire
 
@@ -348,7 +351,7 @@ Pour que la session JWT en cookie fonctionne depuis le navigateur :
 Exemple de base :
 
 ```ts
-const API_BASE = "http://localhost:4000";
+const API_BASE = "";
 
 async function apiFetch(path: string, init: RequestInit = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
