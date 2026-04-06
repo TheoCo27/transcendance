@@ -10,12 +10,11 @@ import {
   NotFoundException,
   Param,
   ParseIntPipe,
-  UseGuards,
   UseFilters,
+  UseGuards,
 } from "@nestjs/common";
+import { SafeUser } from "../auth/types/safe-user.type";
 import { UsersService } from "./users.service";
-
-type SafeUser = Omit<User, "password">;
 
 @Controller("users")
 @UseFilters(ApiExceptionFilter)

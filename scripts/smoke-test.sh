@@ -178,7 +178,7 @@ fi
 TEST_EMAIL="smoke-$(date +%s)@test.com"
 TEST_PASSWORD="longsecuredpassword123!"
 
-REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","name":"smoke"}' "$TEST_EMAIL" "$TEST_PASSWORD")
+REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","username":"smoke"}' "$TEST_EMAIL" "$TEST_PASSWORD")
 LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$TEST_EMAIL" "$TEST_PASSWORD")
 
 cleanup_user "$TEST_EMAIL"
