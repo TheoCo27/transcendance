@@ -1,22 +1,34 @@
 import { UsersModule } from "@/modules/users/users.module";
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
+import type { StringValue } from "ms";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
-
-const JWT_SECRET = "super_secret_jwt_key_change_me";
+import { AuthGuard } from "./guards/auth.guard";
 
 @Module({
   imports: [
     UsersModule,
-    JwtModule.register({
+    JwtModule.registerAsync({
       global: true,
-      secret: JWT_SECRET, // FIXME: A CHANGER
-      signOptions: { expiresIn: "60s" },
+      useFactory: () => {
+        const jwtSecret = process.env.JWT_SECRET;
+
+        if (!jwtSecret) {
+          throw new Error("JWT_SECRET is not configured");
+        }
+
+        return {
+          secret: jwtSecret,
+          signOptions: {
+            expiresIn: (process.env.JWT_EXPIRES_IN || "7d") as StringValue,
+          },
+        };
+      },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, AuthGuard],
   exports: [AuthService],
 })
 export class AuthModule {}

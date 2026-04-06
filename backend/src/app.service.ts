@@ -58,6 +58,7 @@ export class AppService {
         "/auth/register",
         "/auth/login",
         "/auth/logout",
+        "/auth/session",
         "/users/me",
         "/users/:id",
         "/rooms",
