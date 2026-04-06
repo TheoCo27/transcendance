@@ -7,7 +7,7 @@ export class RegisterDto {
 
   @IsString()
   @MinLength(2)
-  name: string;
+  username: string;
 
   @IsString()
   @MinLength(12)
