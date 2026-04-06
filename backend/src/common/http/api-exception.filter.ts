@@ -4,61 +4,95 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from "@nestjs/common";
 import { Response } from "express";
+import { type ApiErrorPayload } from "./api-response";
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
-  catch(exception: unknown, host: ArgumentsHost) {
+  private readonly logger = new Logger(ApiExceptionFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const status = this.getStatus(exception);
+    const error = this.buildErrorPayload(exception, status);
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
-
-    const exceptionResponse =
-      exception instanceof HttpException ? exception.getResponse() : null;
-
-    const message = this.extractMessage(exceptionResponse, exception);
+    if (!(exception instanceof HttpException)) {
+      this.logger.error(
+        exception instanceof Error ? exception.message : "Unhandled exception",
+        exception instanceof Error ? exception.stack : undefined,
+      );
+    }
 
     response.status(status).json({
       success: false,
       data: null,
-      error: {
-        code: `HTTP_${status}`,
-        message,
-      },
+      error,
     });
   }
 
-  private extractMessage(exceptionResponse: unknown, exception: unknown): string {
-    if (typeof exceptionResponse === "string") {
-      return exceptionResponse;
+  private getStatus(exception: unknown): number {
+    if (exception instanceof HttpException) {
+      return exception.getStatus();
     }
 
-    if (
-      exceptionResponse &&
-      typeof exceptionResponse === "object" &&
-      "message" in exceptionResponse
-    ) {
-      const messageValue = (exceptionResponse as { message: unknown }).message;
+    return HttpStatus.INTERNAL_SERVER_ERROR;
+  }
 
-      if (Array.isArray(messageValue)) {
-        return messageValue.join(", ");
+  private buildErrorPayload(
+    exception: unknown,
+    status: number,
+  ): ApiErrorPayload {
+    if (exception instanceof HttpException) {
+      const response = exception.getResponse();
+
+      if (typeof response === "string") {
+        return {
+          code: this.getErrorCode(status),
+          message: response,
+        };
       }
 
-      if (typeof messageValue === "string") {
-        return messageValue;
+      if (this.isExceptionResponse(response)) {
+        return {
+          code: this.getErrorCode(status),
+          message: this.extractMessage(response.message, exception.message),
+        };
       }
+
+      return {
+        code: this.getErrorCode(status),
+        message: exception.message,
+      };
     }
 
-    if (exception instanceof Error) {
-      return exception.message;
+    return {
+      code: this.getErrorCode(status),
+      message: "Internal server error",
+    };
+  }
+
+  private extractMessage(message: unknown, fallback: string): string {
+    if (Array.isArray(message)) {
+      return message.join(", ");
     }
 
-    return "Unexpected error";
+    if (typeof message === "string" && message.length > 0) {
+      return message;
+    }
+
+    return fallback;
+  }
+
+  private getErrorCode(status: number): string {
+    return HttpStatus[status] ?? "INTERNAL_SERVER_ERROR";
+  }
+
+  private isExceptionResponse(
+    response: unknown,
+  ): response is { message?: unknown } {
+    return typeof response === "object" && response !== null;
   }
 }
-

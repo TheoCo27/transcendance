@@ -1,8 +1,19 @@
+import { ok, type ApiResponse } from "@/common/http/api-response";
 import { LoginDto } from "@/modules/users/dto/login.dto";
 import { RegisterDto } from "@/modules/users/dto/register.dto";
-import { Body, Controller, Post, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import { Response } from "express";
+import { CurrentUser } from "./decorators/current-user.decorator";
+import { AuthGuard } from "./guards/auth.guard";
 import { AuthService } from "./auth.service";
+import { AuthPayload } from "./types/auth-payload.type";
 import { SafeUser } from "./types/safe-user.type";
 
 @Controller("auth")
@@ -13,21 +24,29 @@ export class AuthController {
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ success: boolean }> {
+  ): Promise<ApiResponse<SafeUser>> {
     const user = await this.authService.validateUser(dto);
-    return await this.authService.login(user, res);
+    return ok(await this.authService.login(user, res));
   }
 
   @Post("register")
-  async register(@Body() dto: RegisterDto): Promise<SafeUser> {
-    const user = await this.authService.register(dto);
-    return user;
+  async register(@Body() dto: RegisterDto): Promise<ApiResponse<SafeUser>> {
+    return ok(await this.authService.register(dto));
   }
 
   @Post("logout")
   async logout(
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ success: boolean }> {
-    return await this.authService.logout(res);
+  ): Promise<ApiResponse<{ loggedOut: true }>> {
+    await this.authService.logout(res);
+    return ok({ loggedOut: true });
+  }
+
+  @Get("session")
+  @UseGuards(AuthGuard)
+  async session(
+    @CurrentUser() auth: AuthPayload,
+  ): Promise<ApiResponse<SafeUser>> {
+    return ok(await this.authService.getSessionUser(auth.sub));
   }
 }

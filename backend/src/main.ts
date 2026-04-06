@@ -1,3 +1,5 @@
+import "dotenv/config";
+import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import cookieParser from "cookie-parser";
@@ -10,6 +12,7 @@ async function bootstrap() {
   const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 
   app.enableCors({
+    credentials: true,
     origin: frontendOrigin,
   });
 
@@ -21,6 +24,7 @@ async function bootstrap() {
     }),
   );
 
+  app.useGlobalFilters(new ApiExceptionFilter());
   app.use(cookieParser());
 
   await app.listen(port, "0.0.0.0");

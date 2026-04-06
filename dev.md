@@ -34,7 +34,7 @@ Role actuel :
 
 - afficher une page de verification de la stack
 - interroger regulierement `/health`
-- proxifier les appels `/api` et `/health` vers le backend via Webpack Dev Server
+- proxifier les appels `/api`, `/health`, `/auth`, `/users`, `/rooms`, `/game` et `/scores` vers le backend via Webpack Dev Server
 
 ### Backend
 
@@ -61,7 +61,7 @@ Role actuel :
 Le fonctionnement actuel est le suivant :
 
 1. Le navigateur appelle le frontend sur `http://localhost:3000`
-2. Le frontend React TypeScript appelle `/health` et `/api`
+2. Le frontend React TypeScript appelle le backend via des routes proxifiees comme `/health`, `/api`, `/auth/*` et `/users/*`
 3. Webpack Dev Server proxifie ces routes vers le backend `http://backend:4000`
 4. Le backend interroge PostgreSQL via `DATABASE_URL`
 
@@ -75,7 +75,7 @@ Le fonctionnement actuel est le suivant :
                   frontend
      React + TypeScript + Webpack Dev Server
                          |
-      proxy /api et /health via Webpack
+ proxy /api, /health, /auth, /users, /rooms, /game, /scores
                          |
                          v
          http://backend:4000
@@ -127,6 +127,7 @@ Les variables principales sont :
 - `BACKEND_PORT`
 - `FRONTEND_PORT`
 - `JWT_SECRET`
+- `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
 
 Regle d'equipe :
@@ -269,6 +270,8 @@ Ce test verifie :
 - que le backend repond sur `/health`
 - que le frontend atteint bien `/health`
 - que le frontend atteint bien `/api`
+- que `register -> login -> session -> /users/me -> logout` fonctionne
+- que les erreurs d'auth utilisent bien le format API standard
 
 ### Arreter et nettoyer
 
@@ -284,6 +287,117 @@ make fclean
 - `http://localhost:3000/health`
 - `http://localhost:3000/api`
 - `http://localhost:4000/health`
+
+## Auth API pour le front
+
+### Point important sur le proxy dev
+
+Aujourd'hui, Webpack Dev Server proxifie :
+
+- `/api`
+- `/health`
+- `/auth`
+- `/users`
+- `/rooms`
+- `/game`
+- `/scores`
+
+Pour le front en dev, on peut donc appeler ces routes directement depuis `http://localhost:3000`.
+
+Le backend direct `http://localhost:4000` reste utile pour du debug ou pour les tests shell.
+
+### Regle obligatoire
+
+Pour que la session JWT en cookie fonctionne depuis le navigateur :
+
+- toujours appeler le backend avec `credentials: "include"`
+- ne jamais essayer de lire le cookie `access_token` en JavaScript : il est `httpOnly`
+- utiliser `/auth/session` ou `/users/me` pour savoir si l'utilisateur est connecte
+
+### Endpoints utiles
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `GET /auth/session`
+- `GET /users/me`
+- `GET /users/:id`
+
+### Reponse de succes standard
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+
+### Reponse d'erreur standard
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required"
+  }
+}
+```
+
+### Exemples front simples
+
+Exemple de base :
+
+```ts
+const API_BASE = "";
+
+async function apiFetch(path: string, init: RequestInit = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+
+  return response.json();
+}
+```
+
+Login :
+
+```ts
+await apiFetch("/auth/login", {
+  method: "POST",
+  body: JSON.stringify({
+    email: "user@test.com",
+    password: "longsecuredpassword123!",
+  }),
+});
+```
+
+Lire la session courante :
+
+```ts
+const session = await apiFetch("/auth/session");
+```
+
+Lire le vrai profil connecte :
+
+```ts
+const me = await apiFetch("/users/me");
+```
+
+Logout :
+
+```ts
+await apiFetch("/auth/logout", {
+  method: "POST",
+});
+```
 
 ## Regles d'equipe
 
