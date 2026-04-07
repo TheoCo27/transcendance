@@ -68,6 +68,13 @@ Le workflow peut fonctionner de deux facons :
 
 Le backend expose maintenant une base d'API pour brancher le front:
 
+Contrat detaille front-back:
+- `docs/api-front-contract.md`
+
+Etat actuel:
+- `auth` + `users` branches sur Prisma/PostgreSQL
+- `rooms` + `game` + `scores` encore en memoire (MVP d'integration)
+
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/logout`
