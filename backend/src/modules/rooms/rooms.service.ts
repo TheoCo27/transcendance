@@ -12,7 +12,7 @@ export type Room = {
   name: string;
   rounds: number;
   isPrivate: boolean;
-  status: "waiting" | "running" | "finished";
+  status: "waiting" | "playing" | "finished";
   players: RoomPlayer[];
   createdAt: string;
   password?: string;
@@ -98,4 +98,3 @@ export class RoomsService {
     return publicRoom;
   }
 }
-
