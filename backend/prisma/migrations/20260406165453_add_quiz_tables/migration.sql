@@ -1,10 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the column `name` on the `User` table. All the data in the column will be lost.
-  - Added the required column `username` to the `User` table without a default value. This is not possible if the table is not empty.
-
-*/
 -- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('online', 'offline');
 
@@ -18,10 +11,18 @@ CREATE TYPE "RoomStatus" AS ENUM ('waiting', 'playing', 'finished');
 CREATE TYPE "GameStatus" AS ENUM ('waiting', 'in_progress', 'finished');
 
 -- AlterTable
-ALTER TABLE "User" DROP COLUMN "name",
+ALTER TABLE "User" RENAME COLUMN "name" TO "username";
+
+ALTER TABLE "User"
 ADD COLUMN     "avatar_url" TEXT,
-ADD COLUMN     "status" "UserStatus" NOT NULL DEFAULT 'offline',
-ADD COLUMN     "username" TEXT NOT NULL;
+ADD COLUMN     "status" "UserStatus" NOT NULL DEFAULT 'offline';
+
+UPDATE "User"
+SET "username" = split_part("email", '@', 1)
+WHERE "username" IS NULL OR btrim("username") = '';
+
+ALTER TABLE "User"
+ALTER COLUMN "username" SET NOT NULL;
 
 -- CreateTable
 CREATE TABLE "FriendRequests" (

@@ -10,7 +10,8 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
-import { CookieOptions, Response } from "express";
+import { CookieOptions, Request, Response } from "express";
+import { AuthPayload } from "./types/auth-payload.type";
 import type { SafeUser } from "./types/safe-user.type";
 
 @Injectable()
@@ -51,17 +52,22 @@ export class AuthService {
   }
 
   async login(user: User, res: Response): Promise<SafeUser> {
+    const updatedUser = await this.usersService.updateUser({
+      where: { id: user.id },
+      data: { status: "online" },
+    });
+
     const payload = {
-      sub: user.id,
-      email: user.email,
-      username: user.username,
+      sub: updatedUser.id,
+      email: updatedUser.email,
+      username: updatedUser.username,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
 
     res.cookie("access_token", accessToken, this.getAuthCookieOptions());
 
-    return this.sanitizeUser(user);
+    return this.sanitizeUser(updatedUser);
   }
 
   async register(dto: RegisterDto): Promise<SafeUser> {
@@ -87,7 +93,21 @@ export class AuthService {
     }
   }
 
-  async logout(res: Response): Promise<void> {
+  async logout(req: Request, res: Response): Promise<void> {
+    const token = req.cookies?.access_token;
+
+    if (token) {
+      try {
+        const auth = await this.jwtService.verifyAsync<AuthPayload>(token);
+        await this.usersService.updateUser({
+          where: { id: auth.sub },
+          data: { status: "offline" },
+        });
+      } catch {
+        // Ignore invalid or expired cookies and still clear them.
+      }
+    }
+
     res.clearCookie("access_token", this.getAuthCookieOptions());
   }
 

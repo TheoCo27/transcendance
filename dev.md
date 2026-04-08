@@ -288,6 +288,253 @@ make fclean
 - `http://localhost:3000/api`
 - `http://localhost:4000/health`
 
+## Module auth backend
+
+### Vue d'ensemble
+
+Le module auth gere une session JWT stockee dans le cookie `access_token`.
+
+Flux principal :
+
+1. `POST /auth/register` cree un user en base avec mot de passe hash
+2. `POST /auth/login` verifie les credentials, signe un JWT, pose le cookie et passe le user en `online`
+3. `GET /auth/session` lit le cookie, verifie le token et recharge le user courant
+4. `GET /users/me` reutilise le meme guard pour exposer le profil connecte
+5. `POST /auth/logout` supprime le cookie et repasse le user en `offline`
+
+Variables importantes du module :
+
+- `JWT_SECRET` : cle de signature et de verification du JWT
+- `JWT_EXPIRES_IN` : duree de vie du token, `7d` par defaut
+- `FRONTEND_ORIGIN` : sert a regler le comportement du cookie (`sameSite` / `secure`)
+- `access_token` : nom du cookie httpOnly contenant le JWT
+
+### Fichiers du module auth
+
+#### `backend/src/modules/auth/auth.module.ts`
+
+Role :
+
+- assemble le module auth NestJS
+- branche `UsersModule` pour acceder aux users Prisma
+- configure `JwtModule`
+- expose `AuthService` aux autres modules
+
+Elements importants :
+
+- `JwtModule.registerAsync(...)` :
+  - lit `process.env.JWT_SECRET`
+  - jette une erreur si la variable est absente
+  - configure `signOptions.expiresIn` avec `process.env.JWT_EXPIRES_IN || "7d"`
+- `controllers: [AuthController]` : enregistre les routes `/auth/*`
+- `providers: [AuthService, AuthGuard]` : rend le service et le guard injectables
+- `exports: [AuthService]` : permet a un autre module d'injecter `AuthService` si besoin plus tard
+
+#### `backend/src/modules/auth/auth.controller.ts`
+
+Role :
+
+- expose les endpoints HTTP du module auth
+- fait le lien entre les DTO / decorators NestJS et `AuthService`
+- garde le controller tres fin : presque toute la logique metier est deleguee au service
+
+Fonctions importantes :
+
+- `login(dto, res)` :
+  - appelle `authService.validateUser(dto)` pour verifier email + password
+  - appelle `authService.login(user, res)` pour poser le cookie
+  - retourne `ApiResponse<SafeUser>`
+- `register(dto)` :
+  - appelle `authService.register(dto)`
+  - retourne le user sans mot de passe
+- `logout(req, res)` :
+  - passe la `Request` et la `Response` au service
+  - la `Request` sert a lire le cookie courant
+  - la `Response` sert a effacer le cookie
+- `session(auth)` :
+  - protege la route avec `@UseGuards(AuthGuard)`
+  - lit `auth.sub` injecte par `@CurrentUser()`
+  - recharge le user courant via `authService.getSessionUser(...)`
+
+Variables / types utiles :
+
+- `req: Request` : acces aux cookies recus
+- `res: Response` : necessaire pour `res.cookie(...)` et `res.clearCookie(...)`
+- `AuthPayload` : contenu decode du JWT
+- `SafeUser` : user renvoye au client sans le champ `password`
+
+#### `backend/src/modules/auth/auth.service.ts`
+
+Role :
+
+- contient toute la logique metier d'authentification
+- parle a `UsersService`, `JwtService` et `bcrypt`
+- centralise la construction du cookie auth
+
+Fonctions importantes :
+
+- `validateUser(dto)` :
+  - cherche le user avec `usersService.findUserByEmail(dto.email)`
+  - compare le mot de passe avec `bcrypt.compare(dto.password, user.password)`
+  - renvoie `UnauthorizedException("Invalid email or password")` si les credentials sont faux
+- `sanitizeUser(user)` :
+  - retire `password` de l'objet avant de l'envoyer au client
+  - base commune de tous les retours `SafeUser`
+- `getAuthCookieOptions()` :
+  - calcule les options du cookie `access_token`
+  - `httpOnly: true` pour empecher la lecture JS cote navigateur
+  - `path: "/"` pour rendre le cookie valable sur toute l'app
+  - `sameSite` passe a `"none"` si `FRONTEND_ORIGIN` est en `https://`, sinon `"lax"`
+  - `secure` est active seulement en HTTPS
+- `login(user, res)` :
+  - met le user en `status: "online"`
+  - construit le payload JWT `{ sub, email, username }`
+  - signe le token avec `jwtService.signAsync(payload)`
+  - ecrit le cookie via `res.cookie("access_token", accessToken, ...)`
+  - retourne le user nettoye
+- `register(dto)` :
+  - hash le password avec `bcrypt.hash(dto.password, 10)`
+  - cree le user avec `usersService.createUser(...)`
+  - attrape `PrismaClientKnownRequestError` code `P2002` pour transformer le doublon email en `409 Conflict`
+- `logout(req, res)` :
+  - lit le cookie `req.cookies?.access_token`
+  - si le token est valide, repasse le user en `status: "offline"`
+  - ignore volontairement les tokens invalides ou expires
+  - efface le cookie avec `res.clearCookie(...)`
+- `getSessionUser(userId)` :
+  - recharge le user par son id depuis la base
+  - leve `NotFoundException` si le user du token n'existe plus
+
+Variables importantes :
+
+- `usersService` : acces aux operations CRUD Prisma sur `User`
+- `jwtService` : signature et verification des JWT
+- `payload.sub` : id du user porte par le token
+- `accessToken` : JWT final ecrit dans le cookie
+
+#### `backend/src/modules/auth/guards/auth.guard.ts`
+
+Role :
+
+- protege les routes qui exigent une session
+- verifie le cookie `access_token`
+- injecte le payload decode dans `request.user`
+
+Fonction importante :
+
+- `canActivate(context)` :
+  - lit `request.cookies?.access_token`
+  - si absent : `UnauthorizedException("Authentication required")`
+  - si present : verifie le JWT avec `jwtService.verifyAsync<AuthPayload>(token)`
+  - si OK : stocke le resultat dans `request.user`
+  - si KO : `UnauthorizedException("Invalid or expired session")`
+
+Variable importante :
+
+- `request.user` : payload auth partage ensuite avec les controllers via le decorator `@CurrentUser()`
+
+#### `backend/src/modules/auth/decorators/current-user.decorator.ts`
+
+Role :
+
+- expose un decorator NestJS simple pour recuperer le payload auth deja place dans la requete par `AuthGuard`
+
+Element important :
+
+- `CurrentUser` :
+  - lit `ctx.switchToHttp().getRequest<AuthenticatedRequest>()`
+  - retourne `request.user`
+  - evite de reparser les cookies ou le JWT dans chaque controller
+
+#### `backend/src/modules/auth/types/auth-payload.type.ts`
+
+Role :
+
+- decrit la forme du payload JWT une fois decode
+
+Champs importants :
+
+- `sub` : id du user, champ principal pour recharger la session
+- `email` : email au moment du login
+- `username` : username au moment du login
+
+#### `backend/src/modules/auth/types/authenticated-request.type.ts`
+
+Role :
+
+- etend le type `express.Request` avec la propriete `user`
+
+Champ important :
+
+- `user?: AuthPayload` : payload ajoute par `AuthGuard`
+
+#### `backend/src/modules/auth/types/safe-user.type.ts`
+
+Role :
+
+- type de sortie pour ne jamais exposer le `password` au front
+
+Definition importante :
+
+- `Omit<User, "password">` : tous les champs Prisma de `User` sauf le mot de passe hash
+
+### Fichiers relies au module auth
+
+#### `backend/src/modules/users/dto/register.dto.ts`
+
+Role :
+
+- definit le body attendu par `POST /auth/register`
+
+Regles importantes :
+
+- `email` doit etre un email valide
+- `username` doit etre une string d'au moins 2 caracteres
+- `password` doit etre une string d'au moins 12 caracteres
+
+#### `backend/src/modules/users/dto/login.dto.ts`
+
+Role :
+
+- definit le body attendu par `POST /auth/login`
+
+Regles importantes :
+
+- `email` doit etre un email valide
+- `password` doit etre une string d'au moins 12 caracteres
+
+#### `backend/src/modules/users/users.service.ts`
+
+Role :
+
+- encapsule les acces Prisma au modele `User`
+- sert de couche d'acces aux donnees pour `AuthService` et `UsersController`
+
+Fonctions importantes pour auth :
+
+- `findUserByEmail(email)` : point d'entree principal du login
+- `findUser(where)` : recharge le user par `id` ou `email`
+- `createUser(data)` : utilise par le register
+- `updateUser({ where, data })` : utilise pour passer `status` a `online` / `offline`
+
+### Flux d'execution concret
+
+Exemple `GET /auth/session` :
+
+1. la requete arrive sur `AuthController.session`
+2. `AuthGuard.canActivate()` lit le cookie `access_token`
+3. le guard verifie le JWT et stocke le resultat dans `request.user`
+4. `@CurrentUser()` recupere ce payload
+5. `AuthService.getSessionUser(auth.sub)` recharge le user depuis PostgreSQL
+6. le controller retourne `ok(safeUser)`
+
+Exemple `POST /auth/login` :
+
+1. `LoginDto` valide le body
+2. `AuthService.validateUser()` verifie email + password
+3. `AuthService.login()` met le user `online`, signe le JWT et pose le cookie
+4. la reponse renvoie `SafeUser` dans le format API standard
+
 ## Auth API pour le front
 
 ### Point important sur le proxy dev
