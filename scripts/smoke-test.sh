@@ -74,12 +74,17 @@ request_with_curl() {
 	url="$2"
 	data="${3:-}"
 	cookie_jar="${4:-}"
+	extra_header="${5:-}"
 	body_file="${TMP_DIR}/body"
 	headers_file="${TMP_DIR}/headers"
 	curl_args=(-sS -o "$body_file" -D "$headers_file" -w "%{http_code}" -X "$method" "$url")
 
 	if [ -n "$cookie_jar" ]; then
 		curl_args+=(-b "$cookie_jar" -c "$cookie_jar")
+	fi
+
+	if [ -n "$extra_header" ]; then
+		curl_args+=(-H "$extra_header")
 	fi
 
 	if [ "$method" = "POST" ]; then
@@ -109,10 +114,38 @@ assert_body_contains() {
 		|| fail "Body inattendu. Fragment manquant: $expected. Body: $LAST_BODY"
 }
 
+assert_body_not_contains() {
+	unexpected="$1"
+	if printf '%s' "$LAST_BODY" | grep -F -q "$unexpected"; then
+		fail "Body inattendu. Fragment present: $unexpected. Body: $LAST_BODY"
+	fi
+}
+
 assert_headers_contains() {
 	expected="$1"
 	printf '%s' "$LAST_HEADERS" | grep -F -q "$expected" \
 		|| fail "Headers inattendus. Fragment manquant: $expected. Headers: $LAST_HEADERS"
+}
+
+assert_equals() {
+	expected="$1"
+	actual="$2"
+	[ "$actual" = "$expected" ] || fail "Valeur inattendue: attendu '$expected', recu '$actual'"
+}
+
+assert_not_empty() {
+	value="$1"
+	label="$2"
+	[ -n "$value" ] || fail "Valeur vide inattendue pour $label"
+}
+
+get_user_field() {
+	email="$1"
+	field="$2"
+
+	docker exec -i quiz_db sh -lc \
+		"psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -A -c \"SELECT \\\"${field}\\\" FROM \\\"User\\\" WHERE email = '${email}';\"" \
+		| tr -d '\r'
 }
 
 cleanup_user() {
@@ -127,7 +160,8 @@ CLEANUP_NEEDED=0
 
 cleanup() {
 	if [ "$CLEANUP_NEEDED" -eq 1 ]; then
-		cleanup_user "$TEST_EMAIL"
+		[ -n "${TEST_EMAIL:-}" ] && cleanup_user "$TEST_EMAIL"
+		[ -n "${GHOST_EMAIL:-}" ] && cleanup_user "$GHOST_EMAIL"
 	fi
 
 	rm -rf "$TMP_DIR"
@@ -177,11 +211,21 @@ fi
 
 TEST_EMAIL="smoke-$(date +%s)@test.com"
 TEST_PASSWORD="longsecuredpassword123!"
+GHOST_EMAIL="smoke-ghost-$(date +%s)@test.com"
+GHOST_PASSWORD="longsecuredpassword123!"
+GHOST_COOKIE_JAR="${TMP_DIR}/ghost-cookies.txt"
 
 REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","username":"smoke"}' "$TEST_EMAIL" "$TEST_PASSWORD")
 LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$TEST_EMAIL" "$TEST_PASSWORD")
+INVALID_REGISTER_PAYLOAD='{"email":"not-an-email","password":"short","username":"x"}'
+DUPLICATE_REGISTER_PAYLOAD="$REGISTER_PAYLOAD"
+INVALID_LOGIN_PAYLOAD='{"email":"not-an-email","password":"short"}'
+WRONG_PASSWORD_PAYLOAD=$(printf '{"email":"%s","password":"wrongpassword123!"}' "$TEST_EMAIL")
+GHOST_REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","username":"ghost"}' "$GHOST_EMAIL" "$GHOST_PASSWORD")
+GHOST_LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$GHOST_EMAIL" "$GHOST_PASSWORD")
 
 cleanup_user "$TEST_EMAIL"
+cleanup_user "$GHOST_EMAIL"
 CLEANUP_NEEDED=1
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
@@ -191,41 +235,126 @@ assert_body_contains '"code":"UNAUTHORIZED"'
 assert_body_contains '"message":"Authentication required"'
 pass "Session refusee sans cookie"
 
+request_with_curl GET "${BACKEND_BASE_URL}/users/me" "" "$COOKIE_JAR"
+assert_status 401
+assert_body_contains '"success":false'
+assert_body_contains '"code":"UNAUTHORIZED"'
+assert_body_contains '"message":"Authentication required"'
+pass "/users/me refuse sans cookie"
+
+request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "" "Cookie: access_token=invalid-token"
+assert_status 401
+assert_body_contains '"success":false'
+assert_body_contains '"code":"UNAUTHORIZED"'
+assert_body_contains '"message":"Invalid or expired session"'
+pass "Session refusee avec cookie invalide"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$INVALID_REGISTER_PAYLOAD"
+assert_status 400
+assert_body_contains '"success":false'
+assert_body_contains '"code":"BAD_REQUEST"'
+pass "Register invalide refuse"
+
 request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$REGISTER_PAYLOAD"
 assert_status 201
 assert_body_contains '"success":true'
 assert_body_contains "\"email\":\"${TEST_EMAIL}\""
+assert_body_contains '"username":"smoke"'
+assert_body_contains '"status":"offline"'
+assert_body_not_contains '"password"'
 pass "Register OK"
+
+TEST_USER_ID="$(get_user_field "$TEST_EMAIL" id)"
+TEST_USER_STATUS="$(get_user_field "$TEST_EMAIL" status)"
+assert_not_empty "$TEST_USER_ID" "test user id"
+assert_equals "offline" "$TEST_USER_STATUS"
+pass "User cree en base avec status offline"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$DUPLICATE_REGISTER_PAYLOAD"
+assert_status 409
+assert_body_contains '"success":false'
+assert_body_contains '"code":"CONFLICT"'
+assert_body_contains '"message":"Email already exists"'
+pass "Register en doublon refuse"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$INVALID_LOGIN_PAYLOAD"
+assert_status 400
+assert_body_contains '"success":false'
+assert_body_contains '"code":"BAD_REQUEST"'
+pass "Login invalide refuse"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$WRONG_PASSWORD_PAYLOAD"
+assert_status 401
+assert_body_contains '"success":false'
+assert_body_contains '"code":"UNAUTHORIZED"'
+assert_body_contains '"message":"Invalid email or password"'
+pass "Login avec mauvais mot de passe refuse"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$LOGIN_PAYLOAD" "$COOKIE_JAR"
 assert_status_any 200 201
 assert_body_contains '"success":true'
 assert_body_contains "\"email\":\"${TEST_EMAIL}\""
+assert_body_contains '"username":"smoke"'
+assert_body_contains '"status":"online"'
+assert_body_not_contains '"password"'
 assert_headers_contains 'Set-Cookie: access_token='
 pass "Login OK"
+
+TEST_USER_STATUS="$(get_user_field "$TEST_EMAIL" status)"
+assert_equals "online" "$TEST_USER_STATUS"
+pass "Status online apres login"
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
 assert_status 200
 assert_body_contains '"success":true'
 assert_body_contains "\"email\":\"${TEST_EMAIL}\""
+assert_body_contains "\"id\":${TEST_USER_ID}"
+assert_body_contains '"status":"online"'
+assert_body_not_contains '"password"'
 pass "Session courante OK"
 
 request_with_curl GET "${BACKEND_BASE_URL}/users/me" "" "$COOKIE_JAR"
 assert_status 200
 assert_body_contains '"success":true'
 assert_body_contains "\"email\":\"${TEST_EMAIL}\""
+assert_body_contains "\"id\":${TEST_USER_ID}"
+assert_body_contains '"status":"online"'
+assert_body_not_contains '"password"'
 pass "/users/me OK"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/logout" '{}' "$COOKIE_JAR"
 assert_status_any 200 201
 assert_body_contains '"loggedOut":true'
-assert_headers_contains 'Set-Cookie: access_token='
+assert_headers_contains 'Set-Cookie: access_token=;'
 pass "Logout OK"
+
+TEST_USER_STATUS="$(get_user_field "$TEST_EMAIL" status)"
+assert_equals "offline" "$TEST_USER_STATUS"
+pass "Status offline apres logout"
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
 assert_status 401
 assert_body_contains '"success":false'
 assert_body_contains '"code":"UNAUTHORIZED"'
 pass "Session invalidee apres logout"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$GHOST_REGISTER_PAYLOAD"
+assert_status 201
+pass "Ghost register OK"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$GHOST_LOGIN_PAYLOAD" "$GHOST_COOKIE_JAR"
+assert_status_any 200 201
+pass "Ghost login OK"
+
+GHOST_USER_ID="$(get_user_field "$GHOST_EMAIL" id)"
+assert_not_empty "$GHOST_USER_ID" "ghost user id"
+cleanup_user "$GHOST_EMAIL"
+
+request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$GHOST_COOKIE_JAR"
+assert_status 404
+assert_body_contains '"success":false'
+assert_body_contains '"code":"NOT_FOUND"'
+assert_body_contains "\"message\":\"User ${GHOST_USER_ID} not found\""
+pass "Session renvoie 404 si le user du token n'existe plus"
 
 pass "Smoke test termine avec succes"
