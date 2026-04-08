@@ -26,7 +26,7 @@ export default function Navbar() {
                 className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text"
                 href="/register"
               >
-                S'identifier
+                S'inscrire
               </a>
             </>
           )}
