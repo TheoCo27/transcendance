@@ -5,6 +5,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import {
   AUTH_PASSWORD_MIN_LENGTH,
   AUTH_USERNAME_MIN_LENGTH,
+  login,
   register,
 } from "../services/auth";
 
@@ -22,9 +23,16 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
+      const trimmedEmail = email.trim();
+      const trimmedUsername = username.trim();
+
       await register({
-        email: email.trim(),
-        username: username.trim(),
+        email: trimmedEmail,
+        username: trimmedUsername,
+        password,
+      });
+      await login({
+        email: trimmedEmail,
         password,
       });
       navigate("/");
