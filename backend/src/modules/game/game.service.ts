@@ -20,19 +20,53 @@ export type SubmitAnswerResult = {
   totalAnswers: number;
 };
 
+export type PublicQuestion = {
+  id: number;
+  text: string;
+  options: string[];
+};
+
 type RoomRuntime = {
   answeredByQuestion: Map<number, Set<number>>;
   scoresByUser: Map<number, number>;
+};
+
+type QuestionEntry = PublicQuestion & {
+  correctAnswerIndex: number;
 };
 
 @Injectable()
 export class GameService {
   private readonly roomStates = new Map<number, GameState>();
   private readonly roomRuntime = new Map<number, RoomRuntime>();
-  private readonly answerKey = new Map<number, number>([
-    [101, 1],
-    [102, 2],
-    [103, 1],
+  private readonly questionBank = new Map<number, QuestionEntry>([
+    [
+      101,
+      {
+        id: 101,
+        text: "Quel est le language principal utilise pour ce backend ?",
+        options: ["Python", "TypeScript", "Go", "Rust"],
+        correctAnswerIndex: 1,
+      },
+    ],
+    [
+      102,
+      {
+        id: 102,
+        text: "Quel endpoint est utilise pour rejoindre une room ?",
+        options: ["/room/join", "/rooms/join", "/rooms/:roomId/join", "/join-room"],
+        correctAnswerIndex: 2,
+      },
+    ],
+    [
+      103,
+      {
+        id: 103,
+        text: "Quel event WebSocket diffuse le compte a rebours ?",
+        options: ["game:start", "game:timer", "question:tick", "room:timer"],
+        correctAnswerIndex: 1,
+      },
+    ],
   ]);
 
   constructor(private readonly roomsService: RoomsService) {}
@@ -74,7 +108,8 @@ export class GameService {
     state.updatedAt = new Date().toISOString();
     state.currentQuestionId = dto.questionId;
 
-    const isCorrect = this.answerKey.get(dto.questionId) === dto.answerIndex;
+    const question = this.getQuestionEntry(dto.questionId);
+    const isCorrect = question.correctAnswerIndex === dto.answerIndex;
     const scoreDelta = isCorrect ? 100 : 0;
     const previousScore = runtime.scoresByUser.get(dto.userId) || 0;
     const userTotalScore = previousScore + scoreDelta;
@@ -100,7 +135,17 @@ export class GameService {
   }
 
   getQuestionOrder(): number[] {
-    return [...this.answerKey.keys()].sort((a, b) => a - b);
+    return [...this.questionBank.keys()].sort((a, b) => a - b);
+  }
+
+  getPublicQuestion(questionId: number): PublicQuestion {
+    const question = this.getQuestionEntry(questionId);
+
+    return {
+      id: question.id,
+      text: question.text,
+      options: [...question.options],
+    };
   }
 
   getRoomLeaderboard(roomId: number): Array<{ userId: number; score: number }> {
@@ -130,5 +175,13 @@ export class GameService {
 
     this.roomRuntime.set(roomId, runtime);
     return runtime;
+  }
+
+  private getQuestionEntry(questionId: number): QuestionEntry {
+    const question = this.questionBank.get(questionId);
+    if (!question) {
+      throw new ConflictException(`Question ${questionId} not configured`);
+    }
+    return question;
   }
 }

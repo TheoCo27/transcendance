@@ -15,6 +15,7 @@ export type RoomPlayer = {
 export type Room = {
   id: number;
   name: string;
+  ownerUserId?: number;
   rounds: number;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
@@ -38,10 +39,15 @@ export class RoomsService {
     return this.stripPassword(room);
   }
 
-  create(dto: CreateRoomDto): Omit<Room, "password"> {
+  create(
+    dto: CreateRoomDto & {
+      ownerUserId?: number;
+    },
+  ): Omit<Room, "password"> {
     const room: Room = {
       id: this.nextRoomId,
       name: dto.name,
+      ownerUserId: dto.ownerUserId,
       rounds: dto.rounds,
       isPrivate: dto.isPrivate ?? false,
       status: "waiting",
