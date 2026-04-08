@@ -1,28 +1,17 @@
 import Card from "../Card";
 import PrimaryButton from "../PrimaryButton";
-import RulesPanel from "./RulesPanel";
 
 type GamePanelProps = {
-  isRulesOpen: boolean;
   onToggleRules: () => void;
   selectedAnswer: number | null;
   onSelectAnswer: (answerIndex: number) => void;
 };
 
 export default function GamePanel({
-  isRulesOpen,
   onToggleRules,
   selectedAnswer,
   onSelectAnswer,
 }: GamePanelProps) {
-  if (isRulesOpen) {
-    return (
-      <div className="min-h-[80vh] w-full">
-        <RulesPanel onClose={onToggleRules} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex w-full gap-6">
       <Card className="min-h-[80vh] min-w-75 w-[25%] px-6 py-6">
