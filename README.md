@@ -70,6 +70,7 @@ Le backend expose maintenant une base d'API pour brancher le front:
 
 Contrat detaille front-back:
 - `docs/api-front-contract.md`
+- `docs/ws-event-contract.md` (temps reel WebSocket)
 
 Etat actuel:
 - `auth` + `users` branches sur Prisma/PostgreSQL
@@ -89,6 +90,10 @@ Etat actuel:
 - `POST /game/answer`
 - `GET /scores/leaderboard?limit=10`
 - `GET /scores/users/:userId`
+
+Temps reel:
+- namespace Socket.IO: `/ws`
+- events room/game/chat documentes dans `docs/ws-event-contract.md`
 
 Reponse de succes standard:
 
