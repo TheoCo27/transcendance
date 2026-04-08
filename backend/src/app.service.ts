@@ -82,6 +82,7 @@ export class AppService {
         ],
         outboundEvents: [
           "ws:connected",
+          "ws:auth:error",
           "room:list",
           "room:list-updated",
           "room:created",
