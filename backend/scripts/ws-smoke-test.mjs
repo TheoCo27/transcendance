@@ -1,191 +1,195 @@
 #!/usr/bin/env node
-
-import { io } from "socket.io-client";
+import {
+  connectAuthenticatedSocket,
+  createAuthenticatedSession,
+  createSocket,
+  fail,
+  pass,
+  safeDisconnect,
+  waitForEvent,
+} from "./ws-smoke-helpers.mjs";
 
 const BACKEND_PORT = Number(process.env.BACKEND_PORT || 4000);
 const BACKEND_HOST = process.env.BACKEND_HOST || "localhost";
 const WS_BASE_URL =
   process.env.WS_BASE_URL || `http://${BACKEND_HOST}:${BACKEND_PORT}`;
 const WS_NAMESPACE_URL = `${WS_BASE_URL}/ws`;
-const TEST_USER_ID = Number(process.env.WS_SMOKE_USER_ID || 91001);
-const EVENT_TIMEOUT_MS = Number(process.env.WS_SMOKE_TIMEOUT_MS || 12000);
-
-function pass(message) {
-  console.log(`[OK] ${message}`);
-}
-
-function fail(message) {
-  throw new Error(message);
-}
-
-function waitForEvent(socket, eventName, predicate, timeoutMs = EVENT_TIMEOUT_MS) {
-  return new Promise((resolve, reject) => {
-    const onEvent = (payload) => {
-      if (!predicate(payload)) {
-        return;
-      }
-
-      clearTimeout(timer);
-      socket.off(eventName, onEvent);
-      resolve(payload);
-    };
-
-    const timer = setTimeout(() => {
-      socket.off(eventName, onEvent);
-      reject(
-        new Error(
-          `Timeout waiting for event "${eventName}" after ${timeoutMs}ms`,
-        ),
-      );
-    }, timeoutMs);
-
-    socket.on(eventName, onEvent);
-  });
-}
 
 async function run() {
   console.log("== WS smoke test Back 3 ==");
   console.log(`Namespace: ${WS_NAMESPACE_URL}`);
-
-  const socket = io(WS_NAMESPACE_URL, {
-    autoConnect: false,
-    reconnection: false,
-    timeout: EVENT_TIMEOUT_MS,
-    transports: ["websocket", "polling"],
-  });
-
-  socket.connect();
-
+  const sockets = [];
   try {
-    await waitForEvent(
-      socket,
-      "ws:connected",
-      (payload) => payload?.success === true,
-    );
-    pass("Connexion WS OK");
-
-    const roomName = `WS Smoke ${Date.now()}`;
-    const roomCreatedPromise = waitForEvent(
-      socket,
-      "room:created",
-      (payload) => payload?.success === true,
-    );
-
-    socket.emit("room:create", {
-      name: roomName,
-      rounds: 2,
-      isPrivate: false,
-      userId: TEST_USER_ID,
-    });
-
-    const roomCreated = await roomCreatedPromise;
-    const roomId = roomCreated?.data?.id;
-
-    if (typeof roomId !== "number") {
-      fail("room:created payload missing room id");
+    const anonymous = createSocket(WS_NAMESPACE_URL);
+    try {
+      const authErrorPromise = waitForEvent(
+        anonymous,
+        "ws:auth:error",
+        (payload) =>
+          payload?.success === false && payload?.error?.code === "UNAUTHORIZED",
+      );
+      anonymous.connect();
+      await authErrorPromise;
+      pass("Connexion anonyme refusee");
+    } finally {
+      safeDisconnect(anonymous);
     }
-    pass(`Room creee (id=${roomId})`);
-
-    const roomStartedPromise = waitForEvent(
-      socket,
-      "room:started",
-      (payload) => payload?.success === true && payload?.data?.id === roomId,
+    const ownerSession = await createAuthenticatedSession(WS_BASE_URL, "owner");
+    const guestSession = await createAuthenticatedSession(WS_BASE_URL, "guest");
+    const outsiderSession = await createAuthenticatedSession(WS_BASE_URL, "outsider");
+    const owner = await connectAuthenticatedSocket(WS_NAMESPACE_URL, ownerSession.cookieHeader);
+    pass(`Connexion WS OK (owner, userId=${owner.userId})`);
+    const guest = await connectAuthenticatedSocket(WS_NAMESPACE_URL, guestSession.cookieHeader);
+    pass(`Connexion WS OK (guest, userId=${guest.userId})`);
+    const outsider = await connectAuthenticatedSocket(
+      WS_NAMESPACE_URL,
+      outsiderSession.cookieHeader,
     );
-    const gameStartedPromise = waitForEvent(
-      socket,
-      "game:started",
-      (payload) => payload?.success === true && payload?.data?.roomId === roomId,
-    );
-    const questionStartedPromise = waitForEvent(
-      socket,
-      "game:question:started",
-      (payload) => payload?.success === true && payload?.data?.roomId === roomId,
-    );
-    const timerPromise = waitForEvent(
-      socket,
-      "game:timer",
-      (payload) => payload?.success === true && payload?.data?.roomId === roomId,
-    );
-
-    socket.emit("room:start", { roomId });
-
-    await roomStartedPromise;
-    await gameStartedPromise;
-    const questionStarted = await questionStartedPromise;
-    await timerPromise;
-    pass("Start + question + timer OK");
-
-    const questionId = questionStarted?.data?.questionId;
-    if (typeof questionId !== "number") {
-      fail("game:question:started payload missing questionId");
-    }
-
-    const answerResultPromise = waitForEvent(
-      socket,
-      "game:answer:result",
-      (payload) =>
-        payload?.success === true &&
-        payload?.data?.roomId === roomId &&
-        payload?.data?.userId === TEST_USER_ID,
-    );
-    const leaderboardPromise = waitForEvent(
-      socket,
-      "game:leaderboard",
-      (payload) => payload?.success === true && Array.isArray(payload?.data),
-    );
-
-    socket.emit("game:answer", {
-      roomId,
-      userId: TEST_USER_ID,
-      questionId,
-      answerIndex: 1,
-    });
-
-    const answerResult = await answerResultPromise;
-    await leaderboardPromise;
-    if (typeof answerResult?.data?.userTotalScore !== "number") {
-      fail("game:answer:result payload missing userTotalScore");
-    }
-    pass("Reponse + leaderboard OK");
-
-    const duplicateAnswerErrorPromise = waitForEvent(
-      socket,
-      "game:answer:error",
-      (payload) => payload?.success === false,
-    );
-
-    socket.emit("game:answer", {
-      roomId,
-      userId: TEST_USER_ID,
-      questionId,
-      answerIndex: 1,
-    });
-
-    const duplicateAnswerError = await duplicateAnswerErrorPromise;
-    if (duplicateAnswerError?.error?.code !== "CONFLICT") {
-      fail("Expected CONFLICT for duplicate answer");
-    }
-    pass("Anti double-reponse OK");
-
-    const roomClosedPromise = waitForEvent(
-      socket,
-      "room:closed",
-      (payload) => payload?.success === true && payload?.data?.roomId === roomId,
-    );
-
-    socket.emit("room:leave", { roomId, userId: TEST_USER_ID });
-
-    await roomClosedPromise;
-    pass("Fermeture room sur room vide OK");
-
+    pass(`Connexion WS OK (outsider, userId=${outsider.userId})`);
+    sockets.push(owner.socket, guest.socket, outsider.socket);
+    const roomId = await createRoomWithOwner(owner);
+    await assertOutsiderCannotChat(outsider, roomId);
+    await joinRoomAsGuest(guest, roomId);
+    await assertGuestCannotStartRoom(guest, roomId);
+    const questionId = await startRoomAsOwnerAndGetQuestion(owner, roomId);
+    await submitAndValidateAnswer(guest, roomId, questionId);
+    await assertDuplicateAnswerConflict(guest, roomId, questionId);
+    await assertDisconnectUpdatesRoomState(owner, guest, roomId);
+    await assertRoomClosedAfterLastDisconnect(guest, outsider, roomId);
     pass("WS smoke test termine avec succes");
   } finally {
-    socket.disconnect();
+    for (const socket of sockets) safeDisconnect(socket);
   }
+}
+
+async function createRoomWithOwner(owner) {
+  const roomCreatedPromise = waitForEvent(
+    owner.socket,
+    "room:created",
+    (payload) => payload?.success === true && typeof payload?.data?.id === "number",
+  );
+  owner.socket.emit("room:create", {
+    name: `WS Smoke ${Date.now()}`,
+    rounds: 2,
+    isPrivate: false,
+  });
+  const roomCreated = await roomCreatedPromise;
+  const roomId = roomCreated?.data?.id;
+  if (typeof roomId !== "number") fail("room:created payload missing room id");
+  if (roomCreated?.data?.ownerUserId !== owner.userId) fail("room owner mismatch");
+  pass(`Room creee par owner (id=${roomId})`);
+  return roomId;
+}
+
+async function assertOutsiderCannotChat(outsider, roomId) {
+  const chatErrorPromise = waitForEvent(
+    outsider.socket,
+    "chat:message:error",
+    (payload) => payload?.success === false && payload?.error?.code === "UNAUTHORIZED",
+  );
+  outsider.socket.emit("chat:message", {
+    roomId,
+    userId: outsider.userId,
+    content: "intrusion",
+  });
+  await chatErrorPromise;
+  pass("Membership chat protege (outsider refuse)");
+}
+
+async function joinRoomAsGuest(guest, roomId) {
+  const joinPromise = waitForEvent(
+    guest.socket,
+    "room:joined",
+    (payload) => payload?.success === true && payload?.data?.id === roomId,
+  );
+  guest.socket.emit("room:join", { roomId, userId: guest.userId });
+  await joinPromise;
+  pass("Guest rejoint la room");
+}
+
+async function assertGuestCannotStartRoom(guest, roomId) {
+  const startErrorPromise = waitForEvent(
+    guest.socket,
+    "room:start:error",
+    (payload) => payload?.success === false && payload?.error?.code === "UNAUTHORIZED",
+  );
+  guest.socket.emit("room:start", { roomId, userId: guest.userId });
+  await startErrorPromise;
+  pass("Droit owner sur room:start valide");
+}
+
+async function startRoomAsOwnerAndGetQuestion(owner, roomId) {
+  const roomStartedPromise = waitForEvent(
+    owner.socket,
+    "room:started",
+    (payload) => payload?.success === true && payload?.data?.id === roomId,
+  );
+  const questionPromise = waitForEvent(
+    owner.socket,
+    "game:question:started",
+    (payload) => payload?.success === true && payload?.data?.roomId === roomId,
+  );
+  owner.socket.emit("room:start", { roomId, userId: owner.userId });
+  await roomStartedPromise;
+  const question = await questionPromise;
+  if (typeof question?.data?.question?.text !== "string") fail("Missing question text");
+  if (!Array.isArray(question?.data?.question?.options)) fail("Missing question options");
+  pass("Start + question payload front-ready OK");
+  return question.data.questionId;
+}
+
+async function submitAndValidateAnswer(guest, roomId, questionId) {
+  const answerPromise = waitForEvent(
+    guest.socket,
+    "game:answer:result",
+    (payload) => payload?.success === true && payload?.data?.userId === guest.userId,
+  );
+  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 1 });
+  const answer = await answerPromise;
+  if (typeof answer?.data?.userTotalScore !== "number") fail("Missing userTotalScore");
+  pass("Reponse + scoring OK");
+}
+
+async function assertDuplicateAnswerConflict(guest, roomId, questionId) {
+  const duplicateErrorPromise = waitForEvent(
+    guest.socket,
+    "game:answer:error",
+    (payload) => payload?.success === false && payload?.error?.code === "CONFLICT",
+  );
+  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 1 });
+  await duplicateErrorPromise;
+  pass("Anti double-reponse OK");
+}
+
+async function assertDisconnectUpdatesRoomState(owner, guest, roomId) {
+  const roomStatePromise = waitForEvent(
+    guest.socket,
+    "room:state",
+    (payload) =>
+      payload?.success === true &&
+      payload?.data?.id === roomId &&
+      !payload?.data?.players?.some((p) => p.userId === owner.userId),
+  );
+  safeDisconnect(owner.socket);
+  await roomStatePromise;
+  pass("Disconnect owner -> room mise a jour");
+}
+
+async function assertRoomClosedAfterLastDisconnect(guest, outsider, roomId) {
+  const roomRemovedPromise = waitForEvent(
+    outsider.socket,
+    "room:list-updated",
+    (payload) =>
+      payload?.success === true &&
+      Array.isArray(payload?.data) &&
+      !payload.data.some((room) => room.id === roomId),
+  );
+  safeDisconnect(guest.socket);
+  await roomRemovedPromise;
+  pass("Disconnect dernier joueur -> room fermee");
 }
 
 run().catch((error) => {
   console.error(`[KO] ${error instanceof Error ? error.message : "Unknown error"}`);
   process.exit(1);
 });
-

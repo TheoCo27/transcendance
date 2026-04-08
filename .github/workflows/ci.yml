@@ -104,6 +104,9 @@ jobs:
       - name: Run smoke test
         run: bash scripts/smoke-test.sh
 
+      - name: Run WS smoke test
+        run: docker exec quiz_backend npm run test:ws-smoke
+
       - name: Show compose logs on failure
         if: failure()
         run: docker compose logs --no-color

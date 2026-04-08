@@ -4,6 +4,11 @@ Version: `v1` (etat actuel de `feature/realtime`)
 Namespace: `/ws`  
 Transport: `socket.io`
 
+## Authentification WS
+
+- Le socket doit etre authentifie via cookie `access_token` (JWT) envoye au handshake.
+- Si la session est invalide, le serveur emet `ws:auth:error` puis ferme le socket.
+
 ## Envelope commun
 
 Succes:
@@ -37,6 +42,7 @@ Erreur:
 {
   "id": 1,
   "name": "Lobby #1",
+  "ownerUserId": 1,
   "rounds": 5,
   "isPrivate": false,
   "status": "waiting",
@@ -110,9 +116,14 @@ Notes:
 
 ```json
 {
-  "roomId": 1
+  "roomId": 1,
+  "userId": 2
 }
 ```
+
+Notes:
+- `userId` peut etre omis si le socket est deja lie a un user via `room:create`, `room:join`, `game:answer` ou `chat:message`.
+- Seul le owner de la room peut demarrer la partie.
 
 ### `game:answer`
 
@@ -145,7 +156,21 @@ Notes:
 ```json
 {
   "socketId": "socket-id",
+  "userId": 2,
   "timestamp": "2026-04-08T10:00:00.000Z"
+}
+```
+
+- `ws:auth:error`:
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required"
+  }
 }
 ```
 
@@ -193,6 +218,11 @@ Notes:
 {
   "roomId": 1,
   "questionId": 101,
+  "question": {
+    "id": 101,
+    "text": "Quel event WebSocket diffuse le compte a rebours ?",
+    "options": ["game:start", "game:timer", "question:tick", "room:timer"]
+  },
   "questionNumber": 1,
   "totalQuestions": 5,
   "durationMs": 10000,
@@ -200,6 +230,9 @@ Notes:
   "endsAt": "2026-04-08T10:00:10.000Z"
 }
 ```
+
+Note:
+- Le backend n'expose pas la bonne reponse dans ce payload.
 
 - `game:timer`:
 
@@ -279,6 +312,7 @@ Notes:
 - `room:start:error`
 - `game:answer:error`
 - `chat:message:error`
+- `ws:auth:error`
 
 Codes d'erreur possibles:
 - `BAD_REQUEST`
@@ -293,11 +327,15 @@ Codes d'erreur possibles:
 - `room:start` autorise seulement en `waiting` avec au moins 1 joueur.
 - `game:answer` autorise seulement en `playing`.
 - Un user ne peut repondre qu'une seule fois par question.
+- Un socket est lie au `userId` du JWT pour toute sa duree de vie.
+- `room:leave`, `game:answer` et `chat:message` refusent un `userId` qui n'appartient pas a la room cible.
+- `room:start` est reserve au owner de la room.
 - Score cumule par user publie via `game:leaderboard`.
 - Timer serveur par question (defaut 10s via `GAME_QUESTION_DURATION_MS`).
 - Timeout auto d'une question puis question suivante.
 - Fin auto de partie a la fin du cycle de questions.
 - Fermeture auto de room quand elle devient vide.
+- Si un user se deconnecte (plus aucun socket actif pour ce user), il est retire automatiquement des rooms.
 
 ## Notes scope
 
