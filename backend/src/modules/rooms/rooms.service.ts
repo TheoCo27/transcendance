@@ -25,29 +25,9 @@ export type Room = {
 
 @Injectable()
 export class RoomsService {
-  private nextRoomId = 3;
+  private nextRoomId = 1;
 
-  private readonly rooms: Room[] = [
-    {
-      id: 1,
-      name: "Lobby #1",
-      rounds: 5,
-      isPrivate: false,
-      status: "waiting",
-      players: [{ userId: 1, joinedAt: new Date().toISOString() }],
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      name: "Private room",
-      rounds: 3,
-      isPrivate: true,
-      status: "waiting",
-      players: [{ userId: 2, joinedAt: new Date().toISOString() }],
-      createdAt: new Date().toISOString(),
-      password: "room1234",
-    },
-  ];
+  private readonly rooms: Room[] = [];
 
   list(): Array<Omit<Room, "password">> {
     return this.rooms.map((room) => this.stripPassword(room));
