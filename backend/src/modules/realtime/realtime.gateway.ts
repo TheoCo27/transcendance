@@ -176,8 +176,9 @@ export class RealtimeGateway
   ): void {
     try {
       const room = this.roomsService.leave(payload.roomId, payload.userId);
+      const channel = this.roomChannel(payload.roomId);
 
-      client.leave(this.roomChannel(payload.roomId));
+      client.leave(channel);
       client.emit(
         "room:left",
         this.ok({
@@ -185,12 +186,14 @@ export class RealtimeGateway
           userId: payload.userId,
         }),
       );
-      this.server
-        .to(this.roomChannel(payload.roomId))
-        .emit("room:state", this.ok(room));
+
       if (room.players.length === 0) {
-        this.closeRoom(payload.roomId, "room_empty");
+        const closed = this.closeRoom(payload.roomId, "room_empty");
+        client.emit("room:closed", this.ok(closed));
+        return;
       }
+
+      this.server.to(channel).emit("room:state", this.ok(room));
       this.broadcastRoomList();
     } catch (exception) {
       this.emitError(client, "room:leave:error", exception);
@@ -456,7 +459,7 @@ export class RealtimeGateway
     return questionOrder[index];
   }
 
-  private closeRoom(roomId: number, reason: string): void {
+  private closeRoom(roomId: number, reason: string): { roomId: number; reason: string } {
     const channel = this.roomChannel(roomId);
     const room = this.roomsService.getById(roomId);
     if (room.status === "playing") {
@@ -466,14 +469,17 @@ export class RealtimeGateway
     const closed = this.roomsService.close(roomId);
     this.gameService.clearRoomState(roomId);
     this.stopRoomTimer(roomId);
+    const closePayload = {
+      ...closed,
+      reason,
+    };
+
     this.server.to(channel).emit(
       "room:closed",
-      this.ok({
-        ...closed,
-        reason,
-      }),
+      this.ok(closePayload),
     );
     this.broadcastRoomList();
+    return closePayload;
   }
 
   private broadcastRoomList(): void {
