@@ -3,7 +3,13 @@ import { GameService } from "@/modules/game/game.service";
 import { CreateRoomDto } from "@/modules/rooms/dto/create-room.dto";
 import { JoinRoomDto } from "@/modules/rooms/dto/join-room.dto";
 import { Room, RoomsService } from "@/modules/rooms/rooms.service";
-import { HttpException, HttpStatus, Logger } from "@nestjs/common";
+import {
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  Logger,
+  OnModuleDestroy,
+} from "@nestjs/common";
 import {
   ConnectedSocket,
   MessageBody,
@@ -55,6 +61,16 @@ type ChatMessagePayload = {
   content: string;
 };
 
+type RoomTimerRuntime = {
+  roomId: number;
+  questionId: number;
+  questionNumber: number;
+  totalQuestions: number;
+  endsAtMs: number;
+  tickInterval: NodeJS.Timeout;
+  endTimeout: NodeJS.Timeout;
+};
+
 @WebSocketGateway({
   namespace: "/ws",
   cors: {
@@ -64,9 +80,14 @@ type ChatMessagePayload = {
   transports: ["websocket", "polling"],
 })
 export class RealtimeGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy
 {
   private readonly logger = new Logger(RealtimeGateway.name);
+  private readonly activeTimers = new Map<number, RoomTimerRuntime>();
+  private readonly questionDurationMs = Number(
+    process.env.GAME_QUESTION_DURATION_MS || 10000,
+  );
+  private readonly timerTickMs = 1000;
 
   @WebSocketServer()
   server!: Server;
@@ -88,6 +109,12 @@ export class RealtimeGateway
 
   handleDisconnect(client: Socket): void {
     this.logger.log(`Socket disconnected: ${client.id}`);
+  }
+
+  onModuleDestroy(): void {
+    for (const roomId of this.activeTimers.keys()) {
+      this.stopRoomTimer(roomId);
+    }
   }
 
   @SubscribeMessage("room:list")
@@ -161,6 +188,9 @@ export class RealtimeGateway
       this.server
         .to(this.roomChannel(payload.roomId))
         .emit("room:state", this.ok(room));
+      if (room.players.length === 0) {
+        this.closeRoom(payload.roomId, "room_empty");
+      }
       this.broadcastRoomList();
     } catch (exception) {
       this.emitError(client, "room:leave:error", exception);
@@ -174,14 +204,12 @@ export class RealtimeGateway
   ): void {
     try {
       const room = this.roomsService.start(payload.roomId);
-      const gameState = this.gameService.getRoomState(payload.roomId);
+      this.stopRoomTimer(payload.roomId);
 
       this.server
         .to(this.roomChannel(payload.roomId))
         .emit("room:started", this.ok(room));
-      this.server
-        .to(this.roomChannel(payload.roomId))
-        .emit("game:state", this.ok(gameState));
+      this.startGameLoop(payload.roomId, room.rounds);
       this.broadcastRoomList();
     } catch (exception) {
       this.emitError(client, "room:start:error", exception);
@@ -194,8 +222,23 @@ export class RealtimeGateway
     @ConnectedSocket() client: Socket,
   ): void {
     try {
+      const room = this.roomsService.getById(payload.roomId);
+      if (room.status !== "playing") {
+        throw new ConflictException("Game is not running for this room");
+      }
+
+      const runtime = this.activeTimers.get(payload.roomId);
+      if (!runtime) {
+        throw new ConflictException("No active question timer");
+      }
+
+      if (payload.questionId !== runtime.questionId) {
+        throw new ConflictException("Question is not active");
+      }
+
       const answer = this.gameService.submitAnswer(payload);
       const gameState = this.gameService.getRoomState(payload.roomId);
+      const leaderboard = this.gameService.getRoomLeaderboard(payload.roomId);
 
       this.server
         .to(this.roomChannel(payload.roomId))
@@ -203,6 +246,9 @@ export class RealtimeGateway
       this.server
         .to(this.roomChannel(payload.roomId))
         .emit("game:state", this.ok(gameState));
+      this.server
+        .to(this.roomChannel(payload.roomId))
+        .emit("game:leaderboard", this.ok(leaderboard));
     } catch (exception) {
       this.emitError(client, "game:answer:error", exception);
     }
@@ -241,6 +287,193 @@ export class RealtimeGateway
 
   private roomChannel(roomId: number): string {
     return `room:${roomId}`;
+  }
+
+  private startGameLoop(roomId: number, roomRounds: number): void {
+    const totalQuestions = Math.max(1, roomRounds);
+
+    this.server.to(this.roomChannel(roomId)).emit(
+      "game:started",
+      this.ok({
+        roomId,
+        totalQuestions,
+        questionDurationMs: this.questionDurationMs,
+      }),
+    );
+
+    this.startQuestionTimer(roomId, 1, totalQuestions);
+  }
+
+  private startQuestionTimer(
+    roomId: number,
+    questionNumber: number,
+    totalQuestions: number,
+  ): void {
+    this.stopRoomTimer(roomId);
+
+    const questionId = this.getQuestionIdForTurn(questionNumber);
+    const startsAtMs = Date.now();
+    const endsAtMs = startsAtMs + this.questionDurationMs;
+    const startsAt = new Date(startsAtMs).toISOString();
+    const endsAt = new Date(endsAtMs).toISOString();
+
+    const state = this.gameService.setCurrentQuestion(roomId, questionId);
+    const channel = this.roomChannel(roomId);
+
+    this.server.to(channel).emit(
+      "game:question:started",
+      this.ok({
+        roomId,
+        questionId,
+        questionNumber,
+        totalQuestions,
+        durationMs: this.questionDurationMs,
+        startsAt,
+        endsAt,
+      }),
+    );
+    this.server.to(channel).emit("game:state", this.ok(state));
+
+    this.emitTimerTick(roomId, questionId, questionNumber, totalQuestions, endsAtMs);
+
+    const tickInterval = setInterval(() => {
+      this.emitTimerTick(
+        roomId,
+        questionId,
+        questionNumber,
+        totalQuestions,
+        endsAtMs,
+      );
+    }, this.timerTickMs);
+
+    const endTimeout = setTimeout(() => {
+      this.onQuestionTimeout(roomId);
+    }, this.questionDurationMs);
+
+    this.activeTimers.set(roomId, {
+      roomId,
+      questionId,
+      questionNumber,
+      totalQuestions,
+      endsAtMs,
+      tickInterval,
+      endTimeout,
+    });
+  }
+
+  private emitTimerTick(
+    roomId: number,
+    questionId: number,
+    questionNumber: number,
+    totalQuestions: number,
+    endsAtMs: number,
+  ): void {
+    const remainingMs = Math.max(0, endsAtMs - Date.now());
+    this.server.to(this.roomChannel(roomId)).emit(
+      "game:timer",
+      this.ok({
+        roomId,
+        questionId,
+        questionNumber,
+        totalQuestions,
+        remainingMs,
+        endsAt: new Date(endsAtMs).toISOString(),
+      }),
+    );
+  }
+
+  private onQuestionTimeout(roomId: number): void {
+    const runtime = this.activeTimers.get(roomId);
+    if (!runtime) {
+      return;
+    }
+
+    this.stopRoomTimer(roomId);
+
+    this.server.to(this.roomChannel(roomId)).emit(
+      "game:question:timeout",
+      this.ok({
+        roomId: runtime.roomId,
+        questionId: runtime.questionId,
+        questionNumber: runtime.questionNumber,
+        totalQuestions: runtime.totalQuestions,
+      }),
+    );
+
+    if (runtime.questionNumber >= runtime.totalQuestions) {
+      this.endGame(roomId, "timer_completed");
+      return;
+    }
+
+    this.startQuestionTimer(
+      roomId,
+      runtime.questionNumber + 1,
+      runtime.totalQuestions,
+    );
+  }
+
+  private endGame(roomId: number, reason: string): void {
+    this.stopRoomTimer(roomId);
+    const leaderboard = this.gameService.getRoomLeaderboard(roomId);
+    const winnerUserId = leaderboard.length > 0 ? leaderboard[0].userId : null;
+    const room = this.roomsService.finish(roomId);
+
+    this.server.to(this.roomChannel(roomId)).emit("room:state", this.ok(room));
+    this.server
+      .to(this.roomChannel(roomId))
+      .emit("game:leaderboard", this.ok(leaderboard));
+    this.server.to(this.roomChannel(roomId)).emit(
+      "game:ended",
+      this.ok({
+        roomId,
+        reason,
+        winnerUserId,
+        leaderboard,
+      }),
+    );
+    this.broadcastRoomList();
+    this.gameService.clearRoomState(roomId);
+  }
+
+  private stopRoomTimer(roomId: number): void {
+    const runtime = this.activeTimers.get(roomId);
+    if (!runtime) {
+      return;
+    }
+
+    clearInterval(runtime.tickInterval);
+    clearTimeout(runtime.endTimeout);
+    this.activeTimers.delete(roomId);
+  }
+
+  private getQuestionIdForTurn(turnNumber: number): number {
+    const questionOrder = this.gameService.getQuestionOrder();
+    if (questionOrder.length === 0) {
+      throw new ConflictException("No questions configured");
+    }
+
+    const index = (turnNumber - 1) % questionOrder.length;
+    return questionOrder[index];
+  }
+
+  private closeRoom(roomId: number, reason: string): void {
+    const channel = this.roomChannel(roomId);
+    const room = this.roomsService.getById(roomId);
+    if (room.status === "playing") {
+      this.endGame(roomId, reason);
+    }
+
+    const closed = this.roomsService.close(roomId);
+    this.gameService.clearRoomState(roomId);
+    this.stopRoomTimer(roomId);
+    this.server.to(channel).emit(
+      "room:closed",
+      this.ok({
+        ...closed,
+        reason,
+      }),
+    );
+    this.broadcastRoomList();
   }
 
   private broadcastRoomList(): void {
@@ -321,4 +554,3 @@ export class RealtimeGateway
     return "Internal server error";
   }
 }
-

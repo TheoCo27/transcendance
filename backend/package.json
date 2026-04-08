@@ -7,6 +7,7 @@
     "deps:sync": "sh -c 'if [ -f package-lock.json ]; then npm ci; else npm install --include=dev --no-package-lock; fi'",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "test:ws-smoke": "node scripts/ws-smoke-test.mjs",
     "start": "node dist/main.js",
     "start:dev": "npm run prisma:generate && ts-node-dev --respawn --transpile-only src/main.ts",
     "start:docker": "npm run deps:sync && npm run prisma:generate && npm run prisma:migrate:deploy && ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/main.ts"
@@ -36,6 +37,7 @@
     "@types/node": "^22.14.1",
     "dotenv": "^16.4.7",
     "prisma": "^7.5.0",
+    "socket.io-client": "^4.8.3",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.3"
   }
