@@ -50,6 +50,7 @@ Le repo peut etre verifie via GitHub Actions avec :
 - le build du `frontend`
 - un demarrage complet de la stack Docker
 - le smoke test `scripts/smoke-test.sh`
+- un smoke test WebSocket Back 3 via `cd backend && npm run test:ws-smoke`
 
 Le workflow peut fonctionner de deux facons :
 
