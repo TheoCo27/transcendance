@@ -28,7 +28,7 @@ export default function PasswordModal({
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/70 px-[10%] py-6">
-      <Card className="w-[30%] px-8 py-6">
+      <Card className="px-8 py-6">
         <p className="mb-3 text-2xl font-semibold text-text">
           Rejoindre une room privée
         </p>

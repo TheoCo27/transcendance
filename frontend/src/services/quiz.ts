@@ -1,5 +1,9 @@
 import { apiRequest } from "./api";
 
+export const QUIZ_ROOM_NAME_MIN_LENGTH = 2;
+export const QUIZ_ROOM_PASSWORD_MIN_LENGTH = 4;
+export const QUIZ_ROOM_ROUNDS_DEFAULT = 5;
+
 export type RoomPlayer = {
   userId: number;
   joinedAt: string;
