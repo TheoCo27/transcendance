@@ -7,5 +7,6 @@ import { GameService } from "./game.service";
   imports: [RoomsModule],
   controllers: [GameController],
   providers: [GameService],
+  exports: [GameService],
 })
 export class GameModule {}
