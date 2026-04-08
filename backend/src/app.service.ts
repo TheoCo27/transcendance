@@ -69,6 +69,31 @@ export class AppService {
         "/scores/leaderboard",
         "/scores/users/:userId",
       ],
+      realtime: {
+        namespace: "/ws",
+        inboundEvents: [
+          "room:list",
+          "room:create",
+          "room:join",
+          "room:leave",
+          "room:start",
+          "game:answer",
+          "chat:message",
+        ],
+        outboundEvents: [
+          "ws:connected",
+          "room:list",
+          "room:list-updated",
+          "room:created",
+          "room:joined",
+          "room:left",
+          "room:state",
+          "room:started",
+          "game:state",
+          "game:answer:result",
+          "chat:message",
+        ],
+      },
     };
   }
 }

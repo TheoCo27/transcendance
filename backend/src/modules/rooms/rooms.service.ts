@@ -93,6 +93,28 @@ export class RoomsService {
     return this.stripPassword(room);
   }
 
+  leave(roomId: number, userId: number): Omit<Room, "password"> {
+    const room = this.rooms.find((item) => item.id === roomId);
+    if (!room) {
+      throw new NotFoundException(`Room ${roomId} not found`);
+    }
+
+    room.players = room.players.filter((player) => player.userId !== userId);
+
+    return this.stripPassword(room);
+  }
+
+  start(roomId: number): Omit<Room, "password"> {
+    const room = this.rooms.find((item) => item.id === roomId);
+    if (!room) {
+      throw new NotFoundException(`Room ${roomId} not found`);
+    }
+
+    room.status = "playing";
+
+    return this.stripPassword(room);
+  }
+
   private stripPassword(room: Room): Omit<Room, "password"> {
     const { password, ...publicRoom } = room;
     return publicRoom;
