@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { CreateRoomDto } from "./dto/create-room.dto";
 import { JoinRoomDto } from "./dto/join-room.dto";
 
@@ -49,10 +54,7 @@ export class RoomsService {
   }
 
   getById(roomId: number): Omit<Room, "password"> {
-    const room = this.rooms.find((item) => item.id === roomId);
-    if (!room) {
-      throw new NotFoundException(`Room ${roomId} not found`);
-    }
+    const room = this.findRoomOrThrow(roomId);
     return this.stripPassword(room);
   }
 
@@ -74,9 +76,10 @@ export class RoomsService {
   }
 
   join(roomId: number, dto: JoinRoomDto): Omit<Room, "password"> {
-    const room = this.rooms.find((item) => item.id === roomId);
-    if (!room) {
-      throw new NotFoundException(`Room ${roomId} not found`);
+    const room = this.findRoomOrThrow(roomId);
+
+    if (room.status !== "waiting") {
+      throw new ConflictException("Room is not joinable");
     }
 
     if (room.isPrivate && room.password !== dto.password) {
@@ -94,10 +97,7 @@ export class RoomsService {
   }
 
   leave(roomId: number, userId: number): Omit<Room, "password"> {
-    const room = this.rooms.find((item) => item.id === roomId);
-    if (!room) {
-      throw new NotFoundException(`Room ${roomId} not found`);
-    }
+    const room = this.findRoomOrThrow(roomId);
 
     room.players = room.players.filter((player) => player.userId !== userId);
 
@@ -105,9 +105,14 @@ export class RoomsService {
   }
 
   start(roomId: number): Omit<Room, "password"> {
-    const room = this.rooms.find((item) => item.id === roomId);
-    if (!room) {
-      throw new NotFoundException(`Room ${roomId} not found`);
+    const room = this.findRoomOrThrow(roomId);
+
+    if (room.status !== "waiting") {
+      throw new ConflictException("Room is not in waiting state");
+    }
+
+    if (room.players.length < 1) {
+      throw new ConflictException("Cannot start a room without players");
     }
 
     room.status = "playing";
@@ -115,8 +120,45 @@ export class RoomsService {
     return this.stripPassword(room);
   }
 
+  finish(roomId: number): Omit<Room, "password"> {
+    const room = this.findRoomOrThrow(roomId);
+
+    if (room.status !== "playing") {
+      throw new ConflictException("Room is not in playing state");
+    }
+
+    room.status = "finished";
+
+    return this.stripPassword(room);
+  }
+
+  close(roomId: number): { roomId: number } {
+    const index = this.rooms.findIndex((room) => room.id === roomId);
+    if (index === -1) {
+      throw new NotFoundException(`Room ${roomId} not found`);
+    }
+
+    const room = this.rooms[index];
+    if (room.status === "playing") {
+      throw new ConflictException("Cannot close a room while game is playing");
+    }
+
+    this.rooms.splice(index, 1);
+
+    return { roomId };
+  }
+
   private stripPassword(room: Room): Omit<Room, "password"> {
     const { password, ...publicRoom } = room;
     return publicRoom;
+  }
+
+  private findRoomOrThrow(roomId: number): Room {
+    const room = this.rooms.find((item) => item.id === roomId);
+    if (!room) {
+      throw new NotFoundException(`Room ${roomId} not found`);
+    }
+
+    return room;
   }
 }
