@@ -6,10 +6,11 @@ import {
   Controller,
   Get,
   Post,
+  Req,
   Res,
   UseGuards,
 } from "@nestjs/common";
-import { Response } from "express";
+import { Request, Response } from "express";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { AuthGuard } from "./guards/auth.guard";
 import { AuthService } from "./auth.service";
@@ -30,15 +31,19 @@ export class AuthController {
   }
 
   @Post("register")
-  async register(@Body() dto: RegisterDto): Promise<ApiResponse<SafeUser>> {
-    return ok(await this.authService.register(dto));
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ApiResponse<SafeUser>> {
+    return ok(await this.authService.register(dto, res));
   }
 
   @Post("logout")
   async logout(
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApiResponse<{ loggedOut: true }>> {
-    await this.authService.logout(res);
+    await this.authService.logout(req, res);
     return ok({ loggedOut: true });
   }
 
