@@ -159,7 +159,7 @@ type UserScore = {
   - `email`: email valide
   - `username`: string min 2
   - `password`: string min 12
-- Reponse: `201` avec `ApiResponse<SafeUser>`
+- Reponse: `201` avec `ApiResponse<SafeUser>` + cookie `access_token`
 - Erreurs:
   - `409 CONFLICT` si email deja existant
   - `400 BAD_REQUEST` si body invalide
