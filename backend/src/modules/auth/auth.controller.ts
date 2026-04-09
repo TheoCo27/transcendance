@@ -31,8 +31,11 @@ export class AuthController {
   }
 
   @Post("register")
-  async register(@Body() dto: RegisterDto): Promise<ApiResponse<SafeUser>> {
-    return ok(await this.authService.register(dto));
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ApiResponse<SafeUser>> {
+    return ok(await this.authService.register(dto, res));
   }
 
   @Post("logout")

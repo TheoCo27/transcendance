@@ -296,7 +296,7 @@ Le module auth gere une session JWT stockee dans le cookie `access_token`.
 
 Flux principal :
 
-1. `POST /auth/register` cree un user en base avec mot de passe hash
+1. `POST /auth/register` cree un user en base avec mot de passe hash, pose le cookie et passe le user en `online`
 2. `POST /auth/login` verifie les credentials, signe un JWT, pose le cookie et passe le user en `online`
 3. `GET /auth/session` lit le cookie, verifie le token et recharge le user courant
 4. `GET /users/me` reutilise le meme guard pour exposer le profil connecte
@@ -344,8 +344,9 @@ Fonctions importantes :
   - appelle `authService.validateUser(dto)` pour verifier email + password
   - appelle `authService.login(user, res)` pour poser le cookie
   - retourne `ApiResponse<SafeUser>`
-- `register(dto)` :
-  - appelle `authService.register(dto)`
+- `register(dto, res)` :
+  - appelle `authService.register(dto, res)`
+  - pose le cookie de session comme `login`
   - retourne le user sans mot de passe
 - `logout(req, res)` :
   - passe la `Request` et la `Response` au service
@@ -569,6 +570,49 @@ Pour que la session JWT en cookie fonctionne depuis le navigateur :
 - `GET /auth/session`
 - `GET /users/me`
 - `GET /users/:id`
+
+### Mini checklist manuelle auth
+
+Avec `curl` :
+
+```bash
+EMAIL="manual-$(date +%s)@test.com"
+PASS="longsecuredpassword123!"
+COOKIE_JAR=/tmp/register-cookie.txt
+
+curl -i -c "$COOKIE_JAR" \
+  -H 'Content-Type: application/json' \
+  -d "{\"email\":\"$EMAIL\",\"username\":\"manual\",\"password\":\"$PASS\"}" \
+  http://localhost:4000/auth/register
+
+cat "$COOKIE_JAR"
+
+curl -i -b "$COOKIE_JAR" http://localhost:4000/auth/session
+curl -i -b "$COOKIE_JAR" http://localhost:4000/users/me
+curl -i -b "$COOKIE_JAR" -c "$COOKIE_JAR" -H 'Content-Type: application/json' -d '{}' http://localhost:4000/auth/logout
+curl -i -b "$COOKIE_JAR" http://localhost:4000/auth/session
+```
+
+Ce qu'il faut verifier :
+
+- `POST /auth/register` repond `201`
+- la reponse de `register` contient `Set-Cookie: access_token=...`
+- le cookie est present dans le fichier `COOKIE_JAR`
+- `GET /auth/session` repond `200` juste apres `register`
+- `GET /users/me` repond `200` avec le meme user
+- `POST /auth/logout` efface le cookie
+- `GET /auth/session` repasse en `401` apres logout
+
+Avec Postman ou Insomnia :
+
+1. creer une requete `POST http://localhost:4000/auth/register`
+2. envoyer un body JSON avec `email`, `username`, `password`
+3. verifier dans les headers de reponse qu'il y a `Set-Cookie`
+4. verifier que le cookie jar de l'outil contient `access_token`
+5. appeler `GET http://localhost:4000/auth/session`
+6. appeler `GET http://localhost:4000/users/me`
+7. appeler `POST http://localhost:4000/auth/logout`
+8. rejouer `GET http://localhost:4000/auth/session` et verifier le `401`
 
 ### Reponse de succes standard
 
