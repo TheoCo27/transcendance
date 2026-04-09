@@ -8,7 +8,7 @@ import {
 } from "../services/quiz";
 
 type UseQuizLobbyOptions = {
-  userId: number;
+  userId: number | null;
 };
 
 export function useQuizLobby({ userId }: UseQuizLobbyOptions) {
@@ -47,6 +47,10 @@ export function useQuizLobby({ userId }: UseQuizLobbyOptions) {
 
   const joinTargetRoom = useCallback(
     async (room: Room, password?: string) => {
+      if (userId === null) {
+        throw new Error("Utilisateur non connecté");
+      }
+
       setJoinError(null);
       setIsJoining(true);
 
