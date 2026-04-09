@@ -1,33 +1,78 @@
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { getSession, logout, type SafeUser } from "../services/auth";
 import PrimaryButton from "./PrimaryButton";
 
 export default function Navbar() {
-  const isAuthenticated = false;
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSession = async () => {
+      try {
+        const user = await getSession();
+        if (isMounted) {
+          setCurrentUser(user);
+        }
+      } catch {
+        if (isMounted) {
+          setCurrentUser(null);
+        }
+      }
+    };
+
+    void loadSession();
+    const onAuthChanged = () => {
+      void loadSession();
+    };
+    window.addEventListener("auth-changed", onAuthChanged);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("auth-changed", onAuthChanged);
+    };
+  }, []);
 
   return (
     <nav className="bg-surface text-text">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-        <a
+        <Link
           className="text-sm font-medium uppercase tracking-[0.18em]"
-          href="/"
+          to="/"
         >
           Transcendance
-        </a>
+        </Link>
         <div className="flex items-center gap-5">
-          {isAuthenticated ? (
-            <PrimaryButton className="px-4 py-2 text-sm">
+          {currentUser !== null ? (
+            <PrimaryButton
+              className="px-4 py-2 text-sm"
+              onClick={() => {
+                void (async () => {
+                  try {
+                    await logout();
+                  } finally {
+                    setCurrentUser(null);
+                  }
+                })();
+              }}
+            >
               Se déconnecter
             </PrimaryButton>
           ) : (
             <>
-              <a className="text-sm font-medium text-text" href="/login">
+              <Link className="text-sm font-medium text-text" to="/login">
                 Se connecter
-              </a>
-              <a
-                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text"
-                href="/register"
+              </Link>
+              <PrimaryButton
+                className="px-4 py-2 text-sm"
+                onClick={() => {
+                  navigate("/register");
+                }}
               >
                 S'inscrire
-              </a>
+              </PrimaryButton>
             </>
           )}
         </div>
