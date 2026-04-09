@@ -70,7 +70,7 @@ export class AuthService {
     return this.sanitizeUser(updatedUser);
   }
 
-  async register(dto: RegisterDto): Promise<SafeUser> {
+  async register(dto: RegisterDto, res: Response): Promise<SafeUser> {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     try {
@@ -80,7 +80,7 @@ export class AuthService {
         createdAt: new Date(),
       });
 
-      return this.sanitizeUser(user);
+      return this.login(user, res);
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

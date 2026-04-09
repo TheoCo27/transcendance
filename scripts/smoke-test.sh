@@ -127,6 +127,16 @@ assert_headers_contains() {
 		|| fail "Headers inattendus. Fragment manquant: $expected. Headers: $LAST_HEADERS"
 }
 
+assert_cookie_jar_has_cookie() {
+	cookie_jar="$1"
+	cookie_name="$2"
+
+	[ -f "$cookie_jar" ] || fail "Cookie jar absent: $cookie_jar"
+
+	cookie_value="$(awk -v name="$cookie_name" 'BEGIN { FS="\t" } $6 == name { print $7; exit }' "$cookie_jar")"
+	[ -n "$cookie_value" ] || fail "Cookie $cookie_name absent du cookie jar $cookie_jar"
+}
+
 assert_equals() {
 	expected="$1"
 	actual="$2"
@@ -255,20 +265,56 @@ assert_body_contains '"success":false'
 assert_body_contains '"code":"BAD_REQUEST"'
 pass "Register invalide refuse"
 
-request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$REGISTER_PAYLOAD"
+request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$REGISTER_PAYLOAD" "$COOKIE_JAR"
 assert_status 201
 assert_body_contains '"success":true'
 assert_body_contains "\"email\":\"${TEST_EMAIL}\""
 assert_body_contains '"username":"smoke"'
-assert_body_contains '"status":"offline"'
+assert_body_contains '"status":"online"'
 assert_body_not_contains '"password"'
-pass "Register OK"
+assert_headers_contains 'Set-Cookie: access_token='
+assert_cookie_jar_has_cookie "$COOKIE_JAR" "access_token"
+pass "Register OK avec cookie de session"
 
 TEST_USER_ID="$(get_user_field "$TEST_EMAIL" id)"
 TEST_USER_STATUS="$(get_user_field "$TEST_EMAIL" status)"
 assert_not_empty "$TEST_USER_ID" "test user id"
+assert_equals "online" "$TEST_USER_STATUS"
+pass "User cree en base avec status online"
+
+request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains "\"email\":\"${TEST_EMAIL}\""
+assert_body_contains "\"id\":${TEST_USER_ID}"
+assert_body_contains '"status":"online"'
+assert_body_not_contains '"password"'
+pass "Session courante OK juste apres register"
+
+request_with_curl GET "${BACKEND_BASE_URL}/users/me" "" "$COOKIE_JAR"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains "\"email\":\"${TEST_EMAIL}\""
+assert_body_contains "\"id\":${TEST_USER_ID}"
+assert_body_contains '"status":"online"'
+assert_body_not_contains '"password"'
+pass "/users/me OK juste apres register"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/logout" '{}' "$COOKIE_JAR"
+assert_status_any 200 201
+assert_body_contains '"loggedOut":true'
+assert_headers_contains 'Set-Cookie: access_token=;'
+pass "Logout OK apres register"
+
+TEST_USER_STATUS="$(get_user_field "$TEST_EMAIL" status)"
 assert_equals "offline" "$TEST_USER_STATUS"
-pass "User cree en base avec status offline"
+pass "Status offline apres logout"
+
+request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
+assert_status 401
+assert_body_contains '"success":false'
+assert_body_contains '"code":"UNAUTHORIZED"'
+pass "Session invalidee apres logout"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$DUPLICATE_REGISTER_PAYLOAD"
 assert_status 409
@@ -298,6 +344,7 @@ assert_body_contains '"username":"smoke"'
 assert_body_contains '"status":"online"'
 assert_body_not_contains '"password"'
 assert_headers_contains 'Set-Cookie: access_token='
+assert_cookie_jar_has_cookie "$COOKIE_JAR" "access_token"
 pass "Login OK"
 
 TEST_USER_STATUS="$(get_user_field "$TEST_EMAIL" status)"
@@ -326,17 +373,17 @@ request_with_curl POST "${BACKEND_BASE_URL}/auth/logout" '{}' "$COOKIE_JAR"
 assert_status_any 200 201
 assert_body_contains '"loggedOut":true'
 assert_headers_contains 'Set-Cookie: access_token=;'
-pass "Logout OK"
+pass "Logout OK apres login"
 
 TEST_USER_STATUS="$(get_user_field "$TEST_EMAIL" status)"
 assert_equals "offline" "$TEST_USER_STATUS"
-pass "Status offline apres logout"
+pass "Status offline apres logout final"
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
 assert_status 401
 assert_body_contains '"success":false'
 assert_body_contains '"code":"UNAUTHORIZED"'
-pass "Session invalidee apres logout"
+pass "Session invalidee apres logout final"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$GHOST_REGISTER_PAYLOAD"
 assert_status 201
