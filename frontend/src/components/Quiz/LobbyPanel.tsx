@@ -1,7 +1,13 @@
 import { useState } from "react";
-import Card from "../Card";
+import Panel from "../Panel";
 import PrimaryButton from "../PrimaryButton";
-import { type CreateRoomPayload, type Room } from "../../services/quiz";
+import {
+  QUIZ_ROOM_NAME_MIN_LENGTH,
+  QUIZ_ROOM_PASSWORD_MIN_LENGTH,
+  QUIZ_ROOM_ROUNDS_DEFAULT,
+  type CreateRoomPayload,
+  type Room,
+} from "../../services/quiz";
 
 type LobbyPanelProps = {
   onToggleRules: () => void;
@@ -22,7 +28,7 @@ export default function LobbyPanel({
 }: LobbyPanelProps) {
   const [isPrivateRoom, setIsPrivateRoom] = useState(false);
   const [roomName, setRoomName] = useState("");
-  const [rounds, setRounds] = useState(5);
+  const [rounds, setRounds] = useState(QUIZ_ROOM_ROUNDS_DEFAULT);
   const [password, setPassword] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -34,13 +40,17 @@ export default function LobbyPanel({
   const handleCreateRoom = async () => {
     setCreateError(null);
 
-    if (roomName.trim().length < 2) {
-      setCreateError("Le nom doit contenir au moins 2 caractères.");
+    if (roomName.trim().length < QUIZ_ROOM_NAME_MIN_LENGTH) {
+      setCreateError(
+        `Le nom doit contenir au moins ${QUIZ_ROOM_NAME_MIN_LENGTH} caractères.`,
+      );
       return;
     }
 
-    if (isPrivateRoom && password.length < 4) {
-      setCreateError("Le mot de passe doit contenir au moins 4 caractères.");
+    if (isPrivateRoom && password.length < QUIZ_ROOM_PASSWORD_MIN_LENGTH) {
+      setCreateError(
+        `Le mot de passe doit contenir au moins ${QUIZ_ROOM_PASSWORD_MIN_LENGTH} caractères.`,
+      );
       return;
     }
 
@@ -56,7 +66,7 @@ export default function LobbyPanel({
     try {
       await onCreateRoom(payload);
       setRoomName("");
-      setRounds(5);
+      setRounds(QUIZ_ROOM_ROUNDS_DEFAULT);
       setPassword("");
       setIsPrivateRoom(false);
     } catch (error) {
@@ -70,7 +80,7 @@ export default function LobbyPanel({
 
   return (
     <div className="flex w-full gap-6">
-      <Card className="min-h-[80vh] flex-1 px-6 py-6">
+      <Panel className="min-h-[80vh] flex-1 px-6 py-6">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-text">Parties en cours</h1>
           <button
@@ -142,8 +152,8 @@ export default function LobbyPanel({
             </div>
           ))}
         </div>
-      </Card>
-      <Card className="min-h-[80vh] w-[30%] min-w-50 px-6 py-6">
+      </Panel>
+      <Panel className="min-h-[80vh] w-[30%] min-w-50 px-6 py-6">
         <h2 className="mb-5 text-2xl font-semibold text-text">
           Créer une partie
         </h2>
@@ -230,7 +240,7 @@ export default function LobbyPanel({
             {isCreating ? "Création..." : "Créer et jouer"}
           </PrimaryButton>
         </div>
-      </Card>
+      </Panel>
     </div>
   );
 }

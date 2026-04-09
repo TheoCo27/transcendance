@@ -1,4 +1,4 @@
-import Card from "../Card";
+import Panel from "../Panel";
 import PrimaryButton from "../PrimaryButton";
 
 type GamePanelProps = {
@@ -14,7 +14,7 @@ export default function GamePanel({
 }: GamePanelProps) {
   return (
     <div className="flex w-full gap-6">
-      <Card className="min-h-[80vh] min-w-75 w-[25%] px-6 py-6">
+      <Panel className="min-h-[80vh] min-w-75 w-[25%] px-6 py-6">
         <p className="mb-4 text-2xl font-semibold text-text">Chat</p>
         <div className="flex flex-1 flex-col gap-3 overflow-hidden">
           <div className="max-w-[75%] rounded-2xl bg-background px-4 py-3">
@@ -41,8 +41,8 @@ export default function GamePanel({
             Envoyer
           </PrimaryButton>
         </div>
-      </Card>
-      <Card className="min-h-[80vh] min-w-125 flex-1 px-8 py-6">
+      </Panel>
+      <Panel className="min-h-[80vh] min-w-125 flex-1 px-8 py-6">
         <div className="mb-6 flex items-center justify-end">
           <button
             className="rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
@@ -107,8 +107,8 @@ export default function GamePanel({
             </button>
           </div>
         </div>
-      </Card>
-      <Card className="min-h-[80vh] min-w-50 w-[25%] px-6 py-6">
+      </Panel>
+      <Panel className="min-h-[80vh] min-w-50 w-[25%] px-6 py-6">
         <p className="mb-5 text-xl font-semibold text-text">Points</p>
         <div className="space-y-3">
           <div className="flex items-center justify-between rounded-xl bg-background px-4 py-3">
@@ -116,7 +116,7 @@ export default function GamePanel({
             <span>100</span>
           </div>
         </div>
-      </Card>
+      </Panel>
     </div>
   );
 }
