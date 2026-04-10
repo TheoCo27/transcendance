@@ -5,7 +5,6 @@ import PrimaryButton from "../components/PrimaryButton";
 import {
   AUTH_PASSWORD_MIN_LENGTH,
   AUTH_USERNAME_MIN_LENGTH,
-  login,
   register,
 } from "../services/auth";
 
@@ -31,10 +30,6 @@ export default function RegisterPage() {
         username: trimmedUsername,
         password,
       });
-      await login({
-        email: trimmedEmail,
-        password,
-      });
       navigate("/");
     } catch (submitError) {
       setError(
@@ -51,9 +46,9 @@ export default function RegisterPage() {
     <main className="flex flex-1 items-center justify-center px-[10%] py-6">
       <Card className="w-full px-8 py-8">
         <h1 className="mb-6 text-3xl font-semibold text-text">S'inscrire</h1>
-        <form onSubmit={(event) => void handleSubmit(event)}>
+        <form aria-busy={isSubmitting} onSubmit={(event) => void handleSubmit(event)}>
           <label
-            className="mb-2 text-sm font-medium text-text/70"
+            className="mb-2 block text-sm font-medium text-text/70"
             htmlFor="register-email"
           >
             Email
@@ -65,11 +60,12 @@ export default function RegisterPage() {
             placeholder="email@exemple.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            disabled={isSubmitting}
             required
           />
 
           <label
-            className="mb-2 text-sm font-medium text-text/70"
+            className="mb-2 block text-sm font-medium text-text/70"
             htmlFor="register-username"
           >
             Pseudo
@@ -81,12 +77,13 @@ export default function RegisterPage() {
             placeholder="Ton pseudo"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
+            disabled={isSubmitting}
             minLength={AUTH_USERNAME_MIN_LENGTH}
             required
           />
 
           <label
-            className="mb-2 text-sm font-medium text-text/70"
+            className="mb-2 block text-sm font-medium text-text/70"
             htmlFor="register-password"
           >
             Mot de passe
@@ -98,15 +95,19 @@ export default function RegisterPage() {
             placeholder={`Minimum ${AUTH_PASSWORD_MIN_LENGTH} caractères`}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            aria-invalid={error ? "true" : "false"}
+            disabled={isSubmitting}
             minLength={AUTH_PASSWORD_MIN_LENGTH}
             required
           />
 
           {error ? (
-            <p className="mb-4 text-sm text-red-300">{error}</p>
+            <p className="mb-4 text-sm text-red-300" role="alert">
+              {error}
+            </p>
           ) : null}
 
-          <PrimaryButton className="w-full py-3 text-base" type="submit">
+          <PrimaryButton className="w-full py-3 text-base" disabled={isSubmitting} type="submit">
             {isSubmitting ? "Inscription..." : "Créer mon compte"}
           </PrimaryButton>
         </form>
