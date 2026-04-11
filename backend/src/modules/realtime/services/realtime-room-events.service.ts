@@ -36,13 +36,9 @@ export class RealtimeRoomEventsService {
     const payload = this.validation.validatePayload(RoomCreateEventDto, rawPayload);
     const requesterUserId = this.presence.resolveSocketUser(client.id, payload.userId);
     const { userId, ...createDto } = payload;
-    const created = this.roomsService.create({
+    const room = this.roomsService.create({
       ...createDto,
       ownerUserId: requesterUserId,
-    });
-    const room = this.roomsService.join(created.id, {
-      userId: requesterUserId,
-      password: payload.password,
     });
 
     client.join(this.roomChannel(room.id));
@@ -94,15 +90,9 @@ export class RealtimeRoomEventsService {
       payload.userId,
       "room:start requires a bound userId on this socket",
     );
-    const roomState = this.assertUserInRoom(payload.roomId, requesterUserId);
-    if (
-      typeof roomState.ownerUserId === "number" &&
-      roomState.ownerUserId !== requesterUserId
-    ) {
-      throw new UnauthorizedException("Only room owner can start the game");
-    }
+    this.assertUserInRoom(payload.roomId, requesterUserId);
 
-    const room = this.roomsService.start(payload.roomId);
+    const room = this.roomsService.start(payload.roomId, requesterUserId);
     server.to(this.roomChannel(payload.roomId)).emit("room:started", this.response.ok(room));
     this.gameRuntime.startGameLoop(payload.roomId, room.rounds, server);
     this.broadcastRoomList(server);

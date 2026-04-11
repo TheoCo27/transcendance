@@ -8,6 +8,7 @@ Scope: contrat front-back MVP pour auth, users, rooms, game, scores
 - Branche sur Prisma/PostgreSQL:
   - `auth` (login/register/session/logout via `User`)
   - `users` (`/users/me`, `/users/:id`)
+  - `quizzes` (`/quizzes`, `/quizzes/:quizId`)
 - Encore en service memoire (pas encore Prisma):
   - `rooms`
   - `game`
@@ -27,6 +28,7 @@ Consequence:
   - `/rooms`
   - `/game`
   - `/scores`
+  - `/quizzes`
   - `/api`
   - `/health`
 
@@ -109,8 +111,19 @@ type Room = {
 ```ts
 type GameState = {
   roomId: number;
-  currentQuestionId: number;
+  status: "waiting" | "playing" | "finished";
+  currentQuestionId: number | null;
+  currentQuestionNumber: number;
+  totalQuestions: number;
+  questionDurationMs: number | null;
+  questionStartedAt: string | null;
+  questionEndsAt: string | null;
+  answersForCurrentQuestion: number;
   totalAnswers: number;
+  leaderboard: Array<{ userId: number; score: number }>;
+  winnerUserId: number | null;
+  startedAt: string | null;
+  endedAt: string | null;
   updatedAt: string;
 };
 ```
@@ -137,6 +150,25 @@ type UserScore = {
   username: string;
   score: number;
   wins: number;
+};
+```
+
+`Quiz`:
+
+```ts
+type Quiz = {
+  id: number;
+  title: string;
+  createdAt: string;
+  questions: Array<{
+    id: number;
+    questionText: string;
+    answers: string[];
+    correctAnswer: string;
+    position: number;
+    points: number;
+    createdAt: string;
+  }>;
 };
 ```
 
@@ -310,6 +342,43 @@ type UserScore = {
 - Erreurs:
   - `400 BAD_REQUEST`
   - `404 NOT_FOUND` si score absent
+
+### Quizzes
+
+`GET /quizzes`
+- Reponse: `200`, `ApiResponse<Quiz[]>`
+
+`GET /quizzes/:quizId`
+- Reponse: `200`, `ApiResponse<Quiz>`
+- Erreurs:
+  - `400 BAD_REQUEST`
+  - `404 NOT_FOUND` si quiz absent
+
+`POST /quizzes`
+- Body:
+
+```json
+{
+  "title": "Culture generale",
+  "questions": [
+    {
+      "questionText": "Capitale de la France ?",
+      "answers": ["Berlin", "Paris", "Rome", "Madrid"],
+      "correctAnswerIndex": 1,
+      "points": 2
+    }
+  ]
+}
+```
+
+- Validation:
+  - `title`: string 2..120
+  - `questions`: array 1..50
+  - `questionText`: string 1..500
+  - `answers`: array 2..4 de strings non vides
+  - `correctAnswerIndex`: int 0..3 et inferieur a `answers.length`
+  - `points`: int 1..1000 optionnel
+- Reponse: `201`, `ApiResponse<Quiz>`
 
 ## Notes de stabilite
 
