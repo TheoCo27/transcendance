@@ -55,6 +55,7 @@ Transport: `socket.io`
   - `questionNumber`, `totalQuestions`, `durationMs`, `startsAt`, `endsAt`
 - listen `game:timer`
 - listen `game:question:timeout`
+- listen `game:state` pour l'etat agrege de la partie
 
 3. Reponse:
 - emit `game:answer` `{ roomId, userId, questionId, answerIndex }`
@@ -65,6 +66,7 @@ Transport: `socket.io`
 
 4. Fin:
 - listen `game:ended`
+- `GET /scores/leaderboard` reflète maintenant le resultat cumule des parties terminees
 
 ## Flux Chat
 
@@ -103,4 +105,3 @@ Transport: `socket.io`
 - Pour la recette, lancer:
   - `make up`
   - `cd backend && npm run test:ws-smoke`
-

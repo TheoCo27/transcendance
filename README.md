@@ -76,6 +76,7 @@ Contrat detaille front-back:
 
 Etat actuel:
 - `auth` + `users` branches sur Prisma/PostgreSQL
+- `quizzes` branche sur Prisma/PostgreSQL
 - `rooms` + `game` + `scores` encore en memoire (MVP d'integration)
 
 - `POST /auth/register`
@@ -92,6 +93,9 @@ Etat actuel:
 - `POST /game/answer`
 - `GET /scores/leaderboard?limit=10`
 - `GET /scores/users/:userId`
+- `GET /quizzes`
+- `GET /quizzes/:quizId`
+- `POST /quizzes`
 
 Temps reel:
 - namespace Socket.IO: `/ws`
@@ -123,6 +127,7 @@ Reponse d'erreur standard:
 Important pour le front en dev:
 
 - le proxy frontend couvre `/api`, `/health`, `/auth`, `/users`, `/rooms`, `/game` et `/scores`
+- il couvre aussi `/quizzes`
 - le front peut donc appeler ces routes directement sur `http://localhost:3000`
 - utiliser `credentials: "include"` pour que la session cookie fonctionne
 

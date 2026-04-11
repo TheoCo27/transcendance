@@ -21,6 +21,8 @@ export type Room = {
   status: "waiting" | "playing" | "finished";
   players: RoomPlayer[];
   createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
   password?: string;
 };
 
@@ -44,6 +46,7 @@ export class RoomsService {
       ownerUserId?: number;
     },
   ): Omit<Room, "password"> {
+    const createdAt = new Date().toISOString();
     const room: Room = {
       id: this.nextRoomId,
       name: dto.name,
@@ -51,8 +54,13 @@ export class RoomsService {
       rounds: dto.rounds,
       isPrivate: dto.isPrivate ?? false,
       status: "waiting",
-      players: [],
-      createdAt: new Date().toISOString(),
+      players:
+        typeof dto.ownerUserId === "number"
+          ? [{ userId: dto.ownerUserId, joinedAt: createdAt }]
+          : [],
+      createdAt,
+      startedAt: null,
+      finishedAt: null,
       password: dto.password,
     };
 
@@ -79,22 +87,51 @@ export class RoomsService {
       });
     }
 
+    if (typeof room.ownerUserId !== "number") {
+      room.ownerUserId = dto.userId;
+    }
+
     return this.stripPassword(room);
   }
 
   leave(roomId: number, userId: number): Omit<Room, "password"> {
     const room = this.findRoomOrThrow(roomId);
+    const existingPlayer = room.players.find((player) => player.userId === userId);
+
+    if (!existingPlayer) {
+      throw new ConflictException("User is not in this room");
+    }
 
     room.players = room.players.filter((player) => player.userId !== userId);
+
+    if (room.players.length === 0) {
+      room.ownerUserId = undefined;
+      return this.stripPassword(room);
+    }
+
+    if (room.ownerUserId === userId) {
+      room.ownerUserId = room.players[0]?.userId;
+    }
 
     return this.stripPassword(room);
   }
 
-  start(roomId: number): Omit<Room, "password"> {
+  start(roomId: number, requesterUserId: number): Omit<Room, "password"> {
     const room = this.findRoomOrThrow(roomId);
 
     if (room.status !== "waiting") {
       throw new ConflictException("Room is not in waiting state");
+    }
+
+    if (!room.players.some((player) => player.userId === requesterUserId)) {
+      throw new UnauthorizedException("User is not in this room");
+    }
+
+    if (
+      typeof room.ownerUserId === "number" &&
+      room.ownerUserId !== requesterUserId
+    ) {
+      throw new UnauthorizedException("Only room owner can start the game");
     }
 
     if (room.players.length < 1) {
@@ -102,6 +139,8 @@ export class RoomsService {
     }
 
     room.status = "playing";
+    room.startedAt = new Date().toISOString();
+    room.finishedAt = null;
 
     return this.stripPassword(room);
   }
@@ -114,6 +153,7 @@ export class RoomsService {
     }
 
     room.status = "finished";
+    room.finishedAt = new Date().toISOString();
 
     return this.stripPassword(room);
   }
