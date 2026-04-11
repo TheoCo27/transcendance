@@ -1,0 +1,217 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  online
+  offline
+}
+
+enum FriendshipStatus {
+  pending
+  accepted
+  declined
+}
+
+enum RoomStatus {
+  waiting
+  playing
+  finished
+}
+
+enum GameStatus {
+  waiting
+  in_progress
+  finished
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  username String
+  password String
+
+  avatar_url String?
+  status     UserStatus @default(offline)
+  createdAt  DateTime   @default(now())
+
+  rooms      RoomPlayer[] @relation("UserRoomPlayers")
+  ownedRooms Room[]       @relation("RoomOwner")
+
+  messages Messages[] @relation("UserMessages")
+
+  answers            PlayerAnswer[] @relation("UserPlayerAnswers")
+  leaderboardEntries Leaderboard[]  @relation("UserLeaderboardEntries")
+  wonGames           Game[]         @relation("GameWinner")
+
+  sentFriendRequests     FriendRequests[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequests[] @relation("FriendRequestReceiver")
+}
+
+model FriendRequests {
+  id Int @id @default(autoincrement())
+
+  sender   User @relation("FriendRequestSender", fields: [senderId], references: [id])
+  senderId Int
+
+  receiver   User @relation("FriendRequestReceiver", fields: [receiverId], references: [id])
+  receiverId Int
+
+  status    FriendshipStatus @default(pending)
+  createdAt DateTime         @default(now())
+}
+
+model Room {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  owner   User @relation("RoomOwner", fields: [ownerId], references: [id])
+  ownerId Int
+
+  status RoomStatus @default(waiting)
+
+  players  RoomPlayer[] @relation("RoomPlayers")
+  messages Messages[]   @relation("RoomMessages")
+  games    Game[]       @relation("RoomGames")
+
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+}
+
+model Quiz {
+  id        Int      @id @default(autoincrement())
+  title     String
+  createdAt DateTime @default(now())
+
+  questions QuizQuestion[] @relation("QuizQuestions")
+  games     Game[]         @relation("QuizGames")
+}
+
+model QuizQuestion {
+  id     Int  @id @default(autoincrement())
+  quiz   Quiz @relation("QuizQuestions", fields: [quizId], references: [id])
+  quizId Int
+
+  questionText  String
+  answers       Json
+  correctAnswer String
+
+  position  Int
+  points    Int      @default(1)
+  createdAt DateTime @default(now())
+
+  gameQuestions GameQuestion[] @relation("QuestionGameQuestions")
+
+  @@unique([quizId, position])
+}
+
+model Game {
+  id     Int  @id @default(autoincrement())
+  room   Room @relation("RoomGames", fields: [roomId], references: [id])
+  roomId Int
+
+  quiz   Quiz @relation("QuizGames", fields: [quizId], references: [id])
+  quizId Int
+
+  status       GameStatus @default(waiting)
+  winner       User?      @relation("GameWinner", fields: [winnerUserId], references: [id])
+  winnerUserId Int?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  questions   GameQuestion[] @relation("GameQuestions")
+  answers     PlayerAnswer[] @relation("GamePlayerAnswers")
+  leaderboard Leaderboard[]  @relation("GameLeaderboardEntries")
+
+  @@index([roomId, createdAt])
+}
+
+model GameQuestion {
+  id     Int  @id @default(autoincrement())
+  game   Game @relation("GameQuestions", fields: [gameId], references: [id])
+  gameId Int
+
+  question   QuizQuestion @relation("QuestionGameQuestions", fields: [questionId], references: [id])
+  questionId Int
+
+  position  Int
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  answers PlayerAnswer[] @relation("GameQuestionPlayerAnswers")
+
+  @@unique([gameId, position])
+}
+
+model PlayerAnswer {
+  id     Int  @id @default(autoincrement())
+  game   Game @relation("GamePlayerAnswers", fields: [gameId], references: [id])
+  gameId Int
+
+  gameQuestion   GameQuestion @relation("GameQuestionPlayerAnswers", fields: [gameQuestionId], references: [id])
+  gameQuestionId Int
+
+  user   User @relation("UserPlayerAnswers", fields: [userId], references: [id])
+  userId Int
+
+  answer       String
+  isCorrect    Boolean
+  pointsEarned Int      @default(0)
+  answeredAt   DateTime @default(now())
+
+  @@unique([gameQuestionId, userId])
+  @@index([gameId, userId])
+}
+
+model Leaderboard {
+  id     Int  @id @default(autoincrement())
+  game   Game @relation("GameLeaderboardEntries", fields: [gameId], references: [id])
+  gameId Int
+
+  user   User @relation("UserLeaderboardEntries", fields: [userId], references: [id])
+  userId Int
+
+  finalScore Int      @default(0)
+  rank       Int?
+  isWinner   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([gameId, userId])
+  @@index([gameId, rank])
+}
+
+model RoomPlayer {
+  user   User @relation("UserRoomPlayers", fields: [userId], references: [id])
+  userId Int
+
+  room   Room @relation("RoomPlayers", fields: [roomId], references: [id])
+  roomId Int
+
+  score    Int      @default(0)
+  joinedAt DateTime @default(now())
+
+  @@id([userId, roomId])
+}
+
+model Messages {
+  id Int @id @default(autoincrement())
+
+  sender   User @relation("UserMessages", fields: [senderId], references: [id])
+  senderId Int
+
+  room   Room @relation("RoomMessages", fields: [roomId], references: [id])
+  roomId Int
+
+  content String
+  sendAt  DateTime @default(now())
+  read    Boolean  @default(false)
+}
