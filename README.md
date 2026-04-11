@@ -4,8 +4,8 @@ Base minimale pour avoir rapidement des containers fonctionnels et un point de t
 
 ## Services
 
-- `frontend`: React + TypeScript + Webpack Dev Server, accessible sur `http://localhost:3000`
-- `backend`: NestJS + TypeScript + Prisma, accessible sur `http://localhost:4000`
+- `frontend`: React + TypeScript + Webpack Dev Server, accessible sur `https://localhost:3000`
+- `backend`: NestJS + TypeScript + Prisma, accessible sur `https://localhost:4000`
 - `db`: PostgreSQL, accessible sur `localhost:5432`
 
 Le frontend proxifie `/api` et `/health` vers le backend via Webpack Dev Server. Pour un demarrage local rapide, `nginx` n'est pas necessaire.
@@ -16,7 +16,13 @@ Le backend synchronise ses dependances, genere le client Prisma et applique les 
 
 ```bash
 make env-init
-# edite .env puis verifie la config
+# .env.example contient des valeurs de dev directement utilisables
+# installe une fois la CA locale mkcert dans le systeme
+make tls-trust
+# puis le certificat TLS local partage front/back sera regenere automatiquement
+# si tu modifies les credentials Postgres apres la premiere initialisation,
+# pense a reinitialiser le volume local avec make fclean
+# puis verifie la config
 make env-check
 make up
 make test-stack
@@ -41,6 +47,7 @@ Variables attendues :
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
+- `GAME_QUESTION_DURATION_MS`
 
 ## CI
 
@@ -60,10 +67,10 @@ Le workflow peut fonctionner de deux facons :
 ## URLs utiles
 
 - Ports par defaut : frontend `3000`, backend `4000`, db `5432`
-- `http://localhost:3000`
-- `http://localhost:3000/api`
-- `http://localhost:3000/health`
-- `http://localhost:4000/health`
+- `https://localhost:3000`
+- `https://localhost:3000/api`
+- `https://localhost:3000/health`
+- `https://localhost:4000/health`
 
 ## API v1 (Dev 3)
 
@@ -128,7 +135,9 @@ Important pour le front en dev:
 
 - le proxy frontend couvre `/api`, `/health`, `/auth`, `/users`, `/rooms`, `/game` et `/scores`
 - il couvre aussi `/quizzes`
-- le front peut donc appeler ces routes directement sur `http://localhost:3000`
+- le front peut donc appeler ces routes directement sur `https://localhost:3000`
+- le WebSocket Socket.IO passe lui aussi par le meme origin frontend, sans mixed content
+- la confiance navigateur/Node repose sur `mkcert`; lancer `make tls-trust` une fois par machine
 - utiliser `credentials: "include"` pour que la session cookie fonctionne
 
 ## Quand ajouter nginx

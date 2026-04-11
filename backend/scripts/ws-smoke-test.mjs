@@ -12,7 +12,7 @@ import {
 const BACKEND_PORT = Number(process.env.BACKEND_PORT || 4000);
 const BACKEND_HOST = process.env.BACKEND_HOST || "localhost";
 const WS_BASE_URL =
-  process.env.WS_BASE_URL || `http://${BACKEND_HOST}:${BACKEND_PORT}`;
+  process.env.WS_BASE_URL || `https://${BACKEND_HOST}:${BACKEND_PORT}`;
 const WS_NAMESPACE_URL = `${WS_BASE_URL}/ws`;
 
 function section(title) {
