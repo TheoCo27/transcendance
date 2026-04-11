@@ -37,7 +37,8 @@ help:
 	@echo "  make page                -> Open the frontend in Firefox"
 	@echo "  make ps                  -> Show running containers"
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
-	@echo "  make smoke-test          -> Run quick automated checks on the running stack"
+	@echo "  make smoke-test          -> Run the general smoke test (dev op, db, websocket api, authentifcation, front end)"
+	@echo "  make smoke-test-ws       -> Run only the backend WebSocket smoke test"
 	@echo "  make env-init            -> Create .env from .env.example if missing"
 	@echo "  make env-check           -> Check required variables in .env"
 	@echo "  make shell-back          -> Open shell in backend container"
@@ -114,8 +115,11 @@ test-stack: compose-check
 	@echo "Backend  : http://localhost:$${BACKEND_PORT:-4000}/health"
 	@echo "Database : localhost:$${POSTGRES_PORT:-5432}"
 
-smoke-test:
+smoke-test: compose-check
 	bash scripts/smoke-test.sh
+
+smoke-test-ws: compose-check
+	$(COMPOSE) exec -T backend sh -lc 'npm run test:ws-smoke'
 
 env-init:
 	@if [ -f .env ]; then \
@@ -348,6 +352,6 @@ push-file-dev:
 .PHONY: help \
 	all \
 	compose-check \
-	up down clean fclean re restart logs logs-back logs-front logs-db page ps test-stack smoke-test \
+	up down clean fclean re restart logs logs-back logs-front logs-db page ps test-stack smoke-test smoke-test-ws \
 	shell-back shell-front shell-db \
 	push push-dev branch branch-create branch-create-push duplicate_branch status pull-dev pull-branch merge-dev rebase-dev push-file-dev

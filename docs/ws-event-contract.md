@@ -56,8 +56,19 @@ Erreur:
 ```json
 {
   "roomId": 1,
+  "status": "playing",
   "currentQuestionId": 101,
+  "currentQuestionNumber": 1,
+  "totalQuestions": 5,
+  "questionDurationMs": 10000,
+  "questionStartedAt": "2026-04-08T10:00:00.000Z",
+  "questionEndsAt": "2026-04-08T10:00:10.000Z",
+  "answersForCurrentQuestion": 1,
   "totalAnswers": 3,
+  "leaderboard": [{ "userId": 2, "score": 200 }],
+  "winnerUserId": null,
+  "startedAt": "2026-04-08T10:00:00.000Z",
+  "endedAt": null,
   "updatedAt": "2026-04-08T10:00:00.000Z"
 }
 ```
