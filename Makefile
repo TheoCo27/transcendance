@@ -41,6 +41,8 @@ help:
 	@echo "  make smoke-test-ws       -> Run only the backend WebSocket smoke test"
 	@echo "  make env-init            -> Create .env from .env.example if missing"
 	@echo "  make env-check           -> Check required variables in .env"
+	@echo "  make tls-cert            -> Generate the shared local TLS certificate"
+	@echo "  make tls-trust           -> Install mkcert local CA into the system trust store"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
 	@echo "  make shell-db            -> Open a psql session in the db container"
@@ -74,7 +76,8 @@ compose-check:
 		exit 1; \
 	}
 
-up: compose-check
+up: env-check compose-check
+	bash scripts/generate-dev-cert.sh
 	$(COMPOSE) up --build -d --wait
 
 down: compose-check
@@ -88,7 +91,8 @@ fclean: compose-check
 
 re: fclean up
 
-restart: compose-check
+restart: env-check compose-check
+	bash scripts/generate-dev-cert.sh
 	$(COMPOSE) down && $(COMPOSE) up --build
 
 logs: compose-check
@@ -104,18 +108,18 @@ logs-db: compose-check
 	$(COMPOSE) logs -f db
 
 page:
-	open -a Firefox "http://localhost:$${FRONTEND_PORT:-3000}"
+	open -a Firefox "https://localhost:$${FRONTEND_PORT:-3000}"
 
 ps: compose-check
 	$(COMPOSE) ps
 
 test-stack: compose-check
 	$(COMPOSE) ps
-	@echo "Frontend : http://localhost:$${FRONTEND_PORT:-3000}"
-	@echo "Backend  : http://localhost:$${BACKEND_PORT:-4000}/health"
+	@echo "Frontend : https://localhost:$${FRONTEND_PORT:-3000}"
+	@echo "Backend  : https://localhost:$${BACKEND_PORT:-4000}/health"
 	@echo "Database : localhost:$${POSTGRES_PORT:-5432}"
 
-smoke-test: compose-check
+smoke-test: env-check compose-check
 	bash scripts/smoke-test.sh
 
 smoke-test-ws: compose-check
@@ -131,6 +135,12 @@ env-init:
 
 env-check:
 	bash scripts/check-env.sh
+
+tls-cert:
+	bash scripts/generate-dev-cert.sh
+
+tls-trust:
+	mkcert -install
 
 shell-back:
 	docker exec -it quiz_backend sh

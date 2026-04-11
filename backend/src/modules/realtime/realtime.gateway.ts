@@ -19,7 +19,7 @@ import { RealtimeRoomEventsService } from "./services/realtime-room-events.servi
 @WebSocketGateway({
   namespace: "/ws",
   cors: {
-    origin: process.env.FRONTEND_ORIGIN || "http://localhost:3000",
+    origin: process.env.FRONTEND_ORIGIN || "https://localhost:3000",
     credentials: true,
   },
   transports: ["websocket", "polling"],

@@ -7,7 +7,7 @@
     "deps:sync": "sh -c 'if [ -f package-lock.json ]; then npm ci; else npm install --include=dev --no-package-lock; fi'",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "test:ws-smoke": "node scripts/ws-smoke-test.mjs",
+    "test:ws-smoke": "NODE_EXTRA_CA_CERTS=../certs/mkcert-rootCA.pem node scripts/ws-smoke-test.mjs",
     "start": "node dist/main.js",
     "start:dev": "npm run prisma:generate && ts-node-dev --respawn --transpile-only src/main.ts",
     "start:docker": "npm run deps:sync && npm run prisma:generate && npm run prisma:migrate:deploy && ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/main.ts"

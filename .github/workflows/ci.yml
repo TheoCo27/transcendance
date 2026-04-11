@@ -83,7 +83,8 @@ jobs:
           BACKEND_PORT="${CI_BACKEND_PORT:-4000}"
           FRONTEND_PORT="${CI_FRONTEND_PORT:-3000}"
           JWT_SECRET="${CI_JWT_SECRET:-ci_jwt_secret}"
-          FRONTEND_ORIGIN="${CI_FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT}}"
+          FRONTEND_ORIGIN="${CI_FRONTEND_ORIGIN:-https://localhost:${FRONTEND_PORT}}"
+          GAME_QUESTION_DURATION_MS="10000"
           DATABASE_URL="${CI_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}}"
 
           cat <<EOF > .env
@@ -96,7 +97,19 @@ jobs:
           FRONTEND_PORT=${FRONTEND_PORT}
           JWT_SECRET=${JWT_SECRET}
           FRONTEND_ORIGIN=${FRONTEND_ORIGIN}
+          GAME_QUESTION_DURATION_MS=${GAME_QUESTION_DURATION_MS}
           EOF
+
+      - name: Install mkcert
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mkcert libnss3-tools
+
+      - name: Trust mkcert local CA
+        run: mkcert -install
+
+      - name: Generate shared dev TLS certificate
+        run: bash scripts/generate-dev-cert.sh
 
       - name: Build and start stack
         run: docker compose up --build -d --wait

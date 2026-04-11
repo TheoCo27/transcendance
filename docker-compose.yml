@@ -9,11 +9,14 @@ services:
       - "${FRONTEND_PORT:-3000}:3000"
     volumes:
       - ./frontend:/app
+      - ./certs:/certs:ro
       - /app/node_modules
     env_file:
       - .env
     environment:
-      BACKEND_TARGET: http://backend:4000
+      BACKEND_TARGET: https://backend:4000
+      NODE_EXTRA_CA_CERTS: /certs/mkcert-rootCA.pem
+      SSL_CERT_FILE: /certs/mkcert-rootCA.pem
     depends_on:
       backend:
         condition: service_healthy
@@ -23,7 +26,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+          "const url = process.env.FRONTEND_ORIGIN || 'https://localhost:3000'; fetch(url).then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
@@ -41,11 +44,14 @@ services:
       - "${BACKEND_PORT:-4000}:4000"
     volumes:
       - ./backend:/app
+      - ./certs:/certs:ro
       - /app/node_modules
     env_file:
       - .env
     environment:
-      FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT:-3000}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://localhost:3000}
+      NODE_EXTRA_CA_CERTS: /certs/mkcert-rootCA.pem
+      SSL_CERT_FILE: /certs/mkcert-rootCA.pem
     depends_on:
       db:
         condition: service_healthy
@@ -55,7 +61,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:4000/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+          "fetch('https://127.0.0.1:4000/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
