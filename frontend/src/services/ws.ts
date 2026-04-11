@@ -11,7 +11,8 @@ export type WsResponse<T> = {
   error: WsError | null;
 };
 
-const WS_BASE_URL = "http://localhost:4000";
+const WS_BASE_URL =
+  typeof window === "undefined" ? "https://localhost:3000" : window.location.origin;
 
 const socket: Socket = io(`${WS_BASE_URL}/ws`, {
   autoConnect: false,

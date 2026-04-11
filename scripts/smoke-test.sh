@@ -8,9 +8,10 @@ cd "$ROOT_DIR"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 BACKEND_PORT="${BACKEND_PORT:-4000}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-BACKEND_BASE_URL="http://localhost:${BACKEND_PORT}"
-FRONTEND_BASE_URL="http://localhost:${FRONTEND_PORT}"
+BACKEND_BASE_URL="https://localhost:${BACKEND_PORT}"
+FRONTEND_BASE_URL="${FRONTEND_ORIGIN:-https://localhost:${FRONTEND_PORT}}"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ft_transcendance_smoke.XXXXXX")"
+MKCERT_CA_FILE="${ROOT_DIR}/certs/mkcert-rootCA.pem"
 COOKIE_JAR="${TMP_DIR}/cookies.txt"
 LAST_BODY=""
 LAST_HEADERS=""
@@ -34,6 +35,7 @@ print_test_catalog() {
 	printf ' - test dev op\n'
 	printf ' - test db\n'
 	printf ' - test websocket api\n'
+	printf ' - test websocket front proxy\n'
 	printf ' - test authentifcation\n'
 	printf ' - test front end\n'
 }
@@ -58,7 +60,20 @@ container_health() {
 
 check_container() {
 	name="$1"
-	status="$(container_health "$name")"
+	retries="${2:-15}"
+	status=""
+
+	while [ "$retries" -gt 0 ]; do
+		status="$(container_health "$name")"
+		if [ "$status" = "healthy" ]; then
+			pass "Container $name healthy"
+			return 0
+		fi
+
+		retries=$((retries - 1))
+		sleep 2
+	done
+
 	[ "$status" = "healthy" ] || fail "Container $name non healthy (etat: ${status:-inconnu})"
 	pass "Container $name healthy"
 }
@@ -67,7 +82,12 @@ check_http_with_curl() {
 	url="$1"
 	expected="$2"
 
-	body="$(curl -fsS "$url")" || return 1
+	if printf '%s' "$url" | grep -Eq '^https://'; then
+		body="$(curl --cacert "$MKCERT_CA_FILE" -fsS "$url")" || return 1
+	else
+		body="$(curl -fsS "$url")" || return 1
+	fi
+
 	printf '%s' "$body" | grep -F -q "$expected" || fail "Reponse inattendue sur $url"
 	pass "Endpoint $url OK"
 }
@@ -77,9 +97,31 @@ check_http_inside_container() {
 	url="$2"
 	expected="$3"
 
-	body="$(docker exec "$container" sh -lc "wget -qO- '$url'")" || return 1
+	if printf '%s' "$url" | grep -Eq '^https://'; then
+		body="$(docker exec "$container" sh -lc "NODE_EXTRA_CA_CERTS=/certs/mkcert-rootCA.pem node -e \"fetch('${url}').then(async (response) => { if (!response.ok) process.exit(1); process.stdout.write(await response.text()); }).catch(() => process.exit(1))\"")" || return 1
+	else
+		body="$(docker exec "$container" sh -lc "wget -qO- '$url'")" || return 1
+	fi
+
 	printf '%s' "$body" | grep -F -q "$expected" || fail "Reponse inattendue depuis $container sur $url"
 	pass "Endpoint $url OK via $container"
+}
+
+run_database_query() {
+	query="$1"
+
+	docker exec -i quiz_db sh -lc \
+		"PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1 -t -A -c \"$query\""
+}
+
+check_database_credentials() {
+	if ! result="$(run_database_query "SELECT current_user || '|' || current_database();" 2>&1)"; then
+		fail "Connexion PostgreSQL impossible avec les credentials du conteneur db. Verifie .env puis reinitialise le volume avec 'make fclean' si POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB ont change depuis la creation du volume."
+	fi
+
+	result="$(printf '%s' "$result" | tr -d '\r' | head -n 1)"
+	assert_not_empty "$result" "connexion PostgreSQL"
+	pass "Credentials PostgreSQL valides pour quiz_db (${result})"
 }
 
 check_database_query() {
@@ -87,11 +129,11 @@ check_database_query() {
 	query="$2"
 	expected="$3"
 
-	result="$(
-		docker exec -i quiz_db sh -lc \
-			"psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -A -c \"$query\"" \
-			| tr -d '\r[:space:]'
-	)"
+	if ! result="$(run_database_query "$query" 2>&1)"; then
+		fail "Requete DB impossible pour $label. Verifie les credentials PostgreSQL et l'etat du volume Docker."
+	fi
+
+	result="$(printf '%s' "$result" | tr -d '\r[:space:]')"
 	[ "$result" = "$expected" ] || fail "Resultat DB inattendu pour $label: attendu '$expected', recu '$result'"
 	pass "$label"
 }
@@ -116,6 +158,10 @@ request_with_curl() {
 
 	if [ "$method" = "POST" ]; then
 		curl_args+=(-H "Content-Type: application/json" -d "$data")
+	fi
+
+	if printf '%s' "$url" | grep -Eq '^https://'; then
+		curl_args+=(--cacert "$MKCERT_CA_FILE")
 	fi
 
 	LAST_STATUS="$(curl "${curl_args[@]}")" || return 1
@@ -180,16 +226,13 @@ get_user_field() {
 	email="$1"
 	field="$2"
 
-	docker exec -i quiz_db sh -lc \
-		"psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -A -c \"SELECT \\\"${field}\\\" FROM \\\"User\\\" WHERE email = '${email}';\"" \
-		| tr -d '\r'
+	run_database_query "SELECT \\\"${field}\\\" FROM \\\"User\\\" WHERE email = '${email}';" | tr -d '\r'
 }
 
 cleanup_user() {
 	email="$1"
 
-	docker exec -i quiz_db sh -lc \
-		"psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c \"DELETE FROM \\\"User\\\" WHERE email = '${email}';\"" \
+	run_database_query "DELETE FROM \\\"User\\\" WHERE email = '${email}';" \
 		>/dev/null 2>&1 || true
 }
 
@@ -207,25 +250,30 @@ cleanup() {
 trap cleanup EXIT
 
 printf '== Smoke test ft_transcendence ==\n'
-printf 'Frontend : http://localhost:%s\n' "$FRONTEND_PORT"
-printf 'Backend  : http://localhost:%s\n' "$BACKEND_PORT"
+printf 'Frontend : %s\n' "$FRONTEND_BASE_URL"
+printf 'Backend  : %s\n' "$BACKEND_BASE_URL"
 printf 'Database : localhost:%s\n' "$POSTGRES_PORT"
 print_test_catalog
 
 section "test dev op"
 check_command docker
 check_command curl
+check_command bash
+[ -s "$MKCERT_CA_FILE" ] || fail "CA mkcert absente: $MKCERT_CA_FILE. Lance 'make tls-cert' et 'make tls-trust'."
+bash ./scripts/check-env.sh .env >/dev/null 2>&1 || fail "Configuration .env invalide. Lance 'make env-check' pour le diagnostic complet."
+pass "Configuration .env valide"
 compose ps >/dev/null 2>&1 || fail "Docker Compose indisponible ou stack non accessible"
 pass "Docker Compose accessible"
 
 check_container quiz_db
+check_database_credentials
 check_container quiz_backend
 check_container quiz_frontend
 
-if check_http_with_curl "http://localhost:${BACKEND_PORT}/health" '"ok":true'; then
+if check_http_with_curl "${BACKEND_BASE_URL}/health" '"ok":true'; then
 	:
 else
-	check_http_inside_container quiz_backend "http://127.0.0.1:4000/health" '"ok":true'
+	check_http_inside_container quiz_backend "https://127.0.0.1:4000/health" '"ok":true'
 fi
 
 section "test db"
@@ -233,22 +281,22 @@ check_database_query "Connexion PostgreSQL OK" "SELECT 1;" "1"
 check_database_query "Table User presente" "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User';" "1"
 
 section "test front end"
-if check_http_with_curl "http://localhost:${FRONTEND_PORT}" '<title>ft_transcendance starter</title>'; then
+if check_http_with_curl "${FRONTEND_BASE_URL}" '<title>ft_transcendance starter</title>'; then
 	:
 else
-	check_http_inside_container quiz_frontend "http://127.0.0.1:3000" '<title>ft_transcendance starter</title>'
+	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}" '<title>ft_transcendance starter</title>'
 fi
 
-if check_http_with_curl "http://localhost:${FRONTEND_PORT}/health" '"database":{"configured":true,"ok":true}'; then
+if check_http_with_curl "${FRONTEND_BASE_URL}/health" '"database":{"configured":true,"ok":true}'; then
 	:
 else
-	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/health" '"database":{"configured":true,"ok":true}'
+	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/health" '"database":{"configured":true,"ok":true}'
 fi
 
-if check_http_with_curl "http://localhost:${FRONTEND_PORT}/api" 'Backend NestJS accessible'; then
+if check_http_with_curl "${FRONTEND_BASE_URL}/api" 'Backend NestJS accessible'; then
 	:
 else
-	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend NestJS accessible'
+	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/api" 'Backend NestJS accessible'
 fi
 
 section "test authentifcation"
@@ -441,5 +489,9 @@ pass "Session renvoie 404 si le user du token n'existe plus"
 section "test websocket api"
 compose exec -T backend sh -lc 'npm run test:ws-smoke'
 pass "Smoke WebSocket backend OK"
+
+section "test websocket front proxy"
+compose exec -T backend sh -lc 'WS_BASE_URL=https://frontend:3000 node scripts/ws-smoke-test.mjs'
+pass "Smoke WebSocket frontend proxy OK"
 
 pass "Smoke test termine avec succes"
