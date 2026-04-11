@@ -25,6 +25,19 @@ fail() {
 	exit 1
 }
 
+section() {
+	printf '\n== %s ==\n' "$1"
+}
+
+print_test_catalog() {
+	printf '\nTypologies de test executees:\n'
+	printf ' - test dev op\n'
+	printf ' - test db\n'
+	printf ' - test websocket api\n'
+	printf ' - test authentifcation\n'
+	printf ' - test front end\n'
+}
+
 check_command() {
 	command -v "$1" >/dev/null 2>&1 || fail "Commande manquante: $1"
 }
@@ -67,6 +80,20 @@ check_http_inside_container() {
 	body="$(docker exec "$container" sh -lc "wget -qO- '$url'")" || return 1
 	printf '%s' "$body" | grep -F -q "$expected" || fail "Reponse inattendue depuis $container sur $url"
 	pass "Endpoint $url OK via $container"
+}
+
+check_database_query() {
+	label="$1"
+	query="$2"
+	expected="$3"
+
+	result="$(
+		docker exec -i quiz_db sh -lc \
+			"psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -A -c \"$query\"" \
+			| tr -d '\r[:space:]'
+	)"
+	[ "$result" = "$expected" ] || fail "Resultat DB inattendu pour $label: attendu '$expected', recu '$result'"
+	pass "$label"
 }
 
 request_with_curl() {
@@ -183,7 +210,9 @@ printf '== Smoke test ft_transcendence ==\n'
 printf 'Frontend : http://localhost:%s\n' "$FRONTEND_PORT"
 printf 'Backend  : http://localhost:%s\n' "$BACKEND_PORT"
 printf 'Database : localhost:%s\n' "$POSTGRES_PORT"
+print_test_catalog
 
+section "test dev op"
 check_command docker
 check_command curl
 compose ps >/dev/null 2>&1 || fail "Docker Compose indisponible ou stack non accessible"
@@ -193,31 +222,36 @@ check_container quiz_db
 check_container quiz_backend
 check_container quiz_frontend
 
-if command -v curl >/dev/null 2>&1; then
-	if check_http_with_curl "http://localhost:${BACKEND_PORT}/health" '"ok":true'; then
-		:
-	else
-		check_http_inside_container quiz_backend "http://127.0.0.1:4000/health" '"ok":true'
-	fi
-
-	if check_http_with_curl "http://localhost:${FRONTEND_PORT}/health" '"database":{"configured":true,"ok":true}'; then
-		:
-	else
-		check_http_inside_container quiz_frontend "http://127.0.0.1:3000/health" '"database":{"configured":true,"ok":true}'
-	fi
-
-	if check_http_with_curl "http://localhost:${FRONTEND_PORT}/api" 'Backend NestJS accessible'; then
-		:
-	else
-		check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend NestJS accessible'
-	fi
+if check_http_with_curl "http://localhost:${BACKEND_PORT}/health" '"ok":true'; then
+	:
 else
 	check_http_inside_container quiz_backend "http://127.0.0.1:4000/health" '"ok":true'
+fi
+
+section "test db"
+check_database_query "Connexion PostgreSQL OK" "SELECT 1;" "1"
+check_database_query "Table User presente" "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User';" "1"
+
+section "test front end"
+if check_http_with_curl "http://localhost:${FRONTEND_PORT}" '<title>ft_transcendance starter</title>'; then
+	:
+else
+	check_http_inside_container quiz_frontend "http://127.0.0.1:3000" '<title>ft_transcendance starter</title>'
+fi
+
+if check_http_with_curl "http://localhost:${FRONTEND_PORT}/health" '"database":{"configured":true,"ok":true}'; then
+	:
+else
 	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/health" '"database":{"configured":true,"ok":true}'
+fi
+
+if check_http_with_curl "http://localhost:${FRONTEND_PORT}/api" 'Backend NestJS accessible'; then
+	:
+else
 	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend NestJS accessible'
 fi
 
-# ---- AUTH TESTS ----
+section "test authentifcation"
 
 TEST_EMAIL="smoke-$(date +%s)@test.com"
 TEST_PASSWORD="longsecuredpassword123!"
@@ -403,5 +437,9 @@ assert_body_contains '"success":false'
 assert_body_contains '"code":"NOT_FOUND"'
 assert_body_contains "\"message\":\"User ${GHOST_USER_ID} not found\""
 pass "Session renvoie 404 si le user du token n'existe plus"
+
+section "test websocket api"
+compose exec -T backend sh -lc 'npm run test:ws-smoke'
+pass "Smoke WebSocket backend OK"
 
 pass "Smoke test termine avec succes"

@@ -17,16 +17,16 @@ export class ScoresController {
   constructor(private readonly scoresService: ScoresService) {}
 
   @Get("leaderboard")
-  getLeaderboard(
+  async getLeaderboard(
     @Query("limit", new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ): ApiResponse<UserScore[]> {
-    return ok(this.scoresService.getLeaderboard(limit));
+  ): Promise<ApiResponse<UserScore[]>> {
+    return ok(await this.scoresService.getLeaderboard(limit));
   }
 
   @Get("users/:userId")
-  getUserScore(
+  async getUserScore(
     @Param("userId", ParseIntPipe) userId: number,
-  ): ApiResponse<UserScore> {
-    return ok(this.scoresService.getUserScore(userId));
+  ): Promise<ApiResponse<UserScore>> {
+    return ok(await this.scoresService.getUserScore(userId));
   }
 }
