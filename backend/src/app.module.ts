@@ -3,6 +3,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./modules/auth/auth.module";
 import { GameModule } from "./modules/game/game.module";
+import { QuizzesModule } from "./modules/quizzes/quizzes.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { RoomsModule } from "./modules/rooms/rooms.module";
 import { ScoresModule } from "./modules/scores/scores.module";
@@ -16,6 +17,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     PrismaModule,
     RoomsModule,
     GameModule,
+    QuizzesModule,
     ScoresModule,
     RealtimeModule,
   ],

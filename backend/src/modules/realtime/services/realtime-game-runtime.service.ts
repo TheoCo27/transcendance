@@ -1,5 +1,6 @@
 import { GameService } from "@/modules/game/game.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
+import { ScoresService } from "@/modules/scores/scores.service";
 import { ConflictException, Injectable } from "@nestjs/common";
 import { Server } from "socket.io";
 import { RoomTimerRuntime } from "../realtime.types";
@@ -21,6 +22,7 @@ export class RealtimeGameRuntimeService {
   constructor(
     private readonly roomsService: RoomsService,
     private readonly gameService: GameService,
+    private readonly scoresService: ScoresService,
     private readonly response: RealtimeResponseService,
   ) {}
 
@@ -38,6 +40,7 @@ export class RealtimeGameRuntimeService {
 
   startGameLoop(roomId: number, roomRounds: number, server: Server): void {
     const totalQuestions = Math.max(1, roomRounds);
+    this.gameService.startGame(roomId, totalQuestions, this.questionDurationMs);
     server.to(roomChannel(roomId)).emit(
       "game:started",
       this.response.ok({ roomId, totalQuestions, questionDurationMs: this.questionDurationMs }),
@@ -75,9 +78,34 @@ export class RealtimeGameRuntimeService {
     const questionId = getQuestionIdForTurn(this.gameService, questionNumber);
     const startsAtMs = Date.now();
     const endsAtMs = startsAtMs + this.questionDurationMs;
-    const state = this.gameService.setCurrentQuestion(roomId, questionId);
     const question = this.gameService.getPublicQuestion(questionId);
     const channel = roomChannel(roomId);
+    const startsAt = new Date(startsAtMs).toISOString();
+    const endsAt = new Date(endsAtMs).toISOString();
+
+    this.activeTimers.set(roomId, {
+      roomId,
+      questionId,
+      questionNumber,
+      totalQuestions,
+      endsAtMs,
+      tickInterval: setInterval(() => {
+        this.emitTimerTick(roomId, questionId, questionNumber, totalQuestions, server);
+      }, this.timerTickMs),
+      endTimeout: setTimeout(() => {
+        this.onQuestionTimeout(roomId, server);
+      }, this.questionDurationMs),
+    });
+
+    const state = this.gameService.startQuestion({
+      roomId,
+      questionId,
+      questionNumber,
+      totalQuestions,
+      questionDurationMs: this.questionDurationMs,
+      startsAt,
+      endsAt,
+    });
 
     server.to(channel).emit(
       "game:question:started",
@@ -88,29 +116,12 @@ export class RealtimeGameRuntimeService {
         questionNumber,
         totalQuestions,
         durationMs: this.questionDurationMs,
-        startsAt: new Date(startsAtMs).toISOString(),
-        endsAt: new Date(endsAtMs).toISOString(),
+        startsAt,
+        endsAt,
       }),
     );
     server.to(channel).emit("game:state", this.response.ok(state));
     this.emitTimerTick(roomId, questionId, questionNumber, totalQuestions, server);
-
-    const tickInterval = setInterval(() => {
-      this.emitTimerTick(roomId, questionId, questionNumber, totalQuestions, server);
-    }, this.timerTickMs);
-    const endTimeout = setTimeout(() => {
-      this.onQuestionTimeout(roomId, server);
-    }, this.questionDurationMs);
-
-    this.activeTimers.set(roomId, {
-      roomId,
-      questionId,
-      questionNumber,
-      totalQuestions,
-      endsAtMs,
-      tickInterval,
-      endTimeout,
-    });
   }
 
   private emitTimerTick(
@@ -142,6 +153,7 @@ export class RealtimeGameRuntimeService {
     if (!runtime) return;
 
     this.stopRoomTimer(roomId);
+    const state = this.gameService.markQuestionTimedOut(roomId);
     server.to(roomChannel(roomId)).emit(
       "game:question:timeout",
       this.response.ok({
@@ -151,6 +163,7 @@ export class RealtimeGameRuntimeService {
         totalQuestions: runtime.totalQuestions,
       }),
     );
+    server.to(roomChannel(roomId)).emit("game:state", this.response.ok(state));
 
     if (runtime.questionNumber >= runtime.totalQuestions) {
       this.endGame(roomId, "timer_completed", server);
@@ -164,17 +177,20 @@ export class RealtimeGameRuntimeService {
     const leaderboard = this.gameService.getRoomLeaderboard(roomId);
     const winnerUserId = leaderboard.length > 0 ? leaderboard[0].userId : null;
     const room = this.roomsService.finish(roomId);
+    const gameState = this.gameService.finishGame(roomId);
     const channel = roomChannel(roomId);
+
+    this.scoresService.recordGameResult(leaderboard, winnerUserId);
 
     server.to(channel).emit("room:state", this.response.ok(room));
     server.to(channel).emit("game:leaderboard", this.response.ok(leaderboard));
+    server.to(channel).emit("game:state", this.response.ok(gameState));
     server.to(channel).emit(
       "game:ended",
       this.response.ok({ roomId, reason, winnerUserId, leaderboard }),
     );
 
     broadcastRoomList(server, this.roomsService, this.response);
-    this.gameService.clearRoomState(roomId);
   }
 
   private stopRoomTimer(roomId: number): void {

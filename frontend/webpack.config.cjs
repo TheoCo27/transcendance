@@ -47,6 +47,7 @@ module.exports = {
           "/rooms",
           "/game",
           "/scores",
+          "/quizzes",
         ],
         target: backendTarget,
         changeOrigin: true,

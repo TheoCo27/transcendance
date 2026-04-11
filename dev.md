@@ -34,7 +34,7 @@ Role actuel :
 
 - afficher une page de verification de la stack
 - interroger regulierement `/health`
-- proxifier les appels `/api`, `/health`, `/auth`, `/users`, `/rooms`, `/game` et `/scores` vers le backend via Webpack Dev Server
+- proxifier les appels `/api`, `/health`, `/auth`, `/users`, `/rooms`, `/game`, `/scores` et `/quizzes` vers le backend via Webpack Dev Server
 
 ### Backend
 
@@ -61,7 +61,7 @@ Role actuel :
 Le fonctionnement actuel est le suivant :
 
 1. Le navigateur appelle le frontend sur `http://localhost:3000`
-2. Le frontend React TypeScript appelle le backend via des routes proxifiees comme `/health`, `/api`, `/auth/*` et `/users/*`
+2. Le frontend React TypeScript appelle le backend via des routes proxifiees comme `/health`, `/api`, `/auth/*`, `/users/*` et `/quizzes/*`
 3. Webpack Dev Server proxifie ces routes vers le backend `http://backend:4000`
 4. Le backend interroge PostgreSQL via `DATABASE_URL`
 
@@ -75,7 +75,7 @@ Le fonctionnement actuel est le suivant :
                   frontend
      React + TypeScript + Webpack Dev Server
                          |
- proxy /api, /health, /auth, /users, /rooms, /game, /scores
+proxy /api, /health, /auth, /users, /rooms, /game, /scores, /quizzes
                          |
                          v
          http://backend:4000
