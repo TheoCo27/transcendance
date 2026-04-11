@@ -68,7 +68,6 @@ jobs:
       CI_BACKEND_PORT: ${{ secrets.CI_BACKEND_PORT }}
       CI_FRONTEND_PORT: ${{ secrets.CI_FRONTEND_PORT }}
       CI_JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
-      CI_FRONTEND_ORIGIN: ${{ secrets.CI_FRONTEND_ORIGIN }}
 
     steps:
       - name: Checkout repository
@@ -83,7 +82,7 @@ jobs:
           BACKEND_PORT="${CI_BACKEND_PORT:-4000}"
           FRONTEND_PORT="${CI_FRONTEND_PORT:-3000}"
           JWT_SECRET="${CI_JWT_SECRET:-ci_jwt_secret}"
-          FRONTEND_ORIGIN="${CI_FRONTEND_ORIGIN:-https://localhost:${FRONTEND_PORT}}"
+          FRONTEND_ORIGIN="https://localhost:${FRONTEND_PORT}"
           GAME_QUESTION_DURATION_MS="10000"
           DATABASE_URL="${CI_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}}"
 

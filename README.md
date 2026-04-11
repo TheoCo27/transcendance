@@ -62,7 +62,7 @@ Le repo peut etre verifie via GitHub Actions avec :
 Le workflow peut fonctionner de deux facons :
 
 - sans secret GitHub, avec des valeurs CI de secours
-- avec des secrets de repo nommes `CI_POSTGRES_USER`, `CI_POSTGRES_PASSWORD`, `CI_POSTGRES_DB`, `CI_POSTGRES_PORT`, `CI_DATABASE_URL`, `CI_BACKEND_PORT`, `CI_FRONTEND_PORT`, `CI_JWT_SECRET`, `CI_FRONTEND_ORIGIN`
+- avec des secrets de repo nommes `CI_POSTGRES_USER`, `CI_POSTGRES_PASSWORD`, `CI_POSTGRES_DB`, `CI_POSTGRES_PORT`, `CI_DATABASE_URL`, `CI_BACKEND_PORT`, `CI_FRONTEND_PORT`, `CI_JWT_SECRET`
 
 ## URLs utiles
 
