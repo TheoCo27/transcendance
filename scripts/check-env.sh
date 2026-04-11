@@ -99,11 +99,11 @@ if ! printf '%s' "$DATABASE_URL_VALUE" | grep -F -q "/${POSTGRES_DB_VALUE}"; the
 fi
 
 case "$FRONTEND_ORIGIN_VALUE" in
-  http://*|https://*)
+  https://*)
     :
     ;;
   *)
-    printf '[KO] FRONTEND_ORIGIN doit commencer par http:// ou https://\n' >&2
+    printf '[KO] FRONTEND_ORIGIN doit commencer par https:// pour la stack TLS locale\n' >&2
     invalid=1
     ;;
 esac

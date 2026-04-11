@@ -152,7 +152,6 @@ Noms attendus si tu veux piloter la CI depuis l'interface GitHub :
 - `CI_BACKEND_PORT`
 - `CI_FRONTEND_PORT`
 - `CI_JWT_SECRET`
-- `CI_FRONTEND_ORIGIN`
 
 Si ces secrets ne sont pas definis, la CI utilise des valeurs de secours dediees au test.
 
