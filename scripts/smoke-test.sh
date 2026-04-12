@@ -167,6 +167,7 @@ request_with_curl() {
 	LAST_STATUS="$(curl "${curl_args[@]}")" || return 1
 	LAST_BODY="$(cat "$body_file")"
 	LAST_HEADERS="$(cat "$headers_file")"
+	assert_no_server_error
 }
 
 assert_status() {
@@ -192,6 +193,15 @@ assert_body_not_contains() {
 	if printf '%s' "$LAST_BODY" | grep -F -q "$unexpected"; then
 		fail "Body inattendu. Fragment present: $unexpected. Body: $LAST_BODY"
 	fi
+}
+
+assert_no_server_error() {
+	if [ -n "$LAST_STATUS" ] && [ "$LAST_STATUS" -ge 500 ] 2>/dev/null; then
+		fail "Erreur serveur detectee (HTTP $LAST_STATUS). Body: $LAST_BODY"
+	fi
+
+	assert_body_not_contains '"code":"INTERNAL_SERVER_ERROR"'
+	assert_body_not_contains '"message":"Internal server error"'
 }
 
 assert_headers_contains() {

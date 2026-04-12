@@ -9,7 +9,7 @@ import {
   Query,
   UseFilters,
 } from "@nestjs/common";
-import { ScoresService, UserScore } from "./scores.service";
+import { QuizUserScore, ScoresService, UserScore } from "./scores.service";
 
 @Controller("scores")
 @UseFilters(ApiExceptionFilter)
@@ -28,5 +28,13 @@ export class ScoresController {
     @Param("userId", ParseIntPipe) userId: number,
   ): Promise<ApiResponse<UserScore>> {
     return ok(await this.scoresService.getUserScore(userId));
+  }
+
+  @Get("quizzes/:quizId/leaderboard")
+  async getQuizLeaderboard(
+    @Param("quizId", ParseIntPipe) quizId: number,
+    @Query("limit", new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ): Promise<ApiResponse<QuizUserScore[]>> {
+    return ok(await this.scoresService.getQuizLeaderboard(quizId, limit));
   }
 }
