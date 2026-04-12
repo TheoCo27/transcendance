@@ -23,6 +23,13 @@ export class RoomsController {
     return ok(this.roomsService.list());
   }
 
+  @Get("quizzes/:quizId")
+  listByQuizId(
+    @Param("quizId", ParseIntPipe) quizId: number,
+  ): ApiResponse<Array<Omit<Room, "password">>> {
+    return ok(this.roomsService.listByQuizId(quizId));
+  }
+
   @Get(":roomId")
   getById(
     @Param("roomId", ParseIntPipe) roomId: number,

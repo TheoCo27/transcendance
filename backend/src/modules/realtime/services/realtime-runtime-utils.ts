@@ -1,6 +1,5 @@
 import { GameService } from "@/modules/game/game.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
-import { ConflictException } from "@nestjs/common";
 import { Server } from "socket.io";
 import { RealtimeResponseService } from "./realtime-response.service";
 
@@ -10,13 +9,10 @@ export function roomChannel(roomId: number): string {
 
 export function getQuestionIdForTurn(
   gameService: GameService,
+  roomId: number,
   turnNumber: number,
 ): number {
-  const questionOrder = gameService.getQuestionOrder();
-  if (questionOrder.length === 0) {
-    throw new ConflictException("No questions configured");
-  }
-  return questionOrder[(turnNumber - 1) % questionOrder.length];
+  return gameService.getQuestionIdForTurn(roomId, turnNumber);
 }
 
 export function broadcastRoomList(
@@ -26,4 +22,3 @@ export function broadcastRoomList(
 ): void {
   server.emit("room:list-updated", response.ok(roomsService.list()));
 }
-

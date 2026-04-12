@@ -7,6 +7,7 @@ export type SafeUser = {
   id: number;
   email: string;
   username: string;
+  isGuest: boolean;
   avatar_url: string | null;
   status: "online" | "offline";
   createdAt: string;
@@ -21,6 +22,10 @@ export type RegisterPayload = {
   email: string;
   username: string;
   password: string;
+};
+
+export type GuestLoginPayload = {
+  username: string;
 };
 
 function emitAuthChanged() {
@@ -38,6 +43,15 @@ export async function login(payload: LoginPayload): Promise<SafeUser> {
 
 export async function register(payload: RegisterPayload): Promise<SafeUser> {
   const user = await apiRequest<SafeUser>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  emitAuthChanged();
+  return user;
+}
+
+export async function loginAsGuest(payload: GuestLoginPayload): Promise<SafeUser> {
+  const user = await apiRequest<SafeUser>("/auth/guest", {
     method: "POST",
     body: JSON.stringify(payload),
   });

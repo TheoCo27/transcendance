@@ -3,7 +3,13 @@ import Footer from "./components/Footer";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import Navbar from "./components/Navbar";
+import QuizAdminPage from "./pages/QuizAdminPage";
+import QuizRoomPage from "./pages/QuizRoomPage";
+import RoomPage from "./pages/RoomPage";
+import RoomAccessPage from "./pages/RoomAccessPage";
 import RegisterPage from "./pages/RegisterPage";
+import JoinQuizRoomPage from "./pages/JoinQuizRoomPage";
+import ProfilePage from "./pages/ProfilePage";
 
 export default function App() {
   return (
@@ -11,6 +17,12 @@ export default function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/admin" element={<QuizAdminPage />} />
+        <Route path="/join" element={<JoinQuizRoomPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/quiz/:quizId" element={<QuizRoomPage />} />
+        <Route path="/rooms/:roomId/access" element={<RoomAccessPage />} />
+        <Route path="/rooms/:roomId" element={<RoomPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
       </Routes>
