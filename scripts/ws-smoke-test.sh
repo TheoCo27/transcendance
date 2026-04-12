@@ -23,18 +23,13 @@ run_database_query() {
 		"PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1 -t -A -c \"$query\""
 }
 
-cleanup_ws_smoke_users() {
-	run_database_query "DELETE FROM \\\"User\\\" WHERE email LIKE 'ws-smoke-%@test.com';" \
-		>/dev/null 2>&1 || true
-}
-
 cleanup() {
-	cleanup_ws_smoke_users
+	bash scripts/cleanup-smoke-artifacts.sh --scope=ws >/dev/null 2>&1 || true
 }
 
 trap cleanup EXIT
 
-cleanup_ws_smoke_users
+cleanup
 
 if [ -n "${WS_BASE_URL:-}" ]; then
 	compose exec -T -e WS_BASE_URL="$WS_BASE_URL" backend sh -lc 'node scripts/ws-smoke-test.mjs'

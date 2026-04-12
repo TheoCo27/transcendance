@@ -274,6 +274,7 @@ cleanup() {
 		[ -n "${GUEST_USER_ID:-}" ] && cleanup_user_by_id "$GUEST_USER_ID"
 	fi
 	cleanup_smoke_users
+	bash scripts/cleanup-smoke-artifacts.sh --scope=all >/dev/null 2>&1 || true
 
 	rm -rf "$TMP_DIR"
 }
@@ -353,6 +354,7 @@ GUEST_LOGIN_PAYLOAD=$(printf '{"username":"%s"}' "$GUEST_USERNAME")
 cleanup_user "$TEST_EMAIL"
 cleanup_user "$GHOST_EMAIL"
 cleanup_smoke_users
+bash scripts/cleanup-smoke-artifacts.sh --scope=all >/dev/null 2>&1 || true
 CLEANUP_NEEDED=1
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"

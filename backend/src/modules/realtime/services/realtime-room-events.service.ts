@@ -32,6 +32,16 @@ export class RealtimeRoomEventsService {
     client.emit("room:list", this.response.ok(this.roomsService.list()));
   }
 
+  syncSocketRoomMembership(userId: number, client: Socket): void {
+    for (const room of this.roomsService.list()) {
+      if (!room.players.some((player) => player.userId === userId)) {
+        continue;
+      }
+
+      client.join(this.roomChannel(room.id));
+    }
+  }
+
   handleRoomCreate(rawPayload: unknown, client: Socket, server: Server): void {
     const payload = this.validation.validatePayload(RoomCreateEventDto, rawPayload);
     const requesterUserId = this.presence.resolveSocketUser(client.id, payload.userId);
@@ -72,12 +82,6 @@ export class RealtimeRoomEventsService {
 
     client.leave(channel);
     client.emit("room:left", this.response.ok({ roomId: payload.roomId, userId }));
-
-    if (room.players.length === 0) {
-      const closed = this.gameRuntime.closeRoom(payload.roomId, "room_empty", server);
-      client.emit("room:closed", this.response.ok(closed));
-      return;
-    }
 
     server.to(channel).emit("room:state", this.response.ok(room));
     this.broadcastRoomList(server);
@@ -140,11 +144,6 @@ export class RealtimeRoomEventsService {
       server
         .to(channel)
         .emit("room:left", this.response.ok({ roomId: room.id, userId }));
-
-      if (updatedRoom.players.length === 0) {
-        this.gameRuntime.closeRoom(room.id, "socket_disconnect", server);
-        continue;
-      }
 
       server.to(channel).emit("room:state", this.response.ok(updatedRoom));
       listUpdated = true;

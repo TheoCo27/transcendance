@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
@@ -11,6 +11,10 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const joinRoomParam = searchParams.get("joinRoom");
+  const joinRoomId = Number(joinRoomParam);
+  const shouldJoinRoomAfterAuth = Number.isFinite(joinRoomId) && joinRoomId > 0;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [guestUsername, setGuestUsername] = useState("");
@@ -28,7 +32,7 @@ export default function LoginPage() {
         email: email.trim(),
         password,
       });
-      navigate("/");
+      navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -49,7 +53,7 @@ export default function LoginPage() {
       await loginAsGuest({
         username: guestUsername.trim(),
       });
-      navigate("/");
+      navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -64,7 +68,14 @@ export default function LoginPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-[10%] py-6">
       <Card className="w-full px-8 py-8">
-        <h1 className="mb-6 text-3xl font-semibold text-text">Se connecter</h1>
+        <h1 className="mb-3 text-3xl font-semibold text-text">
+          {shouldJoinRoomAfterAuth ? "Rejoindre la room" : "Se connecter"}
+        </h1>
+        <p className="mb-6 text-sm leading-7 text-text/70">
+          {shouldJoinRoomAfterAuth
+            ? `Connecte-toi ou continue en invite pour rejoindre directement la room #${joinRoomId}.`
+            : "Connecte-toi avec ton compte ou entre rapidement en invite avec un pseudo unique."}
+        </p>
         <form aria-busy={isSubmitting} onSubmit={(event) => void handleSubmit(event)}>
           <label
             className="mb-2 block text-sm font-medium text-text/70"
@@ -108,7 +119,11 @@ export default function LoginPage() {
           ) : null}
 
           <PrimaryButton className="w-full py-3 text-base" disabled={isSubmitting} type="submit">
-            {isSubmitting ? "Connexion..." : "Se connecter"}
+            {isSubmitting
+              ? "Connexion..."
+              : shouldJoinRoomAfterAuth
+                ? "Se connecter et join la room"
+                : "Se connecter"}
           </PrimaryButton>
         </form>
 
@@ -144,7 +159,11 @@ export default function LoginPage() {
             disabled={isGuestSubmitting}
             type="submit"
           >
-            {isGuestSubmitting ? "Connexion invité..." : "Continuer en invité"}
+            {isGuestSubmitting
+              ? "Connexion invité..."
+              : shouldJoinRoomAfterAuth
+                ? "Continuer en tant qu'invite et join la room"
+                : "Continuer en invité"}
           </SecondaryButton>
         </form>
 

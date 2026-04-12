@@ -11,6 +11,26 @@ const trustedCaPath = process.env.NODE_EXTRA_CA_CERTS || "/certs/mkcert-rootCA.p
 const hasCustomTlsFiles =
   fs.existsSync(tlsKeyPath) && fs.existsSync(tlsCertPath);
 
+function shouldProxyRoomRequest(pathname, req) {
+  if (!pathname.startsWith("/rooms")) {
+    return false;
+  }
+
+  const acceptHeader = req.headers.accept || "";
+  const isHtmlNavigation = acceptHeader.includes("text/html");
+
+  if (/^\/rooms\/\d+(\/access)?\/?$/.test(pathname) && isHtmlNavigation) {
+    return false;
+  }
+
+  return (
+    pathname === "/rooms" ||
+    /^\/rooms\/quizzes\/\d+\/?$/.test(pathname) ||
+    /^\/rooms\/\d+\/?$/.test(pathname) ||
+    /^\/rooms\/\d+\/join\/?$/.test(pathname)
+  );
+}
+
 module.exports = {
   entry: "./src/main.tsx",
   output: {
@@ -63,12 +83,20 @@ module.exports = {
           "/health",
           "/auth",
           "/users",
-          "/rooms",
           "/game",
           "/scores",
           "/quizzes",
           "/socket.io",
         ],
+        target: backendTarget,
+        changeOrigin: true,
+        secure: fs.existsSync(trustedCaPath),
+        ws: true,
+      },
+      {
+        context(pathname, req) {
+          return shouldProxyRoomRequest(pathname, req);
+        },
         target: backendTarget,
         changeOrigin: true,
         secure: fs.existsSync(trustedCaPath),
