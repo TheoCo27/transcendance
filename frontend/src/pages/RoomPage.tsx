@@ -171,6 +171,10 @@ export default function RoomPage() {
   }, [roomId]);
 
   useEffect(() => {
+    if (isSessionLoading) {
+      return;
+    }
+
     if (user) {
       void connectWs().catch(() => {
         // The page surfaces action-level errors when an actual room action is attempted.
@@ -179,7 +183,7 @@ export default function RoomPage() {
     }
 
     disconnectWs();
-  }, [user]);
+  }, [isSessionLoading, user]);
 
   useEffect(() => {
     if (!user || !Number.isFinite(roomId) || roomId <= 0) {
