@@ -4,6 +4,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   Max,
@@ -44,6 +45,10 @@ export class CreateQuizDto {
   @MinLength(2)
   @MaxLength(120)
   title: string;
+
+  @IsOptional()
+  @IsIn([10, 30, null])
+  questionDurationSec?: 10 | 30 | null;
 
   @IsArray()
   @ArrayMinSize(1)

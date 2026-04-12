@@ -16,7 +16,9 @@ export type Room = {
   id: number;
   name: string;
   ownerUserId?: number;
+  quizId: number | null;
   rounds: number;
+  questionDurationMs: number | null;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
   players: RoomPlayer[];
@@ -51,7 +53,14 @@ export class RoomsService {
       id: this.nextRoomId,
       name: dto.name,
       ownerUserId: dto.ownerUserId,
+      quizId: dto.quizId ?? null,
       rounds: dto.rounds,
+      questionDurationMs:
+        typeof dto.questionDurationSec === "number"
+          ? dto.questionDurationSec * 1000
+          : dto.questionDurationSec === null
+            ? null
+            : Number(process.env.GAME_QUESTION_DURATION_MS || 10000),
       isPrivate: dto.isPrivate ?? false,
       status: "waiting",
       players:
@@ -67,6 +76,12 @@ export class RoomsService {
     this.nextRoomId += 1;
     this.rooms.unshift(room);
     return this.stripPassword(room);
+  }
+
+  listByQuizId(quizId: number): Array<Omit<Room, "password">> {
+    return this.rooms
+      .filter((room) => room.quizId === quizId)
+      .map((room) => this.stripPassword(room));
   }
 
   join(roomId: number, dto: JoinRoomDto): Omit<Room, "password"> {

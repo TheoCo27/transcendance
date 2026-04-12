@@ -236,6 +236,11 @@ cleanup_user() {
 		>/dev/null 2>&1 || true
 }
 
+cleanup_smoke_users() {
+	run_database_query "DELETE FROM \\\"User\\\" WHERE email LIKE 'smoke-%@test.com' OR email LIKE 'ws-smoke-%@test.com';" \
+		>/dev/null 2>&1 || true
+}
+
 CLEANUP_NEEDED=0
 
 cleanup() {
@@ -243,6 +248,7 @@ cleanup() {
 		[ -n "${TEST_EMAIL:-}" ] && cleanup_user "$TEST_EMAIL"
 		[ -n "${GHOST_EMAIL:-}" ] && cleanup_user "$GHOST_EMAIL"
 	fi
+	cleanup_smoke_users
 
 	rm -rf "$TMP_DIR"
 }
@@ -318,6 +324,7 @@ GHOST_LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$GHOST_EMAIL" "$G
 
 cleanup_user "$TEST_EMAIL"
 cleanup_user "$GHOST_EMAIL"
+cleanup_smoke_users
 CLEANUP_NEEDED=1
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
@@ -487,11 +494,11 @@ assert_body_contains "\"message\":\"User ${GHOST_USER_ID} not found\""
 pass "Session renvoie 404 si le user du token n'existe plus"
 
 section "test websocket api"
-compose exec -T backend sh -lc 'npm run test:ws-smoke'
+bash scripts/ws-smoke-test.sh
 pass "Smoke WebSocket backend OK"
 
 section "test websocket front proxy"
-compose exec -T backend sh -lc 'WS_BASE_URL=https://frontend:3000 node scripts/ws-smoke-test.mjs'
+WS_BASE_URL="https://frontend:3000" bash scripts/ws-smoke-test.sh
 pass "Smoke WebSocket frontend proxy OK"
 
 pass "Smoke test termine avec succes"
