@@ -1,15 +1,26 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
-import { login } from "../services/auth";
+import SecondaryButton from "../components/SecondaryButton";
+import {
+  AUTH_USERNAME_MIN_LENGTH,
+  login,
+  loginAsGuest,
+} from "../services/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const joinRoomParam = searchParams.get("joinRoom");
+  const joinRoomId = Number(joinRoomParam);
+  const shouldJoinRoomAfterAuth = Number.isFinite(joinRoomId) && joinRoomId > 0;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [guestUsername, setGuestUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -21,7 +32,7 @@ export default function LoginPage() {
         email: email.trim(),
         password,
       });
-      navigate("/");
+      navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -33,10 +44,38 @@ export default function LoginPage() {
     }
   };
 
+  const handleGuestSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setIsGuestSubmitting(true);
+
+    try {
+      await loginAsGuest({
+        username: guestUsername.trim(),
+      });
+      navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Échec de connexion invité",
+      );
+    } finally {
+      setIsGuestSubmitting(false);
+    }
+  };
+
   return (
     <main className="flex flex-1 items-center justify-center px-[10%] py-6">
       <Card className="w-full px-8 py-8">
-        <h1 className="mb-6 text-3xl font-semibold text-text">Se connecter</h1>
+        <h1 className="mb-3 text-3xl font-semibold text-text">
+          {shouldJoinRoomAfterAuth ? "Rejoindre la room" : "Se connecter"}
+        </h1>
+        <p className="mb-6 text-sm leading-7 text-text/70">
+          {shouldJoinRoomAfterAuth
+            ? `Connecte-toi ou continue en invite pour rejoindre directement la room #${joinRoomId}.`
+            : "Connecte-toi avec ton compte ou entre rapidement en invite avec un pseudo unique."}
+        </p>
         <form aria-busy={isSubmitting} onSubmit={(event) => void handleSubmit(event)}>
           <label
             className="mb-2 block text-sm font-medium text-text/70"
@@ -80,8 +119,52 @@ export default function LoginPage() {
           ) : null}
 
           <PrimaryButton className="w-full py-3 text-base" disabled={isSubmitting} type="submit">
-            {isSubmitting ? "Connexion..." : "Se connecter"}
+            {isSubmitting
+              ? "Connexion..."
+              : shouldJoinRoomAfterAuth
+                ? "Se connecter et join la room"
+                : "Se connecter"}
           </PrimaryButton>
+        </form>
+
+        <div className="my-6 flex items-center gap-4">
+          <div className="h-px flex-1 bg-white/10" />
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text/45">
+            ou
+          </span>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
+
+        <form aria-busy={isGuestSubmitting} onSubmit={(event) => void handleGuestSubmit(event)}>
+          <label
+            className="mb-2 block text-sm font-medium text-text/70"
+            htmlFor="guest-username"
+          >
+            Entrer comme invité
+          </label>
+          <input
+            className="mb-4 w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-text outline-none placeholder:text-text/40"
+            id="guest-username"
+            type="text"
+            placeholder="Pseudo unique"
+            value={guestUsername}
+            onChange={(event) => setGuestUsername(event.target.value)}
+            disabled={isGuestSubmitting}
+            minLength={AUTH_USERNAME_MIN_LENGTH}
+            required
+          />
+
+          <SecondaryButton
+            className="w-full justify-center py-3 text-base"
+            disabled={isGuestSubmitting}
+            type="submit"
+          >
+            {isGuestSubmitting
+              ? "Connexion invité..."
+              : shouldJoinRoomAfterAuth
+                ? "Continuer en tant qu'invite et join la room"
+                : "Continuer en invité"}
+          </SecondaryButton>
         </form>
 
         <p className="mt-5 text-center text-sm text-text/70">
