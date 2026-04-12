@@ -20,13 +20,66 @@ const socket: Socket = io(`${WS_BASE_URL}/ws`, {
   transports: ["websocket", "polling"],
 });
 
-export function connectWs(): void {
+let isWsAuthenticated = false;
+let pendingConnectionPromise: Promise<void> | null = null;
+let resolvePendingConnection: (() => void) | null = null;
+let rejectPendingConnection: ((error: Error) => void) | null = null;
+
+function clearPendingConnection(): void {
+  pendingConnectionPromise = null;
+  resolvePendingConnection = null;
+  rejectPendingConnection = null;
+}
+
+function ensurePendingConnectionPromise(): Promise<void> {
+  if (pendingConnectionPromise) {
+    return pendingConnectionPromise;
+  }
+
+  pendingConnectionPromise = new Promise<void>((resolve, reject) => {
+    resolvePendingConnection = resolve;
+    rejectPendingConnection = reject;
+  });
+
+  return pendingConnectionPromise;
+}
+
+socket.on("ws:connected", () => {
+  isWsAuthenticated = true;
+  resolvePendingConnection?.();
+  clearPendingConnection();
+});
+
+socket.on("ws:auth:error", (payload?: WsResponse<never>) => {
+  isWsAuthenticated = false;
+  rejectPendingConnection?.(
+    new Error(payload?.error?.message ?? "WebSocket authentication failed"),
+  );
+  clearPendingConnection();
+});
+
+socket.on("disconnect", () => {
+  isWsAuthenticated = false;
+});
+
+export function connectWs(): Promise<void> {
+  if (isWsAuthenticated) {
+    return Promise.resolve();
+  }
+
+  const pendingPromise = ensurePendingConnectionPromise();
+
   if (!socket.connected) {
     socket.connect();
   }
+
+  return pendingPromise;
 }
 
 export function disconnectWs(): void {
+  isWsAuthenticated = false;
+  rejectPendingConnection?.(new Error("WebSocket disconnected"));
+  clearPendingConnection();
   if (socket.connected) {
     socket.disconnect();
   }

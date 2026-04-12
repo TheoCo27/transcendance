@@ -20,6 +20,10 @@ export type Room = {
   finishedAt: string | null;
 };
 
+export function getRoomById(roomId: number): Promise<Room> {
+  return apiRequest<Room>(`/rooms/${roomId}`);
+}
+
 export function getRoomsByQuizId(quizId: number): Promise<Room[]> {
   return apiRequest<Room[]>(`/rooms/quizzes/${quizId}`);
 }

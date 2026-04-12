@@ -61,10 +61,11 @@ async function run() {
       outsiderSession.cookieHeader,
     );
     pass(`Connexion WS OK (outsider, userId=${outsider.userId})`);
+    const quizId = await createSmokeQuiz(WS_BASE_URL);
 
     section("test websocket room lifecycle");
     sockets.push(owner.socket, guest.socket, outsider.socket);
-    const roomId = await createRoomWithOwner(owner);
+    const roomId = await createRoomWithOwner(owner, quizId);
     await assertOutsiderCannotChat(outsider, roomId);
     await joinRoomAsGuest(guest, roomId);
     await assertGuestCannotStartRoom(guest, roomId);
@@ -76,7 +77,7 @@ async function run() {
     await assertTimerCompletesGame(guest, roomId);
 
     section("test websocket rest coherence");
-    await assertScoresLeaderboard(WS_BASE_URL, guest.userId);
+    await assertScoresLeaderboard(WS_BASE_URL, guest.userId, quizId);
 
     section("test websocket disconnect cleanup");
     await assertDisconnectUpdatesRoomState(owner, guest, roomId);
@@ -87,7 +88,33 @@ async function run() {
   }
 }
 
-async function createRoomWithOwner(owner) {
+async function createSmokeQuiz(baseUrl) {
+  const response = await fetch(`${baseUrl}/quizzes`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: `WS Smoke Quiz ${Date.now()}`,
+      questionDurationSec: 10,
+      questions: [
+        {
+          questionText: "Quelle est la couleur du ciel par temps clair ?",
+          answers: ["Bleu", "Rouge", "Vert", "Jaune"],
+          correctAnswerIndex: 0,
+          points: 100,
+        },
+      ],
+    }),
+  });
+  const payload = await assertHealthyJsonResponse(response, "Quiz creation endpoint");
+  const quizId = payload?.data?.id;
+  if (typeof quizId !== "number") fail("Quiz creation payload missing quiz id");
+  pass(`Quiz smoke cree (id=${quizId})`);
+  return quizId;
+}
+
+async function createRoomWithOwner(owner, quizId) {
   const roomCreatedPromise = waitForEvent(
     owner.socket,
     "room:created",
@@ -96,12 +123,14 @@ async function createRoomWithOwner(owner) {
   owner.socket.emit("room:create", {
     name: `WS Smoke ${Date.now()}`,
     rounds: 1,
+    quizId,
     isPrivate: false,
   });
   const roomCreated = await roomCreatedPromise;
   const roomId = roomCreated?.data?.id;
   if (typeof roomId !== "number") fail("room:created payload missing room id");
   if (roomCreated?.data?.ownerUserId !== owner.userId) fail("room owner mismatch");
+  if (roomCreated?.data?.quizId !== quizId) fail("room quiz mismatch");
   pass(`Room creee par owner (id=${roomId})`);
   return roomId;
 }
@@ -181,7 +210,7 @@ async function submitAndValidateAnswer(guest, roomId, questionId) {
     "game:answer:result",
     (payload) => payload?.success === true && payload?.data?.userId === guest.userId,
   );
-  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 1 });
+  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 0 });
   const answer = await answerPromise;
   if (typeof answer?.data?.userTotalScore !== "number") fail("Missing userTotalScore");
   pass("Reponse + scoring OK");
@@ -193,7 +222,7 @@ async function assertDuplicateAnswerConflict(guest, roomId, questionId) {
     "game:answer:error",
     (payload) => payload?.success === false && payload?.error?.code === "CONFLICT",
   );
-  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 1 });
+  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 0 });
   await duplicateErrorPromise;
   pass("Anti double-reponse OK");
 }
@@ -235,23 +264,19 @@ async function assertTimerCompletesGame(guest, roomId) {
   pass("Timer + fin de partie OK");
 }
 
-async function assertScoresLeaderboard(baseUrl, userId) {
-  const leaderboardResponse = await fetch(`${baseUrl}/scores/leaderboard?limit=5`);
-  if (!leaderboardResponse.ok) {
-    fail(`Leaderboard endpoint failed (${leaderboardResponse.status})`);
-  }
-
-  const leaderboardPayload = await leaderboardResponse.json();
+async function assertScoresLeaderboard(baseUrl, userId, quizId) {
+  const leaderboardPayload = await fetchHealthyJson(
+    `${baseUrl}/scores/leaderboard?limit=5`,
+    "Leaderboard endpoint",
+  );
   if (!Array.isArray(leaderboardPayload?.data)) {
     fail("Scores leaderboard payload is malformed");
   }
 
-  const userScoreResponse = await fetch(`${baseUrl}/scores/users/${userId}`);
-  if (!userScoreResponse.ok) {
-    fail(`User score endpoint failed (${userScoreResponse.status})`);
-  }
-
-  const userScorePayload = await userScoreResponse.json();
+  const userScorePayload = await fetchHealthyJson(
+    `${baseUrl}/scores/users/${userId}`,
+    "User score endpoint",
+  );
   const entry = userScorePayload?.data;
   if (!entry || entry.userId !== userId) {
     fail("Missing finished game result in user score endpoint");
@@ -261,7 +286,55 @@ async function assertScoresLeaderboard(baseUrl, userId) {
     fail("Scores REST endpoints did not aggregate game result");
   }
 
+  const quizLeaderboardPayload = await fetchHealthyJson(
+    `${baseUrl}/scores/quizzes/${quizId}/leaderboard?limit=5`,
+    "Quiz leaderboard endpoint",
+  );
+  if (!Array.isArray(quizLeaderboardPayload?.data)) {
+    fail("Quiz leaderboard payload is malformed");
+  }
+
+  const quizEntry = quizLeaderboardPayload.data.find((item) => item?.userId === userId);
+  if (!quizEntry) {
+    fail("Missing finished game result in quiz leaderboard");
+  }
+
+  if (quizEntry.score < 100 || quizEntry.wins < 1 || quizEntry.gamesPlayed < 1) {
+    fail("Quiz leaderboard did not aggregate finished game result");
+  }
+
   pass("Scores REST coherent avec la fin de partie WS");
+}
+
+async function fetchHealthyJson(url, label) {
+  const response = await fetch(url);
+  return assertHealthyJsonResponse(response, label);
+}
+
+async function assertHealthyJsonResponse(response, label) {
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status >= 500) {
+    fail(`${label} failed with server error (${response.status})`);
+  }
+
+  if (
+    payload?.error?.code === "INTERNAL_SERVER_ERROR" ||
+    payload?.error?.message === "Internal server error"
+  ) {
+    fail(`${label} returned an internal server error payload`);
+  }
+
+  if (!response.ok) {
+    fail(`${label} failed (${response.status})`);
+  }
+
+  return payload;
 }
 
 async function assertDisconnectUpdatesRoomState(owner, guest, roomId) {

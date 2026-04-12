@@ -62,11 +62,11 @@ export default function JoinQuizRoomPage() {
           Rejoindre une quizz room
         </span>
         <h1 className="mt-6 max-w-3xl text-4xl font-semibold text-slate-950 md:text-5xl">
-          Choisis un quiz publie, ouvre sa page et rejoins sa room de jeu.
+          Choisis un quiz publie, ouvre son hub et entre dans la room de jeu.
         </h1>
         <p className="mt-4 max-w-3xl text-base text-slate-600">
-          Chaque quiz genere sa propre page jouable. Tu peux y retrouver la room
-          en attente, les joueurs connectes et le lancement de partie.
+          Chaque quiz regroupe ses rooms ouvertes. Depuis la page quiz, tu peux
+          creer une room partageable ou ouvrir directement son URL dediee.
         </p>
       </section>
 
@@ -127,7 +127,7 @@ export default function JoinQuizRoomPage() {
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Link className="w-full" to={`/quiz/${quiz.id}`}>
                     <PrimaryButton className="w-full justify-center">
-                      Ouvrir la page du quiz
+                      Ouvrir le hub du quiz
                     </PrimaryButton>
                   </Link>
                   <Link className="w-full sm:w-auto" to="/admin">
