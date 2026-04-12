@@ -199,11 +199,16 @@ export class RealtimeGameRuntimeService {
     this.stopRoomTimer(roomId);
     const leaderboard = this.gameService.getRoomLeaderboard(roomId);
     const winnerUserId = leaderboard.length > 0 ? leaderboard[0].userId : null;
+    const currentRoom = this.roomsService.getById(roomId);
     const room = this.roomsService.finish(roomId);
     const gameState = this.gameService.finishGame(roomId);
     const channel = roomChannel(roomId);
 
-    this.scoresService.recordGameResult(leaderboard, winnerUserId);
+    void this.scoresService.recordGameResult(
+      leaderboard,
+      winnerUserId,
+      currentRoom.quizId,
+    );
 
     server.to(channel).emit("room:state", this.response.ok(room));
     server.to(channel).emit("game:leaderboard", this.response.ok(leaderboard));
