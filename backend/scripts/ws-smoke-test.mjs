@@ -236,19 +236,29 @@ async function assertTimerCompletesGame(guest, roomId) {
 }
 
 async function assertScoresLeaderboard(baseUrl, userId) {
-  const response = await fetch(`${baseUrl}/scores/leaderboard?limit=5`);
-  if (!response.ok) {
-    fail(`Leaderboard endpoint failed (${response.status})`);
+  const leaderboardResponse = await fetch(`${baseUrl}/scores/leaderboard?limit=5`);
+  if (!leaderboardResponse.ok) {
+    fail(`Leaderboard endpoint failed (${leaderboardResponse.status})`);
   }
 
-  const payload = await response.json();
-  const entry = payload?.data?.find?.((item) => item.userId === userId);
-  if (!entry) {
-    fail("Missing finished game result in scores leaderboard");
+  const leaderboardPayload = await leaderboardResponse.json();
+  if (!Array.isArray(leaderboardPayload?.data)) {
+    fail("Scores leaderboard payload is malformed");
+  }
+
+  const userScoreResponse = await fetch(`${baseUrl}/scores/users/${userId}`);
+  if (!userScoreResponse.ok) {
+    fail(`User score endpoint failed (${userScoreResponse.status})`);
+  }
+
+  const userScorePayload = await userScoreResponse.json();
+  const entry = userScorePayload?.data;
+  if (!entry || entry.userId !== userId) {
+    fail("Missing finished game result in user score endpoint");
   }
 
   if (entry.score < 100 || entry.wins < 1) {
-    fail("Scores leaderboard did not aggregate game result");
+    fail("Scores REST endpoints did not aggregate game result");
   }
 
   pass("Scores REST coherent avec la fin de partie WS");

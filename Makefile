@@ -123,7 +123,7 @@ smoke-test: env-check compose-check
 	bash scripts/smoke-test.sh
 
 smoke-test-ws: compose-check
-	$(COMPOSE) exec -T backend sh -lc 'npm run test:ws-smoke'
+	bash scripts/ws-smoke-test.sh
 
 env-init:
 	@if [ -f .env ]; then \
