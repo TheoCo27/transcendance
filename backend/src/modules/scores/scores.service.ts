@@ -1,3 +1,4 @@
+import { PrismaService } from "@/prisma/prisma.service";
 import { UsersService } from "@/modules/users/users.service";
 import { Injectable, NotFoundException } from "@nestjs/common";
 
@@ -6,6 +7,10 @@ export type UserScore = {
   username: string;
   score: number;
   wins: number;
+};
+
+export type QuizUserScore = UserScore & {
+  gamesPlayed: number;
 };
 
 type ScoreSnapshot = {
@@ -17,12 +22,16 @@ type ScoreSnapshot = {
 export class ScoresService {
   private readonly leaderboard = new Map<number, ScoreSnapshot>();
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  recordGameResult(
+  async recordGameResult(
     entries: Array<{ userId: number; score: number }>,
     winnerUserId: number | null,
-  ): void {
+    quizId?: number | null,
+  ): Promise<void> {
     for (const entry of entries) {
       const existing = this.leaderboard.get(entry.userId) || { score: 0, wins: 0 };
       this.leaderboard.set(entry.userId, {
@@ -30,6 +39,41 @@ export class ScoresService {
         wins: existing.wins + (winnerUserId === entry.userId ? 1 : 0),
       });
     }
+
+    if (typeof quizId !== "number") {
+      return;
+    }
+
+    await Promise.all(
+      entries.map((entry) =>
+        this.prisma.client.quizLeaderboard.upsert({
+          where: {
+            quizId_userId: {
+              quizId,
+              userId: entry.userId,
+            },
+          },
+          create: {
+            quizId,
+            userId: entry.userId,
+            totalScore: entry.score,
+            wins: winnerUserId === entry.userId ? 1 : 0,
+            gamesPlayed: 1,
+          },
+          update: {
+            totalScore: {
+              increment: entry.score,
+            },
+            wins: {
+              increment: winnerUserId === entry.userId ? 1 : 0,
+            },
+            gamesPlayed: {
+              increment: 1,
+            },
+          },
+        }),
+      ),
+    );
   }
 
   async getLeaderboard(limit = 10): Promise<UserScore[]> {
@@ -62,6 +106,41 @@ export class ScoresService {
     }
 
     return userScore;
+  }
+
+  async getQuizLeaderboard(quizId: number, limit = 10): Promise<QuizUserScore[]> {
+    const entries = await this.prisma.client.quizLeaderboard.findMany({
+      where: {
+        quizId,
+      },
+      orderBy: [
+        { totalScore: "desc" },
+        { wins: "desc" },
+        { userId: "asc" },
+      ],
+      take: limit,
+    });
+
+    const resolvedEntries = await Promise.all(
+      entries.map(async (entry) => {
+        const userScore = await this.toUserScore({
+          userId: entry.userId,
+          score: entry.totalScore,
+          wins: entry.wins,
+        });
+
+        if (!userScore) {
+          return null;
+        }
+
+        return {
+          ...userScore,
+          gamesPlayed: entry.gamesPlayed,
+        } satisfies QuizUserScore;
+      }),
+    );
+
+    return resolvedEntries.filter((entry): entry is QuizUserScore => entry !== null);
   }
 
   private getSortedEntries(): Array<{
