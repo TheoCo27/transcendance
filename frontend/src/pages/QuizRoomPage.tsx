@@ -93,6 +93,10 @@ export default function QuizRoomPage() {
   }, [quizId]);
 
   useEffect(() => {
+    if (isSessionLoading) {
+      return;
+    }
+
     if (user) {
       void connectWs().catch(() => {
         // The page surfaces action-level errors when an actual room action is attempted.
@@ -101,7 +105,7 @@ export default function QuizRoomPage() {
     }
 
     disconnectWs();
-  }, [user]);
+  }, [isSessionLoading, user]);
 
   useEffect(() => {
     if (!user || !Number.isFinite(quizId) || quizId <= 0) {
