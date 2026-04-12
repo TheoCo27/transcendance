@@ -8,9 +8,10 @@ cd "$ROOT_DIR"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 BACKEND_PORT="${BACKEND_PORT:-4000}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-BACKEND_BASE_URL="http://localhost:${BACKEND_PORT}"
-FRONTEND_BASE_URL="http://localhost:${FRONTEND_PORT}"
+BACKEND_BASE_URL="https://localhost:${BACKEND_PORT}"
+FRONTEND_BASE_URL="${FRONTEND_ORIGIN:-https://localhost:${FRONTEND_PORT}}"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ft_transcendance_smoke.XXXXXX")"
+MKCERT_CA_FILE="${ROOT_DIR}/certs/mkcert-rootCA.pem"
 COOKIE_JAR="${TMP_DIR}/cookies.txt"
 LAST_BODY=""
 LAST_HEADERS=""
@@ -34,6 +35,7 @@ print_test_catalog() {
 	printf ' - test dev op\n'
 	printf ' - test db\n'
 	printf ' - test websocket api\n'
+	printf ' - test websocket front proxy\n'
 	printf ' - test authentifcation\n'
 	printf ' - test front end\n'
 }
@@ -58,7 +60,20 @@ container_health() {
 
 check_container() {
 	name="$1"
-	status="$(container_health "$name")"
+	retries="${2:-15}"
+	status=""
+
+	while [ "$retries" -gt 0 ]; do
+		status="$(container_health "$name")"
+		if [ "$status" = "healthy" ]; then
+			pass "Container $name healthy"
+			return 0
+		fi
+
+		retries=$((retries - 1))
+		sleep 2
+	done
+
 	[ "$status" = "healthy" ] || fail "Container $name non healthy (etat: ${status:-inconnu})"
 	pass "Container $name healthy"
 }
@@ -67,7 +82,12 @@ check_http_with_curl() {
 	url="$1"
 	expected="$2"
 
-	body="$(curl -fsS "$url")" || return 1
+	if printf '%s' "$url" | grep -Eq '^https://'; then
+		body="$(curl --cacert "$MKCERT_CA_FILE" -fsS "$url")" || return 1
+	else
+		body="$(curl -fsS "$url")" || return 1
+	fi
+
 	printf '%s' "$body" | grep -F -q "$expected" || fail "Reponse inattendue sur $url"
 	pass "Endpoint $url OK"
 }
@@ -77,9 +97,31 @@ check_http_inside_container() {
 	url="$2"
 	expected="$3"
 
-	body="$(docker exec "$container" sh -lc "wget -qO- '$url'")" || return 1
+	if printf '%s' "$url" | grep -Eq '^https://'; then
+		body="$(docker exec "$container" sh -lc "NODE_EXTRA_CA_CERTS=/certs/mkcert-rootCA.pem node -e \"fetch('${url}').then(async (response) => { if (!response.ok) process.exit(1); process.stdout.write(await response.text()); }).catch(() => process.exit(1))\"")" || return 1
+	else
+		body="$(docker exec "$container" sh -lc "wget -qO- '$url'")" || return 1
+	fi
+
 	printf '%s' "$body" | grep -F -q "$expected" || fail "Reponse inattendue depuis $container sur $url"
 	pass "Endpoint $url OK via $container"
+}
+
+run_database_query() {
+	query="$1"
+
+	docker exec -i quiz_db sh -lc \
+		"PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1 -t -A -c \"$query\""
+}
+
+check_database_credentials() {
+	if ! result="$(run_database_query "SELECT current_user || '|' || current_database();" 2>&1)"; then
+		fail "Connexion PostgreSQL impossible avec les credentials du conteneur db. Verifie .env puis reinitialise le volume avec 'make fclean' si POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB ont change depuis la creation du volume."
+	fi
+
+	result="$(printf '%s' "$result" | tr -d '\r' | head -n 1)"
+	assert_not_empty "$result" "connexion PostgreSQL"
+	pass "Credentials PostgreSQL valides pour quiz_db (${result})"
 }
 
 check_database_query() {
@@ -87,11 +129,11 @@ check_database_query() {
 	query="$2"
 	expected="$3"
 
-	result="$(
-		docker exec -i quiz_db sh -lc \
-			"psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -A -c \"$query\"" \
-			| tr -d '\r[:space:]'
-	)"
+	if ! result="$(run_database_query "$query" 2>&1)"; then
+		fail "Requete DB impossible pour $label. Verifie les credentials PostgreSQL et l'etat du volume Docker."
+	fi
+
+	result="$(printf '%s' "$result" | tr -d '\r[:space:]')"
 	[ "$result" = "$expected" ] || fail "Resultat DB inattendu pour $label: attendu '$expected', recu '$result'"
 	pass "$label"
 }
@@ -118,9 +160,14 @@ request_with_curl() {
 		curl_args+=(-H "Content-Type: application/json" -d "$data")
 	fi
 
+	if printf '%s' "$url" | grep -Eq '^https://'; then
+		curl_args+=(--cacert "$MKCERT_CA_FILE")
+	fi
+
 	LAST_STATUS="$(curl "${curl_args[@]}")" || return 1
 	LAST_BODY="$(cat "$body_file")"
 	LAST_HEADERS="$(cat "$headers_file")"
+	assert_no_server_error
 }
 
 assert_status() {
@@ -146,6 +193,15 @@ assert_body_not_contains() {
 	if printf '%s' "$LAST_BODY" | grep -F -q "$unexpected"; then
 		fail "Body inattendu. Fragment present: $unexpected. Body: $LAST_BODY"
 	fi
+}
+
+assert_no_server_error() {
+	if [ -n "$LAST_STATUS" ] && [ "$LAST_STATUS" -ge 500 ] 2>/dev/null; then
+		fail "Erreur serveur detectee (HTTP $LAST_STATUS). Body: $LAST_BODY"
+	fi
+
+	assert_body_not_contains '"code":"INTERNAL_SERVER_ERROR"'
+	assert_body_not_contains '"message":"Internal server error"'
 }
 
 assert_headers_contains() {
@@ -180,16 +236,32 @@ get_user_field() {
 	email="$1"
 	field="$2"
 
-	docker exec -i quiz_db sh -lc \
-		"psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -A -c \"SELECT \\\"${field}\\\" FROM \\\"User\\\" WHERE email = '${email}';\"" \
-		| tr -d '\r'
+	run_database_query "SELECT \\\"${field}\\\" FROM \\\"User\\\" WHERE email = '${email}';" | tr -d '\r'
+}
+
+get_user_field_by_username() {
+	username="$1"
+	field="$2"
+
+	run_database_query "SELECT \\\"${field}\\\" FROM \\\"User\\\" WHERE username = '${username}';" | tr -d '\r'
 }
 
 cleanup_user() {
 	email="$1"
 
-	docker exec -i quiz_db sh -lc \
-		"psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c \"DELETE FROM \\\"User\\\" WHERE email = '${email}';\"" \
+	run_database_query "DELETE FROM \\\"User\\\" WHERE email = '${email}';" \
+		>/dev/null 2>&1 || true
+}
+
+cleanup_user_by_id() {
+	user_id="$1"
+
+	run_database_query "DELETE FROM \\\"User\\\" WHERE id = ${user_id};" \
+		>/dev/null 2>&1 || true
+}
+
+cleanup_smoke_users() {
+	run_database_query "DELETE FROM \\\"User\\\" WHERE email LIKE 'smoke-%@test.com' OR email LIKE 'ws-smoke-%@test.com' OR username LIKE 'guest-smoke-%';" \
 		>/dev/null 2>&1 || true
 }
 
@@ -199,7 +271,10 @@ cleanup() {
 	if [ "$CLEANUP_NEEDED" -eq 1 ]; then
 		[ -n "${TEST_EMAIL:-}" ] && cleanup_user "$TEST_EMAIL"
 		[ -n "${GHOST_EMAIL:-}" ] && cleanup_user "$GHOST_EMAIL"
+		[ -n "${GUEST_USER_ID:-}" ] && cleanup_user_by_id "$GUEST_USER_ID"
 	fi
+	cleanup_smoke_users
+	bash scripts/cleanup-smoke-artifacts.sh --scope=all >/dev/null 2>&1 || true
 
 	rm -rf "$TMP_DIR"
 }
@@ -207,25 +282,30 @@ cleanup() {
 trap cleanup EXIT
 
 printf '== Smoke test ft_transcendence ==\n'
-printf 'Frontend : http://localhost:%s\n' "$FRONTEND_PORT"
-printf 'Backend  : http://localhost:%s\n' "$BACKEND_PORT"
+printf 'Frontend : %s\n' "$FRONTEND_BASE_URL"
+printf 'Backend  : %s\n' "$BACKEND_BASE_URL"
 printf 'Database : localhost:%s\n' "$POSTGRES_PORT"
 print_test_catalog
 
 section "test dev op"
 check_command docker
 check_command curl
+check_command bash
+[ -s "$MKCERT_CA_FILE" ] || fail "CA mkcert absente: $MKCERT_CA_FILE. Lance 'make tls-cert' et 'make tls-trust'."
+bash ./scripts/check-env.sh .env >/dev/null 2>&1 || fail "Configuration .env invalide. Lance 'make env-check' pour le diagnostic complet."
+pass "Configuration .env valide"
 compose ps >/dev/null 2>&1 || fail "Docker Compose indisponible ou stack non accessible"
 pass "Docker Compose accessible"
 
 check_container quiz_db
+check_database_credentials
 check_container quiz_backend
 check_container quiz_frontend
 
-if check_http_with_curl "http://localhost:${BACKEND_PORT}/health" '"ok":true'; then
+if check_http_with_curl "${BACKEND_BASE_URL}/health" '"ok":true'; then
 	:
 else
-	check_http_inside_container quiz_backend "http://127.0.0.1:4000/health" '"ok":true'
+	check_http_inside_container quiz_backend "https://127.0.0.1:4000/health" '"ok":true'
 fi
 
 section "test db"
@@ -233,22 +313,22 @@ check_database_query "Connexion PostgreSQL OK" "SELECT 1;" "1"
 check_database_query "Table User presente" "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User';" "1"
 
 section "test front end"
-if check_http_with_curl "http://localhost:${FRONTEND_PORT}" '<title>ft_transcendance starter</title>'; then
+if check_http_with_curl "${FRONTEND_BASE_URL}" '<title>ft_transcendance starter</title>'; then
 	:
 else
-	check_http_inside_container quiz_frontend "http://127.0.0.1:3000" '<title>ft_transcendance starter</title>'
+	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}" '<title>ft_transcendance starter</title>'
 fi
 
-if check_http_with_curl "http://localhost:${FRONTEND_PORT}/health" '"database":{"configured":true,"ok":true}'; then
+if check_http_with_curl "${FRONTEND_BASE_URL}/health" '"database":{"configured":true,"ok":true}'; then
 	:
 else
-	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/health" '"database":{"configured":true,"ok":true}'
+	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/health" '"database":{"configured":true,"ok":true}'
 fi
 
-if check_http_with_curl "http://localhost:${FRONTEND_PORT}/api" 'Backend NestJS accessible'; then
+if check_http_with_curl "${FRONTEND_BASE_URL}/api" 'Backend NestJS accessible'; then
 	:
 else
-	check_http_inside_container quiz_frontend "http://127.0.0.1:3000/api" 'Backend NestJS accessible'
+	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/api" 'Backend NestJS accessible'
 fi
 
 section "test authentifcation"
@@ -258,6 +338,8 @@ TEST_PASSWORD="longsecuredpassword123!"
 GHOST_EMAIL="smoke-ghost-$(date +%s)@test.com"
 GHOST_PASSWORD="longsecuredpassword123!"
 GHOST_COOKIE_JAR="${TMP_DIR}/ghost-cookies.txt"
+GUEST_USERNAME="guest-smoke-$(date +%s)"
+GUEST_COOKIE_JAR="${TMP_DIR}/guest-cookies.txt"
 
 REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","username":"smoke"}' "$TEST_EMAIL" "$TEST_PASSWORD")
 LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$TEST_EMAIL" "$TEST_PASSWORD")
@@ -267,9 +349,12 @@ INVALID_LOGIN_PAYLOAD='{"email":"not-an-email","password":"short"}'
 WRONG_PASSWORD_PAYLOAD=$(printf '{"email":"%s","password":"wrongpassword123!"}' "$TEST_EMAIL")
 GHOST_REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","username":"ghost"}' "$GHOST_EMAIL" "$GHOST_PASSWORD")
 GHOST_LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$GHOST_EMAIL" "$GHOST_PASSWORD")
+GUEST_LOGIN_PAYLOAD=$(printf '{"username":"%s"}' "$GUEST_USERNAME")
 
 cleanup_user "$TEST_EMAIL"
 cleanup_user "$GHOST_EMAIL"
+cleanup_smoke_users
+bash scripts/cleanup-smoke-artifacts.sh --scope=all >/dev/null 2>&1 || true
 CLEANUP_NEEDED=1
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
@@ -438,8 +523,49 @@ assert_body_contains '"code":"NOT_FOUND"'
 assert_body_contains "\"message\":\"User ${GHOST_USER_ID} not found\""
 pass "Session renvoie 404 si le user du token n'existe plus"
 
+request_with_curl POST "${BACKEND_BASE_URL}/auth/guest" "$GUEST_LOGIN_PAYLOAD" "$GUEST_COOKIE_JAR"
+assert_status_any 200 201
+assert_body_contains '"success":true'
+assert_body_contains "\"username\":\"${GUEST_USERNAME}\""
+assert_body_contains '"isGuest":true'
+assert_body_contains '"status":"online"'
+assert_headers_contains 'Set-Cookie: access_token='
+assert_cookie_jar_has_cookie "$GUEST_COOKIE_JAR" "access_token"
+pass "Connexion invite OK"
+
+GUEST_USER_ID="$(get_user_field_by_username "$GUEST_USERNAME" id)"
+GUEST_USER_STATUS="$(get_user_field_by_username "$GUEST_USERNAME" status)"
+GUEST_IS_GUEST="$(get_user_field_by_username "$GUEST_USERNAME" isGuest)"
+assert_not_empty "$GUEST_USER_ID" "guest user id"
+assert_equals "online" "$GUEST_USER_STATUS"
+assert_equals "t" "$GUEST_IS_GUEST"
+pass "Guest cree en base avec status online"
+
+request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$GUEST_COOKIE_JAR"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains "\"id\":${GUEST_USER_ID}"
+assert_body_contains "\"username\":\"${GUEST_USERNAME}\""
+assert_body_contains '"isGuest":true'
+pass "Session invite OK"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/logout" '{}' "$GUEST_COOKIE_JAR"
+assert_status_any 200 201
+assert_body_contains '"loggedOut":true'
+pass "Logout invite OK"
+
+request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$GUEST_COOKIE_JAR"
+assert_status 401
+assert_body_contains '"success":false'
+assert_body_contains '"code":"UNAUTHORIZED"'
+pass "Session invite invalidee apres logout"
+
 section "test websocket api"
-compose exec -T backend sh -lc 'npm run test:ws-smoke'
+bash scripts/ws-smoke-test.sh
 pass "Smoke WebSocket backend OK"
+
+section "test websocket front proxy"
+WS_BASE_URL="https://frontend:3000" bash scripts/ws-smoke-test.sh
+pass "Smoke WebSocket frontend proxy OK"
 
 pass "Smoke test termine avec succes"

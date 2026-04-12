@@ -36,6 +36,7 @@ model User {
   email    String @unique
   username String
   password String
+  isGuest  Boolean @default(false)
 
   avatar_url String?
   status     UserStatus @default(offline)
@@ -48,6 +49,7 @@ model User {
 
   answers            PlayerAnswer[] @relation("UserPlayerAnswers")
   leaderboardEntries Leaderboard[]  @relation("UserLeaderboardEntries")
+  quizLeaderboardEntries QuizLeaderboard[] @relation("UserQuizLeaderboardEntries")
   wonGames           Game[]         @relation("GameWinner")
 
   sentFriendRequests     FriendRequests[] @relation("FriendRequestSender")
@@ -88,10 +90,12 @@ model Room {
 model Quiz {
   id        Int      @id @default(autoincrement())
   title     String
+  questionDurationSec Int?
   createdAt DateTime @default(now())
 
   questions QuizQuestion[] @relation("QuizQuestions")
   games     Game[]         @relation("QuizGames")
+  leaderboardEntries QuizLeaderboard[] @relation("QuizLeaderboardEntries")
 }
 
 model QuizQuestion {
@@ -187,6 +191,24 @@ model Leaderboard {
 
   @@unique([gameId, userId])
   @@index([gameId, rank])
+}
+
+model QuizLeaderboard {
+  id     Int  @id @default(autoincrement())
+  quiz   Quiz @relation("QuizLeaderboardEntries", fields: [quizId], references: [id])
+  quizId Int
+
+  user   User @relation("UserQuizLeaderboardEntries", fields: [userId], references: [id])
+  userId Int
+
+  totalScore Int      @default(0)
+  wins       Int      @default(0)
+  gamesPlayed Int     @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([quizId, userId])
+  @@index([quizId, totalScore, wins])
 }
 
 model RoomPlayer {

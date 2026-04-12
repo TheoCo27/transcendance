@@ -10,6 +10,15 @@ export class UsersService {
     return this.findUser({ email });
   }
 
+  async findUserByUsername(username: string): Promise<User | null> {
+    const users = await this.findUsers({
+      where: { username },
+      take: 1,
+    });
+
+    return users[0] ?? null;
+  }
+
   async findUser(
     userWhereUniqueInput: Prisma.UserWhereUniqueInput,
   ): Promise<User | null> {

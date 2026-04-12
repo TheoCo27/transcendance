@@ -12,7 +12,7 @@ import {
 const BACKEND_PORT = Number(process.env.BACKEND_PORT || 4000);
 const BACKEND_HOST = process.env.BACKEND_HOST || "localhost";
 const WS_BASE_URL =
-  process.env.WS_BASE_URL || `http://${BACKEND_HOST}:${BACKEND_PORT}`;
+  process.env.WS_BASE_URL || `https://${BACKEND_HOST}:${BACKEND_PORT}`;
 const WS_NAMESPACE_URL = `${WS_BASE_URL}/ws`;
 
 function section(title) {
@@ -25,7 +25,7 @@ function printTestCatalog() {
   console.log(" - test websocket room lifecycle");
   console.log(" - test websocket game flow");
   console.log(" - test websocket rest coherence");
-  console.log(" - test websocket disconnect cleanup");
+  console.log(" - test websocket room persistence");
 }
 
 async function run() {
@@ -61,12 +61,20 @@ async function run() {
       outsiderSession.cookieHeader,
     );
     pass(`Connexion WS OK (outsider, userId=${outsider.userId})`);
+    const quizId = await createSmokeQuiz(WS_BASE_URL);
 
     section("test websocket room lifecycle");
     sockets.push(owner.socket, guest.socket, outsider.socket);
-    const roomId = await createRoomWithOwner(owner);
+    const roomId = await createRoomWithOwner(owner, quizId);
     await assertOutsiderCannotChat(outsider, roomId);
     await joinRoomAsGuest(guest, roomId);
+    const ownerMirror = await connectAuthenticatedSocket(
+      WS_NAMESPACE_URL,
+      ownerSession.cookieHeader,
+    );
+    sockets.push(ownerMirror.socket);
+    await assertSocketAutoRejoinsRoomChannel(ownerMirror, guest, roomId);
+    safeDisconnect(ownerMirror.socket);
     await assertGuestCannotStartRoom(guest, roomId);
 
     section("test websocket game flow");
@@ -76,18 +84,50 @@ async function run() {
     await assertTimerCompletesGame(guest, roomId);
 
     section("test websocket rest coherence");
-    await assertScoresLeaderboard(WS_BASE_URL, guest.userId);
+    await assertScoresLeaderboard(WS_BASE_URL, guest.userId, quizId);
 
-    section("test websocket disconnect cleanup");
+    section("test websocket room persistence");
     await assertDisconnectUpdatesRoomState(owner, guest, roomId);
-    await assertRoomClosedAfterLastDisconnect(guest, outsider, roomId);
+    const waitingRoomId = await createRoomWithOwner(guest, quizId);
+    await assertWaitingRoomPersistsAfterLastDisconnect(
+      WS_BASE_URL,
+      guest,
+      outsider,
+      waitingRoomId,
+    );
     pass("WS smoke test termine avec succes");
   } finally {
     for (const socket of sockets) safeDisconnect(socket);
   }
 }
 
-async function createRoomWithOwner(owner) {
+async function createSmokeQuiz(baseUrl) {
+  const response = await fetch(`${baseUrl}/quizzes`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: `WS Smoke Quiz ${Date.now()}`,
+      questionDurationSec: 10,
+      questions: [
+        {
+          questionText: "Quelle est la couleur du ciel par temps clair ?",
+          answers: ["Bleu", "Rouge", "Vert", "Jaune"],
+          correctAnswerIndex: 0,
+          points: 100,
+        },
+      ],
+    }),
+  });
+  const payload = await assertHealthyJsonResponse(response, "Quiz creation endpoint");
+  const quizId = payload?.data?.id;
+  if (typeof quizId !== "number") fail("Quiz creation payload missing quiz id");
+  pass(`Quiz smoke cree (id=${quizId})`);
+  return quizId;
+}
+
+async function createRoomWithOwner(owner, quizId) {
   const roomCreatedPromise = waitForEvent(
     owner.socket,
     "room:created",
@@ -96,12 +136,14 @@ async function createRoomWithOwner(owner) {
   owner.socket.emit("room:create", {
     name: `WS Smoke ${Date.now()}`,
     rounds: 1,
+    quizId,
     isPrivate: false,
   });
   const roomCreated = await roomCreatedPromise;
   const roomId = roomCreated?.data?.id;
   if (typeof roomId !== "number") fail("room:created payload missing room id");
   if (roomCreated?.data?.ownerUserId !== owner.userId) fail("room owner mismatch");
+  if (roomCreated?.data?.quizId !== quizId) fail("room quiz mismatch");
   pass(`Room creee par owner (id=${roomId})`);
   return roomId;
 }
@@ -143,6 +185,27 @@ async function assertGuestCannotStartRoom(guest, roomId) {
   pass("Droit owner sur room:start valide");
 }
 
+async function assertSocketAutoRejoinsRoomChannel(ownerMirror, guest, roomId) {
+  const chatPromise = waitForEvent(
+    ownerMirror.socket,
+    "chat:message",
+    (payload) =>
+      payload?.success === true &&
+      payload?.data?.roomId === roomId &&
+      payload?.data?.userId === guest.userId &&
+      payload?.data?.content === "mirror-check",
+  );
+
+  guest.socket.emit("chat:message", {
+    roomId,
+    userId: guest.userId,
+    content: "mirror-check",
+  });
+
+  await chatPromise;
+  pass("Socket reconnecte auto-rattache aux rooms existantes");
+}
+
 async function startRoomAsOwnerAndGetQuestion(owner, roomId) {
   const roomStartedPromise = waitForEvent(
     owner.socket,
@@ -181,7 +244,7 @@ async function submitAndValidateAnswer(guest, roomId, questionId) {
     "game:answer:result",
     (payload) => payload?.success === true && payload?.data?.userId === guest.userId,
   );
-  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 1 });
+  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 0 });
   const answer = await answerPromise;
   if (typeof answer?.data?.userTotalScore !== "number") fail("Missing userTotalScore");
   pass("Reponse + scoring OK");
@@ -193,7 +256,7 @@ async function assertDuplicateAnswerConflict(guest, roomId, questionId) {
     "game:answer:error",
     (payload) => payload?.success === false && payload?.error?.code === "CONFLICT",
   );
-  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 1 });
+  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 0 });
   await duplicateErrorPromise;
   pass("Anti double-reponse OK");
 }
@@ -235,23 +298,77 @@ async function assertTimerCompletesGame(guest, roomId) {
   pass("Timer + fin de partie OK");
 }
 
-async function assertScoresLeaderboard(baseUrl, userId) {
-  const response = await fetch(`${baseUrl}/scores/leaderboard?limit=5`);
-  if (!response.ok) {
-    fail(`Leaderboard endpoint failed (${response.status})`);
+async function assertScoresLeaderboard(baseUrl, userId, quizId) {
+  const leaderboardPayload = await fetchHealthyJson(
+    `${baseUrl}/scores/leaderboard?limit=5`,
+    "Leaderboard endpoint",
+  );
+  if (!Array.isArray(leaderboardPayload?.data)) {
+    fail("Scores leaderboard payload is malformed");
   }
 
-  const payload = await response.json();
-  const entry = payload?.data?.find?.((item) => item.userId === userId);
-  if (!entry) {
-    fail("Missing finished game result in scores leaderboard");
+  const userScorePayload = await fetchHealthyJson(
+    `${baseUrl}/scores/users/${userId}`,
+    "User score endpoint",
+  );
+  const entry = userScorePayload?.data;
+  if (!entry || entry.userId !== userId) {
+    fail("Missing finished game result in user score endpoint");
   }
 
   if (entry.score < 100 || entry.wins < 1) {
-    fail("Scores leaderboard did not aggregate game result");
+    fail("Scores REST endpoints did not aggregate game result");
+  }
+
+  const quizLeaderboardPayload = await fetchHealthyJson(
+    `${baseUrl}/scores/quizzes/${quizId}/leaderboard?limit=5`,
+    "Quiz leaderboard endpoint",
+  );
+  if (!Array.isArray(quizLeaderboardPayload?.data)) {
+    fail("Quiz leaderboard payload is malformed");
+  }
+
+  const quizEntry = quizLeaderboardPayload.data.find((item) => item?.userId === userId);
+  if (!quizEntry) {
+    fail("Missing finished game result in quiz leaderboard");
+  }
+
+  if (quizEntry.score < 100 || quizEntry.wins < 1 || quizEntry.gamesPlayed < 1) {
+    fail("Quiz leaderboard did not aggregate finished game result");
   }
 
   pass("Scores REST coherent avec la fin de partie WS");
+}
+
+async function fetchHealthyJson(url, label) {
+  const response = await fetch(url);
+  return assertHealthyJsonResponse(response, label);
+}
+
+async function assertHealthyJsonResponse(response, label) {
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status >= 500) {
+    fail(`${label} failed with server error (${response.status})`);
+  }
+
+  if (
+    payload?.error?.code === "INTERNAL_SERVER_ERROR" ||
+    payload?.error?.message === "Internal server error"
+  ) {
+    fail(`${label} returned an internal server error payload`);
+  }
+
+  if (!response.ok) {
+    fail(`${label} failed (${response.status})`);
+  }
+
+  return payload;
 }
 
 async function assertDisconnectUpdatesRoomState(owner, guest, roomId) {
@@ -268,18 +385,42 @@ async function assertDisconnectUpdatesRoomState(owner, guest, roomId) {
   pass("Disconnect owner -> room mise a jour");
 }
 
-async function assertRoomClosedAfterLastDisconnect(guest, outsider, roomId) {
-  const roomRemovedPromise = waitForEvent(
+async function assertWaitingRoomPersistsAfterLastDisconnect(
+  baseUrl,
+  guest,
+  outsider,
+  roomId,
+) {
+  const roomListPromise = waitForEvent(
     outsider.socket,
     "room:list-updated",
     (payload) =>
       payload?.success === true &&
       Array.isArray(payload?.data) &&
-      !payload.data.some((room) => room.id === roomId),
+      payload.data.some(
+        (room) => room.id === roomId && Array.isArray(room.players) && room.players.length === 0,
+      ),
   );
   safeDisconnect(guest.socket);
-  await roomRemovedPromise;
-  pass("Disconnect dernier joueur -> room fermee");
+  await roomListPromise;
+
+  const roomPayload = await fetchHealthyJson(
+    `${baseUrl}/rooms/${roomId}`,
+    "Room endpoint after last disconnect",
+  );
+  if (roomPayload?.data?.id !== roomId) {
+    fail("Room endpoint did not return the expected room after last disconnect");
+  }
+
+  if (
+    roomPayload?.data?.status !== "waiting" ||
+    !Array.isArray(roomPayload?.data?.players) ||
+    roomPayload.data.players.length !== 0
+  ) {
+    fail("Waiting room should stay available and empty after the last disconnect");
+  }
+
+  pass("Disconnect dernier joueur d'une waiting room -> room conservee");
 }
 
 run().catch((error) => {

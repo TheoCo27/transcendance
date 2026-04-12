@@ -19,7 +19,7 @@ import { RealtimeRoomEventsService } from "./services/realtime-room-events.servi
 @WebSocketGateway({
   namespace: "/ws",
   cors: {
-    origin: process.env.FRONTEND_ORIGIN || "http://localhost:3000",
+    origin: process.env.FRONTEND_ORIGIN || "https://localhost:3000",
     credentials: true,
   },
   transports: ["websocket", "polling"],
@@ -45,6 +45,7 @@ export class RealtimeGateway
     try {
       const userId = await this.auth.authenticateSocket(client);
       this.presence.bindSocketToUser(client.id, userId);
+      this.roomEvents.syncSocketRoomMembership(userId, client);
 
       client.emit(
         "ws:connected",
@@ -119,7 +120,7 @@ export class RealtimeGateway
     @ConnectedSocket() client: Socket,
   ): void {
     this.runSafely(client, "room:start:error", () => {
-      this.roomEvents.handleRoomStart(payload, client, this.server);
+      return this.roomEvents.handleRoomStart(payload, client, this.server);
     });
   }
 
@@ -129,7 +130,7 @@ export class RealtimeGateway
     @ConnectedSocket() client: Socket,
   ): void {
     this.runSafely(client, "game:answer:error", () => {
-      this.gameEvents.handleGameAnswer(payload, client, this.server);
+      return this.gameEvents.handleGameAnswer(payload, client, this.server);
     });
   }
 
@@ -146,10 +147,15 @@ export class RealtimeGateway
   private runSafely(
     client: Socket,
     errorEvent: string,
-    callback: () => void,
+    callback: () => void | Promise<void>,
   ): void {
     try {
-      callback();
+      const result = callback();
+      if (result && typeof result === "object" && "catch" in result) {
+        void (result as Promise<void>).catch((exception) => {
+          this.response.emitError(client, errorEvent, exception);
+        });
+      }
     } catch (exception) {
       this.response.emitError(client, errorEvent, exception);
     }

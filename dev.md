@@ -60,9 +60,9 @@ Role actuel :
 
 Le fonctionnement actuel est le suivant :
 
-1. Le navigateur appelle le frontend sur `http://localhost:3000`
+1. Le navigateur appelle le frontend sur `https://localhost:3000`
 2. Le frontend React TypeScript appelle le backend via des routes proxifiees comme `/health`, `/api`, `/auth/*`, `/users/*` et `/quizzes/*`
-3. Webpack Dev Server proxifie ces routes vers le backend `http://backend:4000`
+3. Webpack Dev Server proxifie ces routes vers le backend `https://backend:4000`
 4. Le backend interroge PostgreSQL via `DATABASE_URL`
 
 ### Schema de communication
@@ -71,14 +71,14 @@ Le fonctionnement actuel est le suivant :
                     Navigateur
                          |
                          v
-         http://localhost:3000
+         https://localhost:3000
                   frontend
      React + TypeScript + Webpack Dev Server
                          |
 proxy /api, /health, /auth, /users, /rooms, /game, /scores, /quizzes
                          |
                          v
-         http://backend:4000
+         https://backend:4000
                  backend NestJS
                          |
         DATABASE_URL -> postgresql://db:5432
@@ -89,8 +89,8 @@ proxy /api, /health, /auth, /users, /rooms, /game, /scores, /quizzes
 
 Exposition des ports cote hote :
 
-- frontend -> localhost:3000
-- backend  -> localhost:4000
+- frontend -> https://localhost:3000
+- backend  -> https://localhost:4000
 - db       -> localhost:5432
 ```
 
@@ -129,6 +129,7 @@ Les variables principales sont :
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
+- `GAME_QUESTION_DURATION_MS`
 
 Regle d'equipe :
 
@@ -151,7 +152,6 @@ Noms attendus si tu veux piloter la CI depuis l'interface GitHub :
 - `CI_BACKEND_PORT`
 - `CI_FRONTEND_PORT`
 - `CI_JWT_SECRET`
-- `CI_FRONTEND_ORIGIN`
 
 Si ces secrets ne sont pas definis, la CI utilise des valeurs de secours dediees au test.
 
@@ -186,6 +186,7 @@ Pour faire fonctionner le projet apres un clone :
 
 - cloner le repo
 - lancer `make env-init`
+- lancer `make tls-trust` une fois pour installer la CA locale `mkcert`
 - remplir les vraies valeurs dans `.env`
 - lancer `make env-check`
 - lancer `make` ou `make up`
@@ -283,10 +284,10 @@ make fclean
 
 ## URLs de verification
 
-- `http://localhost:3000`
-- `http://localhost:3000/health`
-- `http://localhost:3000/api`
-- `http://localhost:4000/health`
+- `https://localhost:3000`
+- `https://localhost:3000/health`
+- `https://localhost:3000/api`
+- `https://localhost:4000/health`
 
 ## Module auth backend
 
@@ -550,9 +551,9 @@ Aujourd'hui, Webpack Dev Server proxifie :
 - `/game`
 - `/scores`
 
-Pour le front en dev, on peut donc appeler ces routes directement depuis `http://localhost:3000`.
+Pour le front en dev, on peut donc appeler ces routes directement depuis `https://localhost:3000`.
 
-Le backend direct `http://localhost:4000` reste utile pour du debug ou pour les tests shell.
+Le backend direct `https://localhost:4000` reste utile pour du debug ou pour les tests shell.
 
 ### Regle obligatoire
 
@@ -583,14 +584,14 @@ COOKIE_JAR=/tmp/register-cookie.txt
 curl -i -c "$COOKIE_JAR" \
   -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"username\":\"manual\",\"password\":\"$PASS\"}" \
-  http://localhost:4000/auth/register
+  https://localhost:4000/auth/register
 
 cat "$COOKIE_JAR"
 
-curl -i -b "$COOKIE_JAR" http://localhost:4000/auth/session
-curl -i -b "$COOKIE_JAR" http://localhost:4000/users/me
-curl -i -b "$COOKIE_JAR" -c "$COOKIE_JAR" -H 'Content-Type: application/json' -d '{}' http://localhost:4000/auth/logout
-curl -i -b "$COOKIE_JAR" http://localhost:4000/auth/session
+curl -k -i -b "$COOKIE_JAR" https://localhost:4000/auth/session
+curl -k -i -b "$COOKIE_JAR" https://localhost:4000/users/me
+curl -k -i -b "$COOKIE_JAR" -c "$COOKIE_JAR" -H 'Content-Type: application/json' -d '{}' https://localhost:4000/auth/logout
+curl -k -i -b "$COOKIE_JAR" https://localhost:4000/auth/session
 ```
 
 Ce qu'il faut verifier :
@@ -605,14 +606,14 @@ Ce qu'il faut verifier :
 
 Avec Postman ou Insomnia :
 
-1. creer une requete `POST http://localhost:4000/auth/register`
+1. creer une requete `POST https://localhost:4000/auth/register`
 2. envoyer un body JSON avec `email`, `username`, `password`
 3. verifier dans les headers de reponse qu'il y a `Set-Cookie`
 4. verifier que le cookie jar de l'outil contient `access_token`
-5. appeler `GET http://localhost:4000/auth/session`
-6. appeler `GET http://localhost:4000/users/me`
-7. appeler `POST http://localhost:4000/auth/logout`
-8. rejouer `GET http://localhost:4000/auth/session` et verifier le `401`
+5. appeler `GET https://localhost:4000/auth/session`
+6. appeler `GET https://localhost:4000/users/me`
+7. appeler `POST https://localhost:4000/auth/logout`
+8. rejouer `GET https://localhost:4000/auth/session` et verifier le `401`
 
 ### Reponse de succes standard
 

@@ -19,7 +19,11 @@ export class RealtimeGameEventsService {
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
 
-  handleGameAnswer(rawPayload: unknown, client: Socket, server: Server): void {
+  async handleGameAnswer(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
     const payload = this.validation.validatePayload(SubmitAnswerDto, rawPayload);
     const userId = this.presence.resolveSocketUser(client.id, payload.userId);
 
@@ -41,10 +45,13 @@ export class RealtimeGameEventsService {
     server.to(channel).emit("game:answer:result", this.response.ok(answer));
     server.to(channel).emit("game:state", this.response.ok(gameState));
     server.to(channel).emit("game:leaderboard", this.response.ok(leaderboard));
+
+    if (this.gameService.hasEveryPlayerAnsweredCurrentQuestion(payload.roomId)) {
+      this.gameRuntime.completeActiveQuestion(payload.roomId, "all_answered", server);
+    }
   }
 
   private roomChannel(roomId: number): string {
     return `room:${roomId}`;
   }
 }
-

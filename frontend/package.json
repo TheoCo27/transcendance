@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "deps:sync": "sh -c 'if [ -f package-lock.json ]; then npm ci; else npm install --include=dev --no-package-lock; fi'",
-    "dev": "webpack serve --config webpack.config.cjs --mode development --host 0.0.0.0 --port 3000",
+    "dev": "NODE_EXTRA_CA_CERTS=../certs/mkcert-rootCA.pem webpack serve --config webpack.config.cjs --mode development --host 0.0.0.0 --port 3000",
     "start:docker": "npm run deps:sync && npm run dev",
     "build": "webpack --config webpack.config.cjs --mode production"
   },

@@ -1,6 +1,7 @@
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import { LoginDto } from "@/modules/users/dto/login.dto";
 import { RegisterDto } from "@/modules/users/dto/register.dto";
+import { GuestLoginDto } from "@/modules/users/dto/guest-login.dto";
 import {
   Body,
   Controller,
@@ -36,6 +37,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApiResponse<SafeUser>> {
     return ok(await this.authService.register(dto, res));
+  }
+
+  @Post("guest")
+  async guestLogin(
+    @Body() dto: GuestLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ApiResponse<SafeUser>> {
+    return ok(await this.authService.loginAsGuest(dto, res));
   }
 
   @Post("logout")
