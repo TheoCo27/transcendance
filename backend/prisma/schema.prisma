@@ -88,6 +88,7 @@ model Room {
 model Quiz {
   id        Int      @id @default(autoincrement())
   title     String
+  questionDurationSec Int?
   createdAt DateTime @default(now())
 
   questions QuizQuestion[] @relation("QuizQuestions")

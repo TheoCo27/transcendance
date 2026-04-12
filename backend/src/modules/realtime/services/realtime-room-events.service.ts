@@ -83,7 +83,11 @@ export class RealtimeRoomEventsService {
     this.broadcastRoomList(server);
   }
 
-  handleRoomStart(rawPayload: unknown, client: Socket, server: Server): void {
+  async handleRoomStart(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
     const payload = this.validation.validatePayload(RoomStartDto, rawPayload);
     const requesterUserId = this.presence.resolveSocketUser(
       client.id,
@@ -94,7 +98,7 @@ export class RealtimeRoomEventsService {
 
     const room = this.roomsService.start(payload.roomId, requesterUserId);
     server.to(this.roomChannel(payload.roomId)).emit("room:started", this.response.ok(room));
-    this.gameRuntime.startGameLoop(payload.roomId, room.rounds, server);
+    await this.gameRuntime.startGameLoop(payload.roomId, server);
     this.broadcastRoomList(server);
   }
 

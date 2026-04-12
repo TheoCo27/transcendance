@@ -1,226 +1,131 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import GamePanel from "../components/Quiz/GamePanel";
-import LobbyPanel from "../components/Quiz/LobbyPanel";
-import PasswordModal from "../components/Quiz/PasswordModal";
+import { Link } from "react-router-dom";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
-import RulesPanel from "../components/Quiz/RulesPanel";
-import { useQuizLobby } from "../hooks/useQuizLobby";
-import { getUserById } from "../services/users";
-import {
-  connectWs,
-  disconnectWs,
-  emitWs,
-  offWs,
-  onWs,
-  type WsResponse,
-} from "../services/ws";
+import { getQuizzes, type Quiz } from "../services/quizzes";
 
-type ActivePanel = "lobby" | "game";
-type ChatMessageData = {
-  roomId: number;
-  userId: number;
-  content: string;
-  sentAt: string;
-};
+function formatRuleLabel(questionDurationSec: number | null) {
+  if (questionDurationSec === null) {
+    return "Illimite";
+  }
+  return `${questionDurationSec} sec`;
+}
 
 export default function HomePage() {
-  const navigate = useNavigate();
-  const [activePanel, setActivePanel] = useState<ActivePanel>("lobby");
-  const [isRulesOpen, setIsRulesOpen] = useState(true);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [scoreEntries, setScoreEntries] = useState<
-    Array<{ userId: number; username: string; score: number }>
-  >([]);
-  const [chatMessages, setChatMessages] = useState<ChatMessageData[]>([]);
-  const [chatError, setChatError] = useState<string | null>(null);
-  const { user: sessionUser, isLoading: isSessionLoading } = useAuthSession();
-  const {
-    rooms,
-    roomsLoading,
-    roomsError,
-    currentRoom,
-    roomToJoin,
-    isJoinModalOpen,
-    joinPassword,
-    joinError,
-    isJoining,
-    setJoinPassword,
-    closeJoinModal,
-    requestJoinRoom,
-    confirmJoinRoom,
-    createRoomAndJoin,
-  } = useQuizLobby({ userId: sessionUser?.id ?? null });
+  const { user } = useAuthSession();
+  const [recentQuizzes, setRecentQuizzes] = useState<Quiz[]>([]);
 
   useEffect(() => {
-    if (sessionUser) {
-      connectWs();
-      return;
-    }
-
-    disconnectWs();
-  }, [sessionUser]);
-
-  useEffect(() => {
-    if (!currentRoom) {
-      setScoreEntries([]);
-      setChatMessages([]);
-      setChatError(null);
-      return;
-    }
-
-    const loadRoomUsers = async () => {
-      const entries = await Promise.all(
-        currentRoom.players.map(async (player) => {
-          const userId = player.userId;
-          try {
-            const user = await getUserById(userId);
-            return { userId, username: user.username, score: 0 };
-          } catch {
-            return { userId, username: `Joueur #${userId}`, score: 0 };
-          }
-        }),
-      );
-
-      setScoreEntries(entries);
-    };
-
-    void loadRoomUsers();
-  }, [currentRoom]);
-
-  useEffect(() => {
-    const handleChatMessage = (response: WsResponse<ChatMessageData>) => {
-      if (!response.success || !response.data || !currentRoom) {
-        return;
+    const loadRecentQuizzes = async () => {
+      try {
+        const quizzes = await getQuizzes();
+        setRecentQuizzes(quizzes.slice(0, 3));
+      } catch {
+        setRecentQuizzes([]);
       }
-
-      if (response.data.roomId !== currentRoom.id) {
-        return;
-      }
-
-      setChatMessages((previous) => [...previous, response.data as ChatMessageData]);
     };
 
-    const handleChatError = (response: WsResponse<never>) => {
-      if (response.success) {
-        return;
-      }
-      setChatError(response.error?.message ?? "Erreur chat");
-    };
-
-    onWs("chat:message", handleChatMessage);
-    onWs("chat:message:error", handleChatError);
-
-    return () => {
-      offWs("chat:message", handleChatMessage);
-      offWs("chat:message:error", handleChatError);
-    };
-  }, [currentRoom]);
-
-  useEffect(() => {
-    if (!currentRoom || !sessionUser) {
-      return;
-    }
-
-    emitWs("room:join", {
-      roomId: currentRoom.id,
-      userId: sessionUser.id,
-    });
-    setChatMessages([]);
-    setChatError(null);
-  }, [currentRoom, sessionUser]);
-
-  const handleSendChatMessage = (content: string) => {
-    if (!currentRoom || !sessionUser) {
-      return;
-    }
-
-    setChatError(null);
-    emitWs("chat:message", {
-      roomId: currentRoom.id,
-      userId: sessionUser.id,
-      content,
-    });
-  };
-
-  const chatEntries = chatMessages.map((message) => ({
-    ...message,
-    username:
-      scoreEntries.find((entry) => entry.userId === message.userId)?.username ??
-      `Joueur #${message.userId}`,
-    isSelf: sessionUser?.id === message.userId,
-  }));
+    void loadRecentQuizzes();
+  }, []);
 
   return (
-    <main className="flex flex-1 px-[10%] py-6">
-      {isRulesOpen ? (
-        <div className="min-h-[80vh] w-full">
-          <RulesPanel onClose={() => setIsRulesOpen(false)} />
+    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
+      <section className="grid gap-8 rounded-[2.75rem] border border-slate-900/10 bg-white/76 px-6 py-8 shadow-[0_40px_110px_rgba(15,23,42,0.08)] backdrop-blur md:px-10 md:py-12 lg:grid-cols-[1.25fr_0.95fr]">
+        <div>
+          <span className="inline-flex rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.26em] text-amber-900">
+            Quiz room builder
+          </span>
+          <h1 className="mt-6 max-w-3xl text-5xl font-semibold leading-tight text-slate-950 md:text-6xl">
+            Cree un quiz, ouvre sa room et lance enfin une vraie partie jouable.
+          </h1>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+            La home sert maintenant de rampe de lancement: creation de quiz,
+            acces direct aux rooms et page de jeu dediee a chaque quiz.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+            <Link to={user ? "/admin" : "/register"}>
+              <PrimaryButton className="w-full justify-center sm:w-auto">
+                Creer un quizz
+              </PrimaryButton>
+            </Link>
+            <Link to="/join">
+              <SecondaryButton className="w-full justify-center sm:w-auto">
+                Rejoindre une quizz room
+              </SecondaryButton>
+            </Link>
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3 text-sm text-slate-600">
+            <span className="rounded-full bg-slate-100 px-4 py-2">
+              URL de jeu dediee par quiz
+            </span>
+            <span className="rounded-full bg-slate-100 px-4 py-2">
+              Lobby temps reel
+            </span>
+            <span className="rounded-full bg-slate-100 px-4 py-2">
+              Questions custom + timer
+            </span>
+          </div>
         </div>
-      ) : null}
 
-      {!isRulesOpen && activePanel === "lobby" ? (
-        <LobbyPanel
-          onToggleRules={() => setIsRulesOpen((currentValue) => !currentValue)}
-          onRequireAuth={() => navigate("/login")}
-          rooms={rooms}
-          roomsLoading={roomsLoading}
-          roomsError={roomsError}
-          actionsDisabled={isSessionLoading || sessionUser === null}
-          onCreateRoom={async (payload) => {
-            await createRoomAndJoin(payload);
-            setActivePanel("game");
-            setIsRulesOpen(false);
-          }}
-          onJoinRoom={async (room) => {
-            await requestJoinRoom(room);
-            if (!room.isPrivate) {
-              setActivePanel("game");
-              setIsRulesOpen(false);
-            }
-          }}
-        />
-      ) : null}
+        <div className="grid gap-4">
+          <article className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">
+              Flux 01
+            </p>
+            <h2 className="mt-4 text-2xl font-semibold">
+              Creation admin guidee
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-white/72">
+              Un setup clair pour le nom, un composeur de questions en 4 reponses
+              et une regle de temps par question.
+            </p>
+          </article>
 
-      {!isRulesOpen && activePanel === "game" ? (
-        <GamePanel
-          onToggleRules={() => setIsRulesOpen((currentValue) => !currentValue)}
-          onLeaveRoom={() => {
-            if (currentRoom && sessionUser) {
-              emitWs("room:leave", {
-                roomId: currentRoom.id,
-                userId: sessionUser.id,
-              });
-            }
-            setActivePanel("lobby");
-            setSelectedAnswer(null);
-            setIsRulesOpen(false);
-          }}
-          selectedAnswer={selectedAnswer}
-          onSelectAnswer={setSelectedAnswer}
-          scoreEntries={scoreEntries}
-          chatMessages={chatEntries}
-          chatError={chatError}
-          onSendChatMessage={handleSendChatMessage}
-        />
-      ) : null}
+          <article className="rounded-[2rem] bg-amber-100 p-6 text-slate-950">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-900/70">
+              Flux 02
+            </p>
+            <h2 className="mt-4 text-2xl font-semibold">Page jouable instantanee</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-700">
+              Une fois publie, le quiz vit sur sa propre URL `/quiz/id`, avec room,
+              joueurs, lancement et score final.
+            </p>
+          </article>
+        </div>
+      </section>
 
-      <PasswordModal
-        isOpen={isJoinModalOpen}
-        roomName={roomToJoin?.name ?? null}
-        password={joinPassword}
-        joinError={joinError}
-        isJoining={isJoining}
-        onPasswordChange={setJoinPassword}
-        onClose={closeJoinModal}
-        onConfirm={() => {
-          void (async () => {
-            await confirmJoinRoom();
-            setActivePanel("game");
-            setIsRulesOpen(false);
-          })();
-        }}
-      />
+      <section className="mt-8 grid gap-5 lg:grid-cols-3">
+        {recentQuizzes.length > 0 ? (
+          recentQuizzes.map((quiz) => (
+            <article
+              key={quiz.id}
+              className="rounded-[2rem] border border-slate-900/10 bg-white/78 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                Quiz recent
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold text-slate-950">
+                {quiz.title}
+              </h2>
+              <p className="mt-3 text-sm text-slate-600">
+                {quiz.questions.length} question{quiz.questions.length > 1 ? "s" : ""} /{" "}
+                {formatRuleLabel(quiz.questionDurationSec)}
+              </p>
+              <Link className="mt-6 inline-flex" to={`/quiz/${quiz.id}`}>
+                <SecondaryButton>Ouvrir /quiz/{quiz.id}</SecondaryButton>
+              </Link>
+            </article>
+          ))
+        ) : (
+          <article className="rounded-[2rem] border border-dashed border-slate-900/12 bg-white/60 p-6 text-slate-600 lg:col-span-3">
+            Aucun quiz visible pour le moment. Utilise le CTA principal pour publier
+            le premier.
+          </article>
+        )}
+      </section>
     </main>
   );
 }

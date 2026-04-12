@@ -1,3 +1,4 @@
+import { QuizzesService } from "@/modules/quizzes/quizzes.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
 import {
   BadRequestException,
@@ -47,51 +48,48 @@ export type PublicQuestion = {
   options: string[];
 };
 
+type QuestionEntry = PublicQuestion & {
+  correctAnswerIndex: number;
+};
+
 type RoomRuntime = {
   answeredByQuestion: Map<number, Set<number>>;
   scoresByUser: Map<number, number>;
   totalAnswers: number;
+  questionOrder: number[];
+  questionsById: Map<number, QuestionEntry>;
 };
 
-type QuestionEntry = PublicQuestion & {
-  correctAnswerIndex: number;
-};
+const DEFAULT_QUESTION_BANK: QuestionEntry[] = [
+  {
+    id: 101,
+    text: "Quel est le language principal utilise pour ce backend ?",
+    options: ["Python", "TypeScript", "Go", "Rust"],
+    correctAnswerIndex: 1,
+  },
+  {
+    id: 102,
+    text: "Quel endpoint est utilise pour rejoindre une room ?",
+    options: ["/room/join", "/rooms/join", "/rooms/:roomId/join", "/join-room"],
+    correctAnswerIndex: 2,
+  },
+  {
+    id: 103,
+    text: "Quel event WebSocket diffuse le compte a rebours ?",
+    options: ["game:start", "game:timer", "question:tick", "room:timer"],
+    correctAnswerIndex: 1,
+  },
+];
 
 @Injectable()
 export class GameService {
   private readonly roomStates = new Map<number, GameState>();
   private readonly roomRuntime = new Map<number, RoomRuntime>();
-  private readonly questionBank = new Map<number, QuestionEntry>([
-    [
-      101,
-      {
-        id: 101,
-        text: "Quel est le language principal utilise pour ce backend ?",
-        options: ["Python", "TypeScript", "Go", "Rust"],
-        correctAnswerIndex: 1,
-      },
-    ],
-    [
-      102,
-      {
-        id: 102,
-        text: "Quel endpoint est utilise pour rejoindre une room ?",
-        options: ["/room/join", "/rooms/join", "/rooms/:roomId/join", "/join-room"],
-        correctAnswerIndex: 2,
-      },
-    ],
-    [
-      103,
-      {
-        id: 103,
-        text: "Quel event WebSocket diffuse le compte a rebours ?",
-        options: ["game:start", "game:timer", "question:tick", "room:timer"],
-        correctAnswerIndex: 1,
-      },
-    ],
-  ]);
 
-  constructor(private readonly roomsService: RoomsService) {}
+  constructor(
+    private readonly roomsService: RoomsService,
+    private readonly quizzesService: QuizzesService,
+  ) {}
 
   getRoomState(roomId: number): GameState {
     const room = this.roomsService.getById(roomId);
@@ -101,7 +99,10 @@ export class GameService {
     const existing = this.roomStates.get(roomId);
     if (existing) {
       existing.status = room.status;
-      existing.totalQuestions = Math.max(existing.totalQuestions, room.rounds);
+      existing.totalQuestions = Math.max(
+        existing.totalQuestions,
+        runtime.questionOrder.length || room.rounds,
+      );
       existing.startedAt = room.startedAt ?? existing.startedAt;
       existing.endedAt = room.finishedAt ?? existing.endedAt;
       existing.leaderboard = this.buildLeaderboard(runtime);
@@ -117,8 +118,8 @@ export class GameService {
       status: room.status,
       currentQuestionId: null,
       currentQuestionNumber: 0,
-      totalQuestions: room.rounds,
-      questionDurationMs: null,
+      totalQuestions: runtime.questionOrder.length || room.rounds,
+      questionDurationMs: room.questionDurationMs,
       questionStartedAt: null,
       questionEndsAt: null,
       answersForCurrentQuestion: 0,
@@ -134,25 +135,30 @@ export class GameService {
     return state;
   }
 
-  startGame(
-    roomId: number,
-    totalQuestions: number,
-    questionDurationMs: number,
-  ): GameState {
+  async startGame(roomId: number, questionDurationMs: number | null): Promise<GameState> {
     const room = this.roomsService.getById(roomId);
     const runtime = this.getRoomRuntime(roomId);
+    const questions = await this.getQuestionsForRoom(room.quizId);
+    const selectedQuestions = questions.slice(
+      0,
+      Math.max(1, Math.min(room.rounds, questions.length)),
+    );
     const state = this.getRoomState(roomId);
     const now = new Date().toISOString();
 
     runtime.answeredByQuestion.clear();
     runtime.scoresByUser.clear();
     runtime.totalAnswers = 0;
+    runtime.questionsById = new Map(
+      selectedQuestions.map((question) => [question.id, question]),
+    );
+    runtime.questionOrder = selectedQuestions.map((question) => question.id);
     this.syncScoresWithPlayers(room.players.map((player) => player.userId), runtime);
 
     state.status = "playing";
     state.currentQuestionId = null;
     state.currentQuestionNumber = 0;
-    state.totalQuestions = Math.max(1, totalQuestions);
+    state.totalQuestions = runtime.questionOrder.length;
     state.questionDurationMs = questionDurationMs;
     state.questionStartedAt = null;
     state.questionEndsAt = null;
@@ -172,9 +178,9 @@ export class GameService {
     questionId: number;
     questionNumber: number;
     totalQuestions: number;
-    questionDurationMs: number;
+    questionDurationMs: number | null;
     startsAt: string;
-    endsAt: string;
+    endsAt: string | null;
   }): GameState {
     const state = this.getRoomState(params.roomId);
 
@@ -191,10 +197,14 @@ export class GameService {
     return state;
   }
 
-  markQuestionTimedOut(roomId: number): GameState {
+  completeCurrentQuestion(roomId: number): GameState {
     const state = this.getRoomState(roomId);
     state.updatedAt = new Date().toISOString();
     return state;
+  }
+
+  markQuestionTimedOut(roomId: number): GameState {
+    return this.completeCurrentQuestion(roomId);
   }
 
   submitAnswer(dto: SubmitAnswerDto): SubmitAnswerResult {
@@ -213,7 +223,7 @@ export class GameService {
     }
 
     const runtime = this.getRoomRuntime(dto.roomId);
-    const question = this.getQuestionEntry(dto.questionId);
+    const question = this.getQuestionEntry(dto.roomId, dto.questionId);
     if (dto.answerIndex >= question.options.length) {
       throw new BadRequestException("Answer index is out of range");
     }
@@ -264,12 +274,22 @@ export class GameService {
     return state;
   }
 
-  getQuestionOrder(): number[] {
-    return [...this.questionBank.keys()].sort((a, b) => a - b);
+  getQuestionIdForTurn(roomId: number, turnNumber: number): number {
+    const runtime = this.getRoomRuntime(roomId);
+    const questionOrder =
+      runtime.questionOrder.length > 0
+        ? runtime.questionOrder
+        : DEFAULT_QUESTION_BANK.map((question) => question.id);
+
+    if (questionOrder.length === 0) {
+      throw new ConflictException("No questions configured");
+    }
+
+    return questionOrder[(turnNumber - 1) % questionOrder.length];
   }
 
-  getPublicQuestion(questionId: number): PublicQuestion {
-    const question = this.getQuestionEntry(questionId);
+  getPublicQuestion(roomId: number, questionId: number): PublicQuestion {
+    const question = this.getQuestionEntry(roomId, questionId);
 
     return {
       id: question.id,
@@ -281,6 +301,20 @@ export class GameService {
   getRoomLeaderboard(roomId: number): GameLeaderboardEntry[] {
     this.getRoomState(roomId);
     return this.buildLeaderboard(this.getRoomRuntime(roomId));
+  }
+
+  hasEveryPlayerAnsweredCurrentQuestion(roomId: number): boolean {
+    const room = this.roomsService.getById(roomId);
+    const state = this.getRoomState(roomId);
+    if (state.currentQuestionId === null || room.players.length === 0) {
+      return false;
+    }
+
+    const answeredUsers =
+      this.getRoomRuntime(roomId).answeredByQuestion.get(state.currentQuestionId) ??
+      new Set<number>();
+
+    return answeredUsers.size >= room.players.length;
   }
 
   clearRoomState(roomId: number): void {
@@ -298,6 +332,8 @@ export class GameService {
       answeredByQuestion: new Map<number, Set<number>>(),
       scoresByUser: new Map<number, number>(),
       totalAnswers: 0,
+      questionOrder: [],
+      questionsById: new Map<number, QuestionEntry>(),
     };
 
     this.roomRuntime.set(roomId, runtime);
@@ -326,11 +362,47 @@ export class GameService {
     }
   }
 
-  private getQuestionEntry(questionId: number): QuestionEntry {
-    const question = this.questionBank.get(questionId);
-    if (!question) {
-      throw new ConflictException(`Question ${questionId} not configured`);
+  private getQuestionEntry(roomId: number, questionId: number): QuestionEntry {
+    const runtime = this.getRoomRuntime(roomId);
+    const runtimeQuestion = runtime.questionsById.get(questionId);
+    if (runtimeQuestion) {
+      return runtimeQuestion;
     }
-    return question;
+
+    const fallbackQuestion = DEFAULT_QUESTION_BANK.find((question) => question.id === questionId);
+    if (fallbackQuestion) {
+      return fallbackQuestion;
+    }
+
+    throw new ConflictException(`Question ${questionId} not configured`);
+  }
+
+  private async getQuestionsForRoom(quizId: number | null): Promise<QuestionEntry[]> {
+    if (typeof quizId !== "number") {
+      return DEFAULT_QUESTION_BANK.map((question) => ({
+        ...question,
+        options: [...question.options],
+      }));
+    }
+
+    const quiz = await this.quizzesService.getQuizById(quizId);
+    return quiz.questions.map((question) => {
+      const correctAnswerIndex = question.answers.findIndex(
+        (answer) => answer === question.correctAnswer,
+      );
+
+      if (correctAnswerIndex === -1) {
+        throw new ConflictException(
+          `Question ${question.id} has no matching correct answer`,
+        );
+      }
+
+      return {
+        id: question.id,
+        text: question.questionText,
+        options: [...question.answers],
+        correctAnswerIndex,
+      };
+    });
   }
 }

@@ -4,7 +4,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
 };
 
-export default function PrimaryButton({
+export default function SecondaryButton({
   children,
   className = "",
   type = "button",
@@ -13,10 +13,8 @@ export default function PrimaryButton({
   return (
     <button
       className={[
-        "inline-flex items-center gap-2 rounded-full border border-slate-900/5",
-        "bg-[linear-gradient(135deg,#f97316,#f59e0b)] px-6 py-3 text-sm font-semibold",
-        "text-white shadow-[0_18px_50px_rgba(249,115,22,0.28)] transition",
-        "hover:-translate-y-0.5 hover:shadow-[0_24px_65px_rgba(249,115,22,0.34)]",
+        "rounded-full border border-slate-800/15 bg-white/75 px-5 py-3",
+        "font-semibold text-slate-900 transition hover:border-slate-900/30 hover:bg-white",
         "disabled:cursor-not-allowed disabled:opacity-60",
         className,
       ].join(" ")}
