@@ -119,7 +119,7 @@ export class RealtimeGateway
     @ConnectedSocket() client: Socket,
   ): void {
     this.runSafely(client, "room:start:error", () => {
-      this.roomEvents.handleRoomStart(payload, client, this.server);
+      return this.roomEvents.handleRoomStart(payload, client, this.server);
     });
   }
 
@@ -129,7 +129,7 @@ export class RealtimeGateway
     @ConnectedSocket() client: Socket,
   ): void {
     this.runSafely(client, "game:answer:error", () => {
-      this.gameEvents.handleGameAnswer(payload, client, this.server);
+      return this.gameEvents.handleGameAnswer(payload, client, this.server);
     });
   }
 
@@ -146,10 +146,15 @@ export class RealtimeGateway
   private runSafely(
     client: Socket,
     errorEvent: string,
-    callback: () => void,
+    callback: () => void | Promise<void>,
   ): void {
     try {
-      callback();
+      const result = callback();
+      if (result && typeof result === "object" && "catch" in result) {
+        void (result as Promise<void>).catch((exception) => {
+          this.response.emitError(client, errorEvent, exception);
+        });
+      }
     } catch (exception) {
       this.response.emitError(client, errorEvent, exception);
     }

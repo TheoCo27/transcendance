@@ -22,6 +22,17 @@ export class CreateRoomDto {
   rounds: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
+  quizId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(10)
+  @Max(30)
+  questionDurationSec?: number | null;
+
+  @IsOptional()
   @IsBoolean()
   isPrivate?: boolean;
 
@@ -31,4 +42,3 @@ export class CreateRoomDto {
   @MaxLength(64)
   password?: string;
 }
-
