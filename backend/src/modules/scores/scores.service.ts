@@ -33,7 +33,43 @@ export class ScoresService {
   }
 
   async getLeaderboard(limit = 10): Promise<UserScore[]> {
-    const entries = [...this.leaderboard.entries()]
+    const leaderboard: UserScore[] = [];
+
+    for (const entry of this.getSortedEntries()) {
+      const userScore = await this.toUserScore(entry);
+      if (!userScore) {
+        continue;
+      }
+
+      leaderboard.push(userScore);
+      if (leaderboard.length >= limit) {
+        break;
+      }
+    }
+
+    return leaderboard;
+  }
+
+  async getUserScore(userId: number): Promise<UserScore> {
+    const snapshot = this.leaderboard.get(userId);
+    if (!snapshot) {
+      throw new NotFoundException(`Score for user ${userId} not found`);
+    }
+
+    const userScore = await this.toUserScore({ userId, ...snapshot });
+    if (!userScore) {
+      throw new NotFoundException(`Score for user ${userId} not found`);
+    }
+
+    return userScore;
+  }
+
+  private getSortedEntries(): Array<{
+    userId: number;
+    score: number;
+    wins: number;
+  }> {
+    return [...this.leaderboard.entries()]
       .map(([userId, snapshot]) => ({ userId, ...snapshot }))
       .sort((left, right) => {
         if (right.score !== left.score) {
@@ -43,31 +79,23 @@ export class ScoresService {
           return right.wins - left.wins;
         }
         return left.userId - right.userId;
-      })
-      .slice(0, limit);
-
-    return Promise.all(entries.map((entry) => this.toUserScore(entry)));
-  }
-
-  async getUserScore(userId: number): Promise<UserScore> {
-    const snapshot = this.leaderboard.get(userId);
-    if (!snapshot) {
-      throw new NotFoundException(`Score for user ${userId} not found`);
-    }
-
-    return this.toUserScore({ userId, ...snapshot });
+      });
   }
 
   private async toUserScore(entry: {
     userId: number;
     score: number;
     wins: number;
-  }): Promise<UserScore> {
+  }): Promise<UserScore | null> {
     const user = await this.usersService.findUser({ id: entry.userId });
+    if (!user) {
+      this.leaderboard.delete(entry.userId);
+      return null;
+    }
 
     return {
       userId: entry.userId,
-      username: user?.username ?? `Joueur #${entry.userId}`,
+      username: user.username,
       score: entry.score,
       wins: entry.wins,
     };
