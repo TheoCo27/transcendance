@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
@@ -94,7 +94,10 @@ function formatRoomStatus(status: Room["status"]) {
 export default function RoomPage() {
   const { roomId: roomIdParam } = useParams();
   const roomId = Number(roomIdParam);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isLoading: isSessionLoading } = useAuthSession();
+  const shouldAutoJoin = searchParams.get("join") === "1";
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
@@ -111,6 +114,7 @@ export default function RoomPage() {
   const [roomActionError, setRoomActionError] = useState<string | null>(null);
   const [roomClosedReason, setRoomClosedReason] = useState<string | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [hasAttemptedAutoJoin, setHasAttemptedAutoJoin] = useState(false);
 
   const refreshRoom = async () => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -457,6 +461,10 @@ export default function RoomPage() {
     user && room?.players.some((player) => player.userId === user.id),
   );
 
+  useEffect(() => {
+    setHasAttemptedAutoJoin(false);
+  }, [roomId, user?.id, shouldAutoJoin]);
+
   const scoreboard = useMemo(() => {
     const baseEntries =
       gameState?.leaderboard.length && gameState.leaderboard.length > 0
@@ -505,6 +513,44 @@ export default function RoomPage() {
       );
     }
   };
+
+  useEffect(() => {
+    if (
+      !shouldAutoJoin ||
+      hasAttemptedAutoJoin ||
+      isSessionLoading ||
+      !user ||
+      !room
+    ) {
+      return;
+    }
+
+    if (isUserInRoom) {
+      navigate(`/rooms/${room.id}`, { replace: true });
+      return;
+    }
+
+    if (room.status !== "waiting") {
+      setRoomActionError("Cette room a deja demarre, elle n'accepte plus de nouveaux joueurs.");
+      setHasAttemptedAutoJoin(true);
+      navigate(`/rooms/${room.id}`, { replace: true });
+      return;
+    }
+
+    setHasAttemptedAutoJoin(true);
+    void (async () => {
+      await joinRoom();
+      navigate(`/rooms/${room.id}`, { replace: true });
+    })();
+  }, [
+    hasAttemptedAutoJoin,
+    isSessionLoading,
+    isUserInRoom,
+    navigate,
+    room,
+    shouldAutoJoin,
+    user,
+  ]);
 
   const leaveRoom = async () => {
     if (!user || !room || !isUserInRoom) {
@@ -661,7 +707,9 @@ export default function RoomPage() {
                 <SecondaryButton
                   className="justify-center"
                   onClick={() => {
-                    void navigator.clipboard.writeText(window.location.href);
+                    void navigator.clipboard.writeText(
+                      `${window.location.origin}/rooms/${room.id}/access`,
+                    );
                   }}
                 >
                   Copier l'URL de la room
