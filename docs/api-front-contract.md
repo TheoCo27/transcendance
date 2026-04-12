@@ -1,6 +1,6 @@
 # API Front Contract (Dev3)
 
-Version: v1 (etat actuel de `dev` au 2026-04-07)
+Version: v1 (etat actuel de `dev` au 2026-04-12)
 Scope: contrat front-back MVP pour auth, users, rooms, game, scores
 
 ## Etat de persistance (important)
@@ -9,19 +9,20 @@ Scope: contrat front-back MVP pour auth, users, rooms, game, scores
   - `auth` (login/register/session/logout via `User`)
   - `users` (`/users/me`, `/users/:id`)
   - `quizzes` (`/quizzes`, `/quizzes/:quizId`)
-- Encore en service memoire (pas encore Prisma):
-  - `rooms`
-  - `game`
-  - `scores`
+  - `scores` partiellement (`/scores/quizzes/:quizId/leaderboard`)
+- Runtime local:
+  - `rooms` persistees dans `.runtime/rooms-store.json`
+  - `game` en runtime (non persiste en DB)
+  - `scores` globaux en runtime
 
 Consequence:
-- Les routes `rooms/game/scores` sont valides pour integration front MVP,
-  mais les donnees ne sont pas persistantes entre redemarrages pour l'instant.
+- Les routes `rooms/game/scores` sont valides pour integration front MVP.
+- Les scores globaux et l'etat de partie restent runtime.
 
 ## Base URL et proxy
 
-- Backend direct: `http://localhost:4000`
-- Front dev server: `http://localhost:3000`
+- Backend direct: `https://localhost:4000`
+- Front dev server: `https://localhost:3000`
 - En dev, le front peut appeler directement:
   - `/auth`
   - `/users`
@@ -98,11 +99,16 @@ type SafeUser = {
 type Room = {
   id: number;
   name: string;
+  ownerUserId?: number;
+  quizId: number | null;
   rounds: number;
+  questionDurationMs: number | null;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
   players: Array<{ userId: number; joinedAt: string }>;
   createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
 };
 ```
 
@@ -138,6 +144,7 @@ type SubmitAnswerResult = {
   selectedAnswerIndex: number;
   isCorrect: boolean;
   scoreDelta: number;
+  userTotalScore: number;
   totalAnswers: number;
 };
 ```
@@ -159,6 +166,7 @@ type UserScore = {
 type Quiz = {
   id: number;
   title: string;
+  questionDurationSec: number | null;
   createdAt: string;
   questions: Array<{
     id: number;
@@ -216,6 +224,19 @@ type Quiz = {
 - Reponse: `201` (ou `200` selon config future), `ApiResponse<{ loggedOut: true }>`
 - Effet: suppression cookie `access_token`
 
+`POST /auth/guest`
+- Body:
+
+```json
+{
+  "username": "guest_player"
+}
+```
+
+- Validation:
+  - `username`: string min 2
+- Reponse: `201`, `ApiResponse<SafeUser>` + cookie `access_token`
+
 `GET /auth/session`
 - Auth: cookie `access_token` requis
 - Reponse: `200`, `ApiResponse<SafeUser>`
@@ -244,6 +265,11 @@ type Quiz = {
 `GET /rooms`
 - Reponse: `200`, `ApiResponse<Room[]>`
 
+`GET /rooms/quizzes/:quizId`
+- Reponse: `200`, `ApiResponse<Room[]>`
+- Erreurs:
+  - `400 BAD_REQUEST` si `quizId` non numerique
+
 `GET /rooms/:roomId`
 - Reponse: `200`, `ApiResponse<Room>`
 - Erreurs:
@@ -257,6 +283,8 @@ type Quiz = {
 {
   "name": "Lobby #1",
   "rounds": 5,
+  "quizId": 1,
+  "questionDurationSec": 10,
   "isPrivate": false
 }
 ```
@@ -267,6 +295,8 @@ type Quiz = {
 {
   "name": "Private room",
   "rounds": 3,
+  "quizId": 1,
+  "questionDurationSec": 30,
   "isPrivate": true,
   "password": "room1234"
 }
@@ -275,12 +305,13 @@ type Quiz = {
 - Validation:
   - `name`: string 2..40
   - `rounds`: int 1..20
+  - `quizId`: int >= 1 (optionnel)
+  - `questionDurationSec`: int 10..30 (optionnel, null autorise)
   - `isPrivate`: boolean optionnel
   - `password`: requis si `isPrivate=true`, string 4..64
 - Reponse: `201`, `ApiResponse<Room>`
 - Note MVP:
-  - `rounds`, `isPrivate`, `password` sont des champs API temporaires cote service memoire.
-  - Le schema Prisma `Room` ne les inclut pas encore dans l'etat actuel.
+  - `rooms` est gere en runtime local et persiste dans `.runtime/rooms-store.json`.
 
 `POST /rooms/:roomId/join`
 - Body:
@@ -342,6 +373,11 @@ type Quiz = {
 - Erreurs:
   - `400 BAD_REQUEST`
   - `404 NOT_FOUND` si score absent
+
+`GET /scores/quizzes/:quizId/leaderboard?limit=10`
+- Reponse: `200`, `ApiResponse<Array<UserScore & { gamesPlayed: number }>>`
+- Erreurs:
+  - `400 BAD_REQUEST`
 
 ### Quizzes
 

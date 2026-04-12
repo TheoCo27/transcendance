@@ -36,7 +36,7 @@ Transport: `socket.io`
 4. Quitter room:
 - emit `room:leave` `{ roomId, userId }`
 - listen `room:left`
-- listen `room:closed` (si room vide)
+- `room:closed` n'est pas attendu quand la room `waiting` devient vide (la room reste ouverte/shareable)
 - listen `room:leave:error`
 
 ## Flux Game
@@ -101,7 +101,7 @@ Transport: `socket.io`
 ## Notes integration
 
 - Ne pas faire confiance au `userId` UI seul: le backend valide contre le socket authentifie.
-- Les services `rooms/game/scores` restent en memoire (pas persistants apres restart).
+- `rooms` est persiste dans `.runtime/rooms-store.json` (runtime local). `game` reste runtime et `scores` combine runtime + persistance quiz leaderboard.
 - Pour la recette, lancer:
   - `make up`
   - `cd backend && npm run test:ws-smoke`

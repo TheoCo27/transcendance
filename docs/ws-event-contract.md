@@ -207,9 +207,12 @@ Notes:
 ```json
 {
   "roomId": 1,
-  "reason": "room_empty"
+  "reason": "manual_close"
 }
 ```
+
+Note:
+- Dans l'etat actuel, une room `waiting` vide est conservee (shareable) et n'emet pas `room:closed` automatiquement.
 
 ### Game
 
@@ -345,7 +348,7 @@ Codes d'erreur possibles:
 - Timer serveur par question (defaut 10s via `GAME_QUESTION_DURATION_MS`).
 - Timeout auto d'une question puis question suivante.
 - Fin auto de partie a la fin du cycle de questions.
-- Fermeture auto de room quand elle devient vide.
+- Une room `waiting` vide est conservee (pas de fermeture auto).
 - Si un user se deconnecte (plus aucun socket actif pour ce user), il est retire automatiquement des rooms.
 
 ## Notes scope
