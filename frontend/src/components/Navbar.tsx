@@ -28,6 +28,12 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {currentUser !== null ? (
             <>
+              <Link
+                className="inline-flex items-center rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white"
+                to="/profile"
+              >
+                {currentUser.username}
+              </Link>
               <Link className="hidden text-sm font-medium text-slate-600 sm:block" to="/admin">
                 Nouveau quiz
               </Link>
