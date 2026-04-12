@@ -15,6 +15,14 @@ function formatJoinedDate(createdAt: string) {
   }
 }
 
+function formatIdentityLabel(user: { email: string; isGuest: boolean }) {
+  if (user.isGuest) {
+    return "Compte invite";
+  }
+
+  return user.email;
+}
+
 export default function ProfilePage() {
   const { user, isLoading } = useAuthSession();
 
@@ -64,10 +72,13 @@ export default function ProfilePage() {
             {user.username.slice(0, 1).toUpperCase()}
           </div>
           <h1 className="mt-6 text-3xl font-semibold">{user.username}</h1>
-          <p className="mt-2 text-sm text-white/70">{user.email}</p>
+          <p className="mt-2 text-sm text-white/70">{formatIdentityLabel(user)}</p>
           <div className="mt-8 flex flex-wrap gap-3 text-sm">
             <span className="rounded-full bg-white/10 px-4 py-2">
               Statut: {user.status}
+            </span>
+            <span className="rounded-full bg-white/10 px-4 py-2">
+              {user.isGuest ? "Mode invite" : "Compte classique"}
             </span>
             <span className="rounded-full bg-white/10 px-4 py-2">
               Membre depuis {formatJoinedDate(user.createdAt)}
@@ -99,10 +110,10 @@ export default function ProfilePage() {
             </div>
             <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Email
+                {user.isGuest ? "Type de compte" : "Email"}
               </dt>
               <dd className="mt-2 text-lg font-semibold text-slate-950">
-                {user.email}
+                {user.isGuest ? "Invite" : user.email}
               </dd>
             </div>
             <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
