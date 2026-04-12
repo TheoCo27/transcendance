@@ -6,6 +6,7 @@ import Navbar from "./components/Navbar";
 import QuizAdminPage from "./pages/QuizAdminPage";
 import QuizRoomPage from "./pages/QuizRoomPage";
 import RoomPage from "./pages/RoomPage";
+import RoomAccessPage from "./pages/RoomAccessPage";
 import RegisterPage from "./pages/RegisterPage";
 import JoinQuizRoomPage from "./pages/JoinQuizRoomPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/join" element={<JoinQuizRoomPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/quiz/:quizId" element={<QuizRoomPage />} />
+        <Route path="/rooms/:roomId/access" element={<RoomAccessPage />} />
         <Route path="/rooms/:roomId" element={<RoomPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

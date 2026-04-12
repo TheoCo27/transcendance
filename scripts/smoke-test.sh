@@ -239,6 +239,13 @@ get_user_field() {
 	run_database_query "SELECT \\\"${field}\\\" FROM \\\"User\\\" WHERE email = '${email}';" | tr -d '\r'
 }
 
+get_user_field_by_username() {
+	username="$1"
+	field="$2"
+
+	run_database_query "SELECT \\\"${field}\\\" FROM \\\"User\\\" WHERE username = '${username}';" | tr -d '\r'
+}
+
 cleanup_user() {
 	email="$1"
 
@@ -246,8 +253,15 @@ cleanup_user() {
 		>/dev/null 2>&1 || true
 }
 
+cleanup_user_by_id() {
+	user_id="$1"
+
+	run_database_query "DELETE FROM \\\"User\\\" WHERE id = ${user_id};" \
+		>/dev/null 2>&1 || true
+}
+
 cleanup_smoke_users() {
-	run_database_query "DELETE FROM \\\"User\\\" WHERE email LIKE 'smoke-%@test.com' OR email LIKE 'ws-smoke-%@test.com';" \
+	run_database_query "DELETE FROM \\\"User\\\" WHERE email LIKE 'smoke-%@test.com' OR email LIKE 'ws-smoke-%@test.com' OR username LIKE 'guest-smoke-%';" \
 		>/dev/null 2>&1 || true
 }
 
@@ -257,8 +271,10 @@ cleanup() {
 	if [ "$CLEANUP_NEEDED" -eq 1 ]; then
 		[ -n "${TEST_EMAIL:-}" ] && cleanup_user "$TEST_EMAIL"
 		[ -n "${GHOST_EMAIL:-}" ] && cleanup_user "$GHOST_EMAIL"
+		[ -n "${GUEST_USER_ID:-}" ] && cleanup_user_by_id "$GUEST_USER_ID"
 	fi
 	cleanup_smoke_users
+	bash scripts/cleanup-smoke-artifacts.sh --scope=all >/dev/null 2>&1 || true
 
 	rm -rf "$TMP_DIR"
 }
@@ -322,6 +338,8 @@ TEST_PASSWORD="longsecuredpassword123!"
 GHOST_EMAIL="smoke-ghost-$(date +%s)@test.com"
 GHOST_PASSWORD="longsecuredpassword123!"
 GHOST_COOKIE_JAR="${TMP_DIR}/ghost-cookies.txt"
+GUEST_USERNAME="guest-smoke-$(date +%s)"
+GUEST_COOKIE_JAR="${TMP_DIR}/guest-cookies.txt"
 
 REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","username":"smoke"}' "$TEST_EMAIL" "$TEST_PASSWORD")
 LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$TEST_EMAIL" "$TEST_PASSWORD")
@@ -331,10 +349,12 @@ INVALID_LOGIN_PAYLOAD='{"email":"not-an-email","password":"short"}'
 WRONG_PASSWORD_PAYLOAD=$(printf '{"email":"%s","password":"wrongpassword123!"}' "$TEST_EMAIL")
 GHOST_REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","username":"ghost"}' "$GHOST_EMAIL" "$GHOST_PASSWORD")
 GHOST_LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "$GHOST_EMAIL" "$GHOST_PASSWORD")
+GUEST_LOGIN_PAYLOAD=$(printf '{"username":"%s"}' "$GUEST_USERNAME")
 
 cleanup_user "$TEST_EMAIL"
 cleanup_user "$GHOST_EMAIL"
 cleanup_smoke_users
+bash scripts/cleanup-smoke-artifacts.sh --scope=all >/dev/null 2>&1 || true
 CLEANUP_NEEDED=1
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
@@ -502,6 +522,43 @@ assert_body_contains '"success":false'
 assert_body_contains '"code":"NOT_FOUND"'
 assert_body_contains "\"message\":\"User ${GHOST_USER_ID} not found\""
 pass "Session renvoie 404 si le user du token n'existe plus"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/guest" "$GUEST_LOGIN_PAYLOAD" "$GUEST_COOKIE_JAR"
+assert_status_any 200 201
+assert_body_contains '"success":true'
+assert_body_contains "\"username\":\"${GUEST_USERNAME}\""
+assert_body_contains '"isGuest":true'
+assert_body_contains '"status":"online"'
+assert_headers_contains 'Set-Cookie: access_token='
+assert_cookie_jar_has_cookie "$GUEST_COOKIE_JAR" "access_token"
+pass "Connexion invite OK"
+
+GUEST_USER_ID="$(get_user_field_by_username "$GUEST_USERNAME" id)"
+GUEST_USER_STATUS="$(get_user_field_by_username "$GUEST_USERNAME" status)"
+GUEST_IS_GUEST="$(get_user_field_by_username "$GUEST_USERNAME" isGuest)"
+assert_not_empty "$GUEST_USER_ID" "guest user id"
+assert_equals "online" "$GUEST_USER_STATUS"
+assert_equals "t" "$GUEST_IS_GUEST"
+pass "Guest cree en base avec status online"
+
+request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$GUEST_COOKIE_JAR"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains "\"id\":${GUEST_USER_ID}"
+assert_body_contains "\"username\":\"${GUEST_USERNAME}\""
+assert_body_contains '"isGuest":true'
+pass "Session invite OK"
+
+request_with_curl POST "${BACKEND_BASE_URL}/auth/logout" '{}' "$GUEST_COOKIE_JAR"
+assert_status_any 200 201
+assert_body_contains '"loggedOut":true'
+pass "Logout invite OK"
+
+request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$GUEST_COOKIE_JAR"
+assert_status 401
+assert_body_contains '"success":false'
+assert_body_contains '"code":"UNAUTHORIZED"'
+pass "Session invite invalidee apres logout"
 
 section "test websocket api"
 bash scripts/ws-smoke-test.sh

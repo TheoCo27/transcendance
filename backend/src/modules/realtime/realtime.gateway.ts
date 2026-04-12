@@ -45,6 +45,7 @@ export class RealtimeGateway
     try {
       const userId = await this.auth.authenticateSocket(client);
       this.presence.bindSocketToUser(client.id, userId);
+      this.roomEvents.syncSocketRoomMembership(userId, client);
 
       client.emit(
         "ws:connected",

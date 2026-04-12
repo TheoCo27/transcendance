@@ -333,7 +333,7 @@ export default function QuizRoomPage() {
                             className="justify-center"
                             onClick={() => {
                               void navigator.clipboard.writeText(
-                                `${window.location.origin}/rooms/${room.id}`,
+                                `${window.location.origin}/rooms/${room.id}/access`,
                               );
                             }}
                           >

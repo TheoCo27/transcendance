@@ -25,7 +25,7 @@ function printTestCatalog() {
   console.log(" - test websocket room lifecycle");
   console.log(" - test websocket game flow");
   console.log(" - test websocket rest coherence");
-  console.log(" - test websocket disconnect cleanup");
+  console.log(" - test websocket room persistence");
 }
 
 async function run() {
@@ -68,6 +68,13 @@ async function run() {
     const roomId = await createRoomWithOwner(owner, quizId);
     await assertOutsiderCannotChat(outsider, roomId);
     await joinRoomAsGuest(guest, roomId);
+    const ownerMirror = await connectAuthenticatedSocket(
+      WS_NAMESPACE_URL,
+      ownerSession.cookieHeader,
+    );
+    sockets.push(ownerMirror.socket);
+    await assertSocketAutoRejoinsRoomChannel(ownerMirror, guest, roomId);
+    safeDisconnect(ownerMirror.socket);
     await assertGuestCannotStartRoom(guest, roomId);
 
     section("test websocket game flow");
@@ -79,9 +86,15 @@ async function run() {
     section("test websocket rest coherence");
     await assertScoresLeaderboard(WS_BASE_URL, guest.userId, quizId);
 
-    section("test websocket disconnect cleanup");
+    section("test websocket room persistence");
     await assertDisconnectUpdatesRoomState(owner, guest, roomId);
-    await assertRoomClosedAfterLastDisconnect(guest, outsider, roomId);
+    const waitingRoomId = await createRoomWithOwner(guest, quizId);
+    await assertWaitingRoomPersistsAfterLastDisconnect(
+      WS_BASE_URL,
+      guest,
+      outsider,
+      waitingRoomId,
+    );
     pass("WS smoke test termine avec succes");
   } finally {
     for (const socket of sockets) safeDisconnect(socket);
@@ -170,6 +183,27 @@ async function assertGuestCannotStartRoom(guest, roomId) {
   guest.socket.emit("room:start", { roomId, userId: guest.userId });
   await startErrorPromise;
   pass("Droit owner sur room:start valide");
+}
+
+async function assertSocketAutoRejoinsRoomChannel(ownerMirror, guest, roomId) {
+  const chatPromise = waitForEvent(
+    ownerMirror.socket,
+    "chat:message",
+    (payload) =>
+      payload?.success === true &&
+      payload?.data?.roomId === roomId &&
+      payload?.data?.userId === guest.userId &&
+      payload?.data?.content === "mirror-check",
+  );
+
+  guest.socket.emit("chat:message", {
+    roomId,
+    userId: guest.userId,
+    content: "mirror-check",
+  });
+
+  await chatPromise;
+  pass("Socket reconnecte auto-rattache aux rooms existantes");
 }
 
 async function startRoomAsOwnerAndGetQuestion(owner, roomId) {
@@ -351,18 +385,42 @@ async function assertDisconnectUpdatesRoomState(owner, guest, roomId) {
   pass("Disconnect owner -> room mise a jour");
 }
 
-async function assertRoomClosedAfterLastDisconnect(guest, outsider, roomId) {
-  const roomRemovedPromise = waitForEvent(
+async function assertWaitingRoomPersistsAfterLastDisconnect(
+  baseUrl,
+  guest,
+  outsider,
+  roomId,
+) {
+  const roomListPromise = waitForEvent(
     outsider.socket,
     "room:list-updated",
     (payload) =>
       payload?.success === true &&
       Array.isArray(payload?.data) &&
-      !payload.data.some((room) => room.id === roomId),
+      payload.data.some(
+        (room) => room.id === roomId && Array.isArray(room.players) && room.players.length === 0,
+      ),
   );
   safeDisconnect(guest.socket);
-  await roomRemovedPromise;
-  pass("Disconnect dernier joueur -> room fermee");
+  await roomListPromise;
+
+  const roomPayload = await fetchHealthyJson(
+    `${baseUrl}/rooms/${roomId}`,
+    "Room endpoint after last disconnect",
+  );
+  if (roomPayload?.data?.id !== roomId) {
+    fail("Room endpoint did not return the expected room after last disconnect");
+  }
+
+  if (
+    roomPayload?.data?.status !== "waiting" ||
+    !Array.isArray(roomPayload?.data?.players) ||
+    roomPayload.data.players.length !== 0
+  ) {
+    fail("Waiting room should stay available and empty after the last disconnect");
+  }
+
+  pass("Disconnect dernier joueur d'une waiting room -> room conservee");
 }
 
 run().catch((error) => {
