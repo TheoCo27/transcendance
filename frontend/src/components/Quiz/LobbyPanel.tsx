@@ -87,15 +87,8 @@ export default function LobbyPanel({
     <div className="flex w-full gap-6">
       {hasRooms ? (
         <Panel className="min-h-[80vh] flex-1 px-6 py-6">
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6">
             <h1 className="text-2xl font-semibold text-text">Parties en cours</h1>
-            <button
-              className="rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
-              type="button"
-              onClick={onToggleRules}
-            >
-              Règles
-            </button>
           </div>
           <div className="space-y-3">
             {roomsMessage ? (

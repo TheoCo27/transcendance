@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createRoom,
+  getRoomById,
   getRooms,
   joinRoom,
   type CreateRoomPayload,
@@ -62,6 +63,7 @@ export function useQuizLobby({ userId }: UseQuizLobbyOptions) {
         setCurrentRoom(joinedRoom);
         closeJoinModal();
         await loadRooms();
+        return joinedRoom;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Impossible de rejoindre la room";
@@ -84,7 +86,7 @@ export function useQuizLobby({ userId }: UseQuizLobbyOptions) {
         return;
       }
 
-      await joinTargetRoom(room);
+      return joinTargetRoom(room);
     },
     [joinTargetRoom],
   );
@@ -94,17 +96,31 @@ export function useQuizLobby({ userId }: UseQuizLobbyOptions) {
       return;
     }
 
-    await joinTargetRoom(roomToJoin, joinPassword);
+    return joinTargetRoom(roomToJoin, joinPassword);
   }, [joinPassword, joinTargetRoom, roomToJoin]);
 
   const createRoomAndJoin = useCallback(
     async (payload: CreateRoomPayload) => {
       setRoomsError(null);
       const createdRoom = await createRoom(payload);
-      await joinTargetRoom(createdRoom, payload.password);
+      return joinTargetRoom(createdRoom, payload.password);
     },
     [joinTargetRoom],
   );
+
+  const loadCurrentRoom = useCallback(async (roomId: number) => {
+    const room = await getRoomById(roomId);
+    setCurrentRoom(room);
+    return room;
+  }, []);
+
+  const clearCurrentRoom = useCallback(() => {
+    setCurrentRoom(null);
+  }, []);
+
+  const syncCurrentRoom = useCallback((room: Room) => {
+    setCurrentRoom(room);
+  }, []);
 
   useEffect(() => {
     void loadRooms();
@@ -125,5 +141,8 @@ export function useQuizLobby({ userId }: UseQuizLobbyOptions) {
     requestJoinRoom,
     confirmJoinRoom,
     createRoomAndJoin,
+    loadCurrentRoom,
+    clearCurrentRoom,
+    syncCurrentRoom,
   };
 }

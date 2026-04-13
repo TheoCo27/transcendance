@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Panel from "../Panel";
 import PrimaryButton from "../PrimaryButton";
 
@@ -38,6 +38,16 @@ export default function GamePanel({
   onSendChatMessage,
 }: GamePanelProps) {
   const [messageInput, setMessageInput] = useState("");
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    container.scrollTop = container.scrollHeight;
+  }, [chatMessages]);
 
   const handleSendMessage = () => {
     const content = messageInput.trim();
@@ -50,26 +60,31 @@ export default function GamePanel({
 
   return (
     <div className="flex w-full gap-6">
-      <Panel className="min-h-[80vh] min-w-75 w-[25%] px-6 py-6">
+      <Panel className="h-[80vh] min-w-75 w-[25%] overflow-hidden px-6 py-6">
         <p className="mb-4 text-2xl font-semibold text-text">Chat</p>
-        <div className="flex flex-1 flex-col gap-3 overflow-hidden">
-          {chatMessages.map((message) => (
-            <div
-              className={[
-                "max-w-[75%] rounded-2xl px-4 py-3",
-                message.isSelf ? "self-end bg-primary" : "bg-background",
-              ].join(" ")}
-              key={`${message.userId}-${message.sentAt}-${message.content}`}
-            >
-              {!message.isSelf ? (
-                <p className="m-0 text-sm text-text/70">{message.username}</p>
-              ) : null}
-              <p className="m-0 text-base text-text">{message.content}</p>
-            </div>
-          ))}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <div
+            className="flex h-full flex-col gap-3 overflow-y-auto pr-2"
+            ref={messagesContainerRef}
+          >
+            {chatMessages.map((message) => (
+              <div
+                className={[
+                  "max-w-[75%] rounded-2xl px-4 py-3",
+                  message.isSelf ? "self-end bg-primary" : "bg-background",
+                ].join(" ")}
+                key={`${message.userId}-${message.sentAt}-${message.content}`}
+              >
+                {!message.isSelf ? (
+                  <p className="m-0 text-sm text-text/70">{message.username}</p>
+                ) : null}
+                <p className="m-0 text-base text-text">{message.content}</p>
+              </div>
+            ))}
+          </div>
         </div>
         <form
-          className="mt-4 flex items-center gap-3 rounded-2xl bg-background px-4 py-3"
+          className="mt-4 flex shrink-0 items-center gap-3 rounded-2xl bg-background px-4 py-3"
           onSubmit={(event) => {
             event.preventDefault();
             handleSendMessage();
@@ -92,13 +107,6 @@ export default function GamePanel({
       </Panel>
       <Panel className="min-h-[80vh] min-w-125 flex-1 px-8 py-6">
         <div className="mb-6 flex items-center justify-end gap-3">
-          <button
-            className="rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
-            type="button"
-            onClick={onLeaveRoom}
-          >
-            Quitter la room
-          </button>
           <button
             className="rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
             type="button"
@@ -164,7 +172,16 @@ export default function GamePanel({
         </div>
       </Panel>
       <Panel className="min-h-[80vh] min-w-50 w-[25%] px-6 py-6">
-        <p className="mb-5 text-xl font-semibold text-text">Points</p>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <p className="m-0 text-xl font-semibold text-text">Points</p>
+          <button
+            className="rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
+            type="button"
+            onClick={onLeaveRoom}
+          >
+            Quitter
+          </button>
+        </div>
         <div className="space-y-3">
           {scoreEntries.map((entry) => (
             <div
