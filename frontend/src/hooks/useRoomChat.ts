@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   emitWs,
   offWs,
@@ -71,12 +71,12 @@ export function useRoomChat({
     };
   }, [roomId]);
 
-  const resetChat = () => {
+  const resetChat = useCallback(() => {
     setChatMessages([]);
     setChatError(null);
-  };
+  }, []);
 
-  const sendChatMessage = (content: string) => {
+  const sendChatMessage = useCallback((content: string) => {
     if (roomId === null || userId === null) {
       return;
     }
@@ -87,7 +87,7 @@ export function useRoomChat({
       userId,
       content,
     });
-  };
+  }, [roomId, userId]);
 
   return {
     chatMessages,

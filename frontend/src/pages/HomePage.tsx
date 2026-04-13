@@ -3,17 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import GamePanel from "../components/Quiz/GamePanel";
 import LobbyPanel from "../components/Quiz/LobbyPanel";
 import PasswordModal from "../components/Quiz/PasswordModal";
-import { useAuthSession } from "../hooks/useAuthSession";
+import { useAuth } from "../providers/AuthProvider";
 import { useRoomChat } from "../hooks/useRoomChat";
 import { useRoomParticipants } from "../hooks/useRoomParticipants";
 import { useRoomRealtime } from "../hooks/useRoomRealtime";
 import RulesPanel from "../components/Quiz/RulesPanel";
 import { useQuizLobby } from "../hooks/useQuizLobby";
-import {
-  connectWs,
-  disconnectWs,
-  emitWs,
-} from "../services/ws";
+import { emitWs } from "../services/ws";
 
 type ActivePanel = "lobby" | "game";
 
@@ -22,7 +18,7 @@ export default function HomePage() {
   const { roomId: roomIdParam } = useParams();
   const [isRulesOpen, setIsRulesOpen] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const { user: sessionUser, isLoading: isSessionLoading } = useAuthSession();
+  const { user: sessionUser, isLoading: isSessionLoading } = useAuth();
   const {
     rooms,
     roomsLoading,
@@ -53,15 +49,6 @@ export default function HomePage() {
     requestedRoomId !== null && Number.isInteger(requestedRoomId) && requestedRoomId > 0
       ? "game"
       : "lobby";
-
-  useEffect(() => {
-    if (sessionUser) {
-      connectWs();
-      return;
-    }
-
-    disconnectWs();
-  }, [sessionUser]);
 
   useEffect(() => {
     if (activePanel === "lobby") {

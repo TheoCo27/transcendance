@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Room } from "../services/quiz";
 import { getUserById } from "../services/users";
 
@@ -55,7 +55,7 @@ export function useRoomParticipants(
     void loadRoomUsers();
   }, [currentRoom]);
 
-  const applyLeaderboard = (leaderboard: LeaderboardEntry[]) => {
+  const applyLeaderboard = useCallback((leaderboard: LeaderboardEntry[]) => {
     setScoreEntries((previous) => {
       const scoreByUserId = new Map(
         leaderboard.map((entry) => [entry.userId, entry.score]),
@@ -77,7 +77,7 @@ export function useRoomParticipants(
 
       return [...updatedEntries, ...missingEntries].sort((a, b) => b.score - a.score);
     });
-  };
+  }, []);
 
   return {
     scoreEntries,
