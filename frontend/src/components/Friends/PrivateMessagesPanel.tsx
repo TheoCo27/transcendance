@@ -1,3 +1,4 @@
+import type { FormEvent } from "react";
 import type { FriendUserSummary, PrivateMessage } from "../../services/users";
 import PrimaryButton from "../PrimaryButton";
 
@@ -9,7 +10,7 @@ type PrivateMessagesPanelProps = {
   conversationError: string | null;
   messageInput: string;
   onMessageInputChange: (value: string) => void;
-  onMessageSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onMessageSubmit: (event: FormEvent<HTMLFormElement>) => void;
   isSendingMessage: boolean;
 };
 

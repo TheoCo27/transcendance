@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import FriendNetworkPanel, {
   type FriendNotice,
@@ -232,9 +232,7 @@ export default function FriendsPage() {
     );
   }
 
-  const handleFriendSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleFriendSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFriendNotice(null);
     setIsSendingRequest(true);
@@ -285,9 +283,7 @@ export default function FriendsPage() {
     }
   };
 
-  const handleMessageSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleMessageSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (selectedFriendId === null || messageInput.trim().length === 0) {
