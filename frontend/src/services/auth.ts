@@ -45,6 +45,10 @@ export async function register(payload: RegisterPayload): Promise<SafeUser> {
   return user;
 }
 
+export function loginWithGoogle(): void {
+  window.location.href = "/auth/google/start";
+}
+
 export function getSession(): Promise<SafeUser> {
   return apiRequest<SafeUser>("/auth/session");
 }

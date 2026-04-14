@@ -6,6 +6,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -36,6 +37,49 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApiResponse<SafeUser>> {
     return ok(await this.authService.register(dto, res));
+  }
+
+  @Get("google/start")
+  oauthGoogleStart(@Res() res: Response): void {
+    const frontendOrigin = process.env.FRONTEND_ORIGIN || "https://localhost:3000";
+
+    try {
+      res.redirect(this.authService.getOauthGoogleStartUrl(res));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "oauth_google_not_configured";
+      res.redirect(
+        `${frontendOrigin}/login?oauth_error=${encodeURIComponent(message)}`,
+      );
+    }
+  }
+
+  @Get("google/callback")
+  async oauthGoogleCallback(
+    @Req() req: Request,
+    @Query("code") code: string,
+    @Query("state") state: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const frontendOrigin = process.env.FRONTEND_ORIGIN || "https://localhost:3000";
+
+    if (!code || !state) {
+      this.authService.clearOauthGoogleState(res);
+      res.redirect(`${frontendOrigin}/login?oauth_error=missing_code_or_state`);
+      return;
+    }
+
+    try {
+      await this.authService.loginWithGoogle(req, res, code, state);
+      res.redirect(`${frontendOrigin}/`);
+    } catch (error) {
+      this.authService.clearOauthGoogleState(res);
+      const message =
+        error instanceof Error ? error.message : "oauth_google_failed";
+      res.redirect(
+        `${frontendOrigin}/login?oauth_error=${encodeURIComponent(message)}`,
+      );
+    }
   }
 
   @Post("logout")
