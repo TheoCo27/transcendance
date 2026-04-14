@@ -1,9 +1,11 @@
+import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { SafeUser } from "../../services/auth";
 import type {
   FriendOverview,
   PrivateConversationSummary,
 } from "../../services/users";
+import Avatar from "../Avatar";
 import PrimaryButton from "../PrimaryButton";
 import SecondaryButton from "../SecondaryButton";
 
@@ -19,7 +21,7 @@ type FriendNetworkPanelProps = {
   isFriendsLoading: boolean;
   friendUsername: string;
   onFriendUsernameChange: (value: string) => void;
-  onFriendSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onFriendSubmit: (event: FormEvent<HTMLFormElement>) => void;
   friendNotice: FriendNotice | null;
   isSendingRequest: boolean;
   pendingActionId: number | null;
@@ -136,9 +138,13 @@ export default function FriendNetworkPanel({
                   >
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#f59e0b)] text-lg font-semibold text-white">
-                          {friend.username.slice(0, 1).toUpperCase()}
-                        </div>
+                        <Avatar
+                          alt={`Photo de profil de ${friend.username}`}
+                          avatarUrl={friend.avatar_url}
+                          className="h-12 w-12"
+                          fallbackClassName="text-lg"
+                          username={friend.username}
+                        />
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-lg font-semibold text-white">

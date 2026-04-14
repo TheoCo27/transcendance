@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import Avatar from "../components/Avatar";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
@@ -181,17 +182,13 @@ export default function ProfilePage() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/55">
             Profil joueur
           </p>
-          {user.avatar_url ? (
-            <img
-              alt={`Photo de profil de ${user.username}`}
-              className="mt-6 h-24 w-24 rounded-full object-cover ring-4 ring-white/10"
-              src={user.avatar_url}
-            />
-          ) : (
-            <div className="mt-6 inline-flex h-24 w-24 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#f59e0b)] text-3xl font-semibold text-white">
-              {user.username.slice(0, 1).toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            alt={`Photo de profil de ${user.username}`}
+            avatarUrl={user.avatar_url}
+            className="mt-6 h-24 w-24 ring-4 ring-white/10"
+            fallbackClassName="text-3xl"
+            username={user.username}
+          />
           <h1 className="mt-6 text-3xl font-semibold">{user.username}</h1>
           <p className="mt-2 text-sm text-white/70">{formatIdentityLabel(user)}</p>
           <div className="mt-8 flex flex-wrap gap-3 text-sm">
@@ -227,17 +224,13 @@ export default function ProfilePage() {
               </dt>
               <dd className="mt-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                  {user.avatar_url ? (
-                    <img
-                      alt={`Photo de profil de ${user.username}`}
-                      className="h-20 w-20 rounded-full object-cover ring-2 ring-slate-900/10"
-                      src={user.avatar_url}
-                    />
-                  ) : (
-                    <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#f59e0b)] text-2xl font-semibold text-white">
-                      {user.username.slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
+                  <Avatar
+                    alt={`Photo de profil de ${user.username}`}
+                    avatarUrl={user.avatar_url}
+                    className="h-20 w-20 ring-2 ring-slate-900/10"
+                    fallbackClassName="text-2xl"
+                    username={user.username}
+                  />
                   <div className="flex-1">
                     <p className="text-sm leading-7 text-slate-600">
                       Ajoute une image JPG, PNG ou WEBP jusqu'a 2 Mo.
