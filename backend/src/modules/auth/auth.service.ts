@@ -3,7 +3,9 @@ import { RegisterDto } from "@/modules/users/dto/register.dto";
 import { UsersService } from "@/modules/users/users.service";
 import { Prisma, User } from "@generated/prisma/client";
 import {
+  BadGatewayException,
   ConflictException,
+  InternalServerErrorException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -15,8 +17,24 @@ import { CookieOptions, Request, Response } from "express";
 import { AuthPayload } from "./types/auth-payload.type";
 import type { SafeUser } from "./types/safe-user.type";
 
+type FortyTwoTokenResponse = {
+  access_token: string;
+};
+
+type FortyTwoMeResponse = {
+  id: number;
+  login: string;
+  email: string | null;
+};
+
 @Injectable()
 export class AuthService {
+  private static readonly OAUTH_42_STATE_COOKIE = "oauth_42_state";
+  private static readonly OAUTH_42_AUTHORIZE_URL =
+    "https://api.intra.42.fr/oauth/authorize";
+  private static readonly OAUTH_42_TOKEN_URL = "https://api.intra.42.fr/oauth/token";
+  private static readonly OAUTH_42_ME_URL = "https://api.intra.42.fr/v2/me";
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -50,6 +68,64 @@ export class AuthService {
       sameSite: isSecureCookie ? "none" : "lax",
       secure: Boolean(isSecureCookie),
     };
+  }
+
+  private getOAuth42StateCookieOptions(): CookieOptions {
+    return {
+      ...this.getAuthCookieOptions(),
+      sameSite: "lax",
+      maxAge: 10 * 60 * 1000,
+    };
+  }
+
+  private getOauth42Config(): {
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    scope: string;
+  } {
+    const clientId = process.env.FT_CLIENT_ID;
+    const clientSecret = process.env.FT_CLIENT_SECRET;
+    const redirectUri = process.env.FT_REDIRECT_URI;
+    const scope = process.env.FT_SCOPE || "public";
+
+    if (!clientId || !clientSecret || !redirectUri) {
+      throw new InternalServerErrorException("42 OAuth is not configured");
+    }
+
+    return {
+      clientId,
+      clientSecret,
+      redirectUri,
+      scope,
+    };
+  }
+
+  getOauth42StartUrl(res: Response): string {
+    const config = this.getOauth42Config();
+    const state = randomUUID();
+    const authorizeUrl = new URL(AuthService.OAUTH_42_AUTHORIZE_URL);
+
+    authorizeUrl.searchParams.set("client_id", config.clientId);
+    authorizeUrl.searchParams.set("redirect_uri", config.redirectUri);
+    authorizeUrl.searchParams.set("response_type", "code");
+    authorizeUrl.searchParams.set("scope", config.scope);
+    authorizeUrl.searchParams.set("state", state);
+
+    res.cookie(
+      AuthService.OAUTH_42_STATE_COOKIE,
+      state,
+      this.getOAuth42StateCookieOptions(),
+    );
+
+    return authorizeUrl.toString();
+  }
+
+  clearOauth42State(res: Response): void {
+    res.clearCookie(
+      AuthService.OAUTH_42_STATE_COOKIE,
+      this.getOAuth42StateCookieOptions(),
+    );
   }
 
   async login(user: User, res: Response): Promise<SafeUser> {
@@ -103,6 +179,79 @@ export class AuthService {
       createdAt: new Date(),
     });
 
+    return this.login(user, res);
+  }
+
+  async loginWithFortyTwo(
+    req: Request,
+    res: Response,
+    code: string,
+    state: string,
+  ): Promise<SafeUser> {
+    const expectedState = req.cookies?.[AuthService.OAUTH_42_STATE_COOKIE];
+
+    if (!expectedState || expectedState !== state) {
+      throw new UnauthorizedException("Invalid OAuth state");
+    }
+
+    const config = this.getOauth42Config();
+    const tokenPayload = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      code,
+      redirect_uri: config.redirectUri,
+      state,
+    });
+
+    const tokenResponse = await fetch(AuthService.OAUTH_42_TOKEN_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: tokenPayload.toString(),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new BadGatewayException("Failed to exchange 42 authorization code");
+    }
+
+    const tokenJson = (await tokenResponse.json()) as FortyTwoTokenResponse;
+
+    if (!tokenJson.access_token) {
+      throw new BadGatewayException("42 token response is invalid");
+    }
+
+    const meResponse = await fetch(AuthService.OAUTH_42_ME_URL, {
+      headers: {
+        Authorization: `Bearer ${tokenJson.access_token}`,
+      },
+    });
+
+    if (!meResponse.ok) {
+      throw new BadGatewayException("Failed to fetch 42 profile");
+    }
+
+    const profile = (await meResponse.json()) as FortyTwoMeResponse;
+
+    if (!profile.login) {
+      throw new BadGatewayException("42 profile is invalid");
+    }
+
+    const email = profile.email || `42-${profile.id}@oauth.local`;
+    const username = profile.login;
+    let user = await this.usersService.findUserByEmail(email);
+
+    if (!user) {
+      user = await this.usersService.createUser({
+        email,
+        username,
+        password: await bcrypt.hash(randomUUID(), 10),
+        createdAt: new Date(),
+      });
+    }
+
+    this.clearOauth42State(res);
     return this.login(user, res);
   }
 

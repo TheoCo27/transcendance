@@ -45,6 +45,10 @@ export async function register(payload: RegisterPayload): Promise<SafeUser> {
   return user;
 }
 
+export function loginWithFortyTwo(): void {
+  window.location.href = "/auth/42/start";
+}
+
 export async function loginAsGuest(): Promise<SafeUser> {
   const user = await apiRequest<SafeUser>("/auth/guest", {
     method: "POST",

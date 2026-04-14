@@ -57,6 +57,8 @@ export class AppService {
         "/api",
         "/auth/register",
         "/auth/login",
+        "/auth/42/start",
+        "/auth/42/callback",
         "/auth/guest",
         "/auth/logout",
         "/auth/session",

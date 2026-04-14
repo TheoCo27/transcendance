@@ -6,6 +6,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -43,6 +44,49 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApiResponse<SafeUser>> {
     return ok(await this.authService.guestLogin(res));
+  }
+
+  @Get("42/start")
+  oauth42Start(@Res() res: Response): void {
+    const frontendOrigin = process.env.FRONTEND_ORIGIN || "https://localhost:3000";
+
+    try {
+      res.redirect(this.authService.getOauth42StartUrl(res));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "oauth_42_not_configured";
+      res.redirect(
+        `${frontendOrigin}/login?oauth_error=${encodeURIComponent(message)}`,
+      );
+    }
+  }
+
+  @Get("42/callback")
+  async oauth42Callback(
+    @Req() req: Request,
+    @Query("code") code: string,
+    @Query("state") state: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const frontendOrigin = process.env.FRONTEND_ORIGIN || "https://localhost:3000";
+
+    if (!code || !state) {
+      this.authService.clearOauth42State(res);
+      res.redirect(`${frontendOrigin}/login?oauth_error=missing_code_or_state`);
+      return;
+    }
+
+    try {
+      await this.authService.loginWithFortyTwo(req, res, code, state);
+      res.redirect(`${frontendOrigin}/`);
+    } catch (error) {
+      this.authService.clearOauth42State(res);
+      const message =
+        error instanceof Error ? error.message : "oauth_42_failed";
+      res.redirect(
+        `${frontendOrigin}/login?oauth_error=${encodeURIComponent(message)}`,
+      );
+    }
   }
 
   @Post("logout")
