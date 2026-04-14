@@ -39,6 +39,13 @@ export class AuthController {
     return ok(await this.authService.register(dto, res));
   }
 
+  @Post("guest")
+  async guest(
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ApiResponse<SafeUser>> {
+    return ok(await this.authService.guestLogin(res));
+  }
+
   @Get("42/start")
   oauth42Start(@Res() res: Response): void {
     const frontendOrigin = process.env.FRONTEND_ORIGIN || "https://localhost:3000";
