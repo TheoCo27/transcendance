@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
-import { login, loginAsGuest, loginWithGoogle } from "../services/auth";
+import {
+  login,
+  loginAsGuest,
+  loginWithFortyTwo,
+  loginWithGoogle,
+} from "../services/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -117,6 +122,15 @@ export default function LoginPage() {
             type="button"
           >
             Continuer en invité
+          </PrimaryButton>
+
+          <PrimaryButton
+            className="mt-3 w-full bg-white/10 py-3 text-base hover:bg-white/20"
+            disabled={isSubmitting}
+            onClick={loginWithFortyTwo}
+            type="button"
+          >
+            Se connecter avec 42
           </PrimaryButton>
 
           <PrimaryButton

@@ -45,10 +45,6 @@ export async function register(payload: RegisterPayload): Promise<SafeUser> {
   return user;
 }
 
-export function loginWithGoogle(): void {
-  window.location.href = "/auth/google/start";
-}
-
 export async function loginAsGuest(): Promise<SafeUser> {
   const user = await apiRequest<SafeUser>("/auth/guest", {
     method: "POST",
@@ -56,6 +52,14 @@ export async function loginAsGuest(): Promise<SafeUser> {
   });
   emitAuthChanged();
   return user;
+}
+
+export function loginWithFortyTwo(): void {
+  window.location.href = "/auth/42/start";
+}
+
+export function loginWithGoogle(): void {
+  window.location.href = "/auth/google/start";
 }
 
 export function getSession(): Promise<SafeUser> {
