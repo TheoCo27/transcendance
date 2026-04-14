@@ -174,6 +174,18 @@ export class AuthService {
     }
   }
 
+  async guestLogin(res: Response): Promise<SafeUser> {
+    const guestId = randomUUID();
+    const user = await this.usersService.createUser({
+      email: `guest+${guestId}@guest.local`,
+      username: `Guest-${guestId.slice(0, 8)}`,
+      password: await bcrypt.hash(randomUUID(), 10),
+      createdAt: new Date(),
+    });
+
+    return this.login(user, res);
+  }
+
   async loginWithGoogle(
     req: Request,
     res: Response,

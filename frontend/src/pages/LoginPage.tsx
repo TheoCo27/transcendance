@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
-import { login, loginWithGoogle } from "../services/auth";
+import { login, loginAsGuest, loginWithGoogle } from "../services/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -36,6 +36,24 @@ export default function LoginPage() {
         submitError instanceof Error
           ? submitError.message
           : "Échec de connexion",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await loginAsGuest();
+      navigate("/");
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Échec de connexion invité",
       );
     } finally {
       setIsSubmitting(false);
@@ -90,6 +108,15 @@ export default function LoginPage() {
 
           <PrimaryButton className="w-full py-3 text-base" disabled={isSubmitting} type="submit">
             {isSubmitting ? "Connexion..." : "Se connecter"}
+          </PrimaryButton>
+
+          <PrimaryButton
+            className="mt-3 w-full bg-white/10 py-3 text-base hover:bg-white/20"
+            disabled={isSubmitting}
+            onClick={() => void handleGuestLogin()}
+            type="button"
+          >
+            Continuer en invité
           </PrimaryButton>
 
           <PrimaryButton

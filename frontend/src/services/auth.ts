@@ -49,6 +49,15 @@ export function loginWithGoogle(): void {
   window.location.href = "/auth/google/start";
 }
 
+export async function loginAsGuest(): Promise<SafeUser> {
+  const user = await apiRequest<SafeUser>("/auth/guest", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  emitAuthChanged();
+  return user;
+}
+
 export function getSession(): Promise<SafeUser> {
   return apiRequest<SafeUser>("/auth/session");
 }
