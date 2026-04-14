@@ -10,6 +10,7 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
 import { CookieOptions, Request, Response } from "express";
 import { AuthPayload } from "./types/auth-payload.type";
 import type { SafeUser } from "./types/safe-user.type";
@@ -91,6 +92,18 @@ export class AuthService {
 
       throw error;
     }
+  }
+
+  async guestLogin(res: Response): Promise<SafeUser> {
+    const guestId = randomUUID();
+    const user = await this.usersService.createUser({
+      email: `guest+${guestId}@guest.local`,
+      username: `Guest-${guestId.slice(0, 8)}`,
+      password: await bcrypt.hash(randomUUID(), 10),
+      createdAt: new Date(),
+    });
+
+    return this.login(user, res);
   }
 
   async logout(req: Request, res: Response): Promise<void> {

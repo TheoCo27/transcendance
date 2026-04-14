@@ -38,6 +38,13 @@ export class AuthController {
     return ok(await this.authService.register(dto, res));
   }
 
+  @Post("guest")
+  async guest(
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ApiResponse<SafeUser>> {
+    return ok(await this.authService.guestLogin(res));
+  }
+
   @Post("logout")
   async logout(
     @Req() req: Request,

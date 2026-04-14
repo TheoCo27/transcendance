@@ -45,6 +45,15 @@ export async function register(payload: RegisterPayload): Promise<SafeUser> {
   return user;
 }
 
+export async function loginAsGuest(): Promise<SafeUser> {
+  const user = await apiRequest<SafeUser>("/auth/guest", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  emitAuthChanged();
+  return user;
+}
+
 export function getSession(): Promise<SafeUser> {
   return apiRequest<SafeUser>("/auth/session");
 }
