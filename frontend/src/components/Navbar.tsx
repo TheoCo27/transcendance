@@ -1,11 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useAuthSession } from "../hooks/useAuthSession";
+import { useAuth } from "../providers/AuthProvider";
 import { logout } from "../services/auth";
 import PrimaryButton from "./PrimaryButton";
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuthSession();
+  const { user: currentUser } = useAuth();
 
   return (
     <nav className="bg-surface text-text">

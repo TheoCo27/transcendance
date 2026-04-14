@@ -1,40 +1,24 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import GamePanel from "../components/Quiz/GamePanel";
 import LobbyPanel from "../components/Quiz/LobbyPanel";
 import PasswordModal from "../components/Quiz/PasswordModal";
-import { useAuthSession } from "../hooks/useAuthSession";
+import { useAuth } from "../providers/AuthProvider";
+import { useRoomChat } from "../hooks/useRoomChat";
+import { useRoomParticipants } from "../hooks/useRoomParticipants";
+import { useRoomRealtime } from "../hooks/useRoomRealtime";
 import RulesPanel from "../components/Quiz/RulesPanel";
 import { useQuizLobby } from "../hooks/useQuizLobby";
-import { getUserById } from "../services/users";
-import {
-  connectWs,
-  disconnectWs,
-  emitWs,
-  offWs,
-  onWs,
-  type WsResponse,
-} from "../services/ws";
+import { emitWs } from "../services/ws";
 
 type ActivePanel = "lobby" | "game";
-type ChatMessageData = {
-  roomId: number;
-  userId: number;
-  content: string;
-  sentAt: string;
-};
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [activePanel, setActivePanel] = useState<ActivePanel>("lobby");
+  const { roomId: roomIdParam } = useParams();
   const [isRulesOpen, setIsRulesOpen] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [scoreEntries, setScoreEntries] = useState<
-    Array<{ userId: number; username: string; score: number }>
-  >([]);
-  const [chatMessages, setChatMessages] = useState<ChatMessageData[]>([]);
-  const [chatError, setChatError] = useState<string | null>(null);
-  const { user: sessionUser, isLoading: isSessionLoading } = useAuthSession();
+  const { user: sessionUser, isLoading: isSessionLoading } = useAuth();
   const {
     rooms,
     roomsLoading,
@@ -50,98 +34,59 @@ export default function HomePage() {
     requestJoinRoom,
     confirmJoinRoom,
     createRoomAndJoin,
+    loadCurrentRoom,
+    clearCurrentRoom,
+    syncCurrentRoom,
   } = useQuizLobby({ userId: sessionUser?.id ?? null });
+  const requestedRoomId = roomIdParam ? Number(roomIdParam) : null;
+  const currentRoomId = currentRoom?.id ?? null;
+  const { chatMessages, chatError, resetChat, sendChatMessage } = useRoomChat({
+    roomId: currentRoomId,
+    userId: sessionUser?.id ?? null,
+  });
+  const { scoreEntries, applyLeaderboard } = useRoomParticipants(currentRoom);
+  const activePanel: ActivePanel =
+    requestedRoomId !== null && Number.isInteger(requestedRoomId) && requestedRoomId > 0
+      ? "game"
+      : "lobby";
 
   useEffect(() => {
-    if (sessionUser) {
-      connectWs();
+    if (activePanel === "lobby") {
+      clearCurrentRoom();
+      setSelectedAnswer(null);
       return;
     }
 
-    disconnectWs();
-  }, [sessionUser]);
-
-  useEffect(() => {
-    if (!currentRoom) {
-      setScoreEntries([]);
-      setChatMessages([]);
-      setChatError(null);
+    if (requestedRoomId === null || !Number.isInteger(requestedRoomId) || requestedRoomId < 1) {
+      navigate("/", { replace: true });
       return;
     }
 
-    const loadRoomUsers = async () => {
-      const entries = await Promise.all(
-        currentRoom.players.map(async (player) => {
-          const userId = player.userId;
-          try {
-            const user = await getUserById(userId);
-            return { userId, username: user.username, score: 0 };
-          } catch {
-            return { userId, username: `Joueur #${userId}`, score: 0 };
-          }
-        }),
-      );
-
-      setScoreEntries(entries);
-    };
-
-    void loadRoomUsers();
-  }, [currentRoom]);
-
-  useEffect(() => {
-    const handleChatMessage = (response: WsResponse<ChatMessageData>) => {
-      if (!response.success || !response.data || !currentRoom) {
-        return;
+    const restoreRoom = async () => {
+      try {
+        await loadCurrentRoom(requestedRoomId);
+        setIsRulesOpen(false);
+      } catch {
+        clearCurrentRoom();
+        navigate("/", { replace: true });
       }
-
-      if (response.data.roomId !== currentRoom.id) {
-        return;
-      }
-
-      setChatMessages((previous) => [...previous, response.data as ChatMessageData]);
     };
 
-    const handleChatError = (response: WsResponse<never>) => {
-      if (response.success) {
-        return;
-      }
-      setChatError(response.error?.message ?? "Erreur chat");
-    };
+    void restoreRoom();
+  }, [activePanel, clearCurrentRoom, loadCurrentRoom, navigate, requestedRoomId]);
 
-    onWs("chat:message", handleChatMessage);
-    onWs("chat:message:error", handleChatError);
-
-    return () => {
-      offWs("chat:message", handleChatMessage);
-      offWs("chat:message:error", handleChatError);
-    };
-  }, [currentRoom]);
-
-  useEffect(() => {
-    if (!currentRoom || !sessionUser) {
-      return;
-    }
-
-    emitWs("room:join", {
-      roomId: currentRoom.id,
-      userId: sessionUser.id,
-    });
-    setChatMessages([]);
-    setChatError(null);
-  }, [currentRoom, sessionUser]);
-
-  const handleSendChatMessage = (content: string) => {
-    if (!currentRoom || !sessionUser) {
-      return;
-    }
-
-    setChatError(null);
-    emitWs("chat:message", {
-      roomId: currentRoom.id,
-      userId: sessionUser.id,
-      content,
-    });
-  };
+  useRoomRealtime({
+    requestedRoomId,
+    currentRoomId,
+    userId: sessionUser?.id ?? null,
+    syncCurrentRoom,
+    clearCurrentRoom,
+    onRoomClosed: () => {
+      navigate("/", { replace: true });
+    },
+    onRoomJoined: resetChat,
+    onLeaderboard: applyLeaderboard,
+  });
 
   const chatEntries = chatMessages.map((message) => ({
     ...message,
@@ -168,15 +113,15 @@ export default function HomePage() {
           roomsError={roomsError}
           actionsDisabled={isSessionLoading || sessionUser === null}
           onCreateRoom={async (payload) => {
-            await createRoomAndJoin(payload);
-            setActivePanel("game");
+            const room = await createRoomAndJoin(payload);
             setIsRulesOpen(false);
+            navigate(`/room/${room.id}`);
           }}
           onJoinRoom={async (room) => {
             await requestJoinRoom(room);
             if (!room.isPrivate) {
-              setActivePanel("game");
               setIsRulesOpen(false);
+              navigate(`/room/${room.id}`);
             }
           }}
         />
@@ -192,16 +137,17 @@ export default function HomePage() {
                 userId: sessionUser.id,
               });
             }
-            setActivePanel("lobby");
+            clearCurrentRoom();
             setSelectedAnswer(null);
             setIsRulesOpen(false);
+            navigate("/");
           }}
           selectedAnswer={selectedAnswer}
           onSelectAnswer={setSelectedAnswer}
           scoreEntries={scoreEntries}
           chatMessages={chatEntries}
           chatError={chatError}
-          onSendChatMessage={handleSendChatMessage}
+          onSendChatMessage={sendChatMessage}
         />
       ) : null}
 
@@ -215,9 +161,11 @@ export default function HomePage() {
         onClose={closeJoinModal}
         onConfirm={() => {
           void (async () => {
-            await confirmJoinRoom();
-            setActivePanel("game");
+            const room = await confirmJoinRoom();
             setIsRulesOpen(false);
+            if (room) {
+              navigate(`/room/${room.id}`);
+            }
           })();
         }}
       />

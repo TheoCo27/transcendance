@@ -35,6 +35,10 @@ export function getRooms(): Promise<Room[]> {
   return apiRequest<Room[]>("/rooms");
 }
 
+export function getRoomById(roomId: number): Promise<Room> {
+  return apiRequest<Room>(`/rooms/${roomId}`);
+}
+
 export function createRoom(payload: CreateRoomPayload): Promise<Room> {
   return apiRequest<Room>("/rooms", {
     method: "POST",
