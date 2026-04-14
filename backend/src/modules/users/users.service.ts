@@ -31,6 +31,13 @@ export type FriendActionResult = {
   friendshipStatus: FriendshipStatus;
 };
 
+const SUPPORTED_AVATAR_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -152,7 +159,7 @@ export class UsersService {
       const friend = relation.senderId === userId ? relation.receiver : relation.sender;
 
       if (!friend.isGuest) {
-        uniqueFriends.set(friend.id, this.sanitizeFriendUser(friend));
+        uniqueFriends.set(friend.id, this.buildFriendUserSummary(friend));
       }
     }
 
@@ -166,7 +173,7 @@ export class UsersService {
           id: relation.id,
           status: relation.status,
           createdAt: relation.createdAt,
-          user: this.sanitizeFriendUser(relation.sender),
+          user: this.buildFriendUserSummary(relation.sender),
         })),
       sentRequests: sentRequests
         .filter((relation) => !relation.receiver.isGuest)
@@ -174,9 +181,41 @@ export class UsersService {
           id: relation.id,
           status: relation.status,
           createdAt: relation.createdAt,
-          user: this.sanitizeFriendUser(relation.receiver),
+          user: this.buildFriendUserSummary(relation.receiver),
         })),
     };
+  }
+
+  async listFriends(userId: number): Promise<FriendUserSummary[]> {
+    const overview = await this.getFriendOverview(userId);
+    return overview.friends;
+  }
+
+  async areUsersFriends(userId: number, friendId: number): Promise<boolean> {
+    if (userId === friendId) {
+      return false;
+    }
+
+    const relation = await this.prisma.client.friendRequests.findFirst({
+      where: {
+        status: "accepted",
+        OR: [
+          {
+            senderId: userId,
+            receiverId: friendId,
+          },
+          {
+            senderId: friendId,
+            receiverId: userId,
+          },
+        ],
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return Boolean(relation);
   }
 
   async sendFriendRequest(
@@ -302,6 +341,33 @@ export class UsersService {
     };
   }
 
+  async updateAvatar(userId: number, avatarDataUrl: string | null): Promise<User> {
+    const user = await this.findUser({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    if (avatarDataUrl === null) {
+      return this.updateUser({
+        where: { id: userId },
+        data: {
+          avatar_url: null,
+        },
+      });
+    }
+
+    const normalizedAvatar = avatarDataUrl.trim();
+    this.assertAvatarDataUrlIsValid(normalizedAvatar);
+
+    return this.updateUser({
+      where: { id: userId },
+      data: {
+        avatar_url: normalizedAvatar,
+      },
+    });
+  }
+
   private async getActiveFriendRelation(senderId: number, receiverId: number) {
     return this.prisma.client.friendRequests.findFirst({
       where: {
@@ -331,7 +397,37 @@ export class UsersService {
     }
   }
 
-  private sanitizeFriendUser(user: User): FriendUserSummary {
+  private assertAvatarDataUrlIsValid(avatarDataUrl: string): void {
+    const match = avatarDataUrl.match(
+      /^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/,
+    );
+
+    if (!match) {
+      throw new BadRequestException("Avatar must be a valid image file");
+    }
+
+    const mimeType = match[1];
+    const base64Payload = match[2];
+
+    if (!SUPPORTED_AVATAR_MIME_TYPES.has(mimeType)) {
+      throw new BadRequestException(
+        "Supported avatar formats are JPG, PNG and WEBP",
+      );
+    }
+
+    const paddingLength = base64Payload.endsWith("==")
+      ? 2
+      : base64Payload.endsWith("=")
+        ? 1
+        : 0;
+    const estimatedByteSize = Math.floor((base64Payload.length * 3) / 4) - paddingLength;
+
+    if (estimatedByteSize > MAX_AVATAR_SIZE_BYTES) {
+      throw new BadRequestException("Avatar image must be 2 MB or smaller");
+    }
+  }
+
+  buildFriendUserSummary(user: User): FriendUserSummary {
     return {
       id: user.id,
       username: user.username,
