@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { Room } from "../services/quiz";
+import type { PublicQuestion } from "../types/game";
 import {
   emitWs,
   offWs,
@@ -21,6 +22,8 @@ type UseRoomRealtimeOptions = {
   onRoomClosed: () => void;
   onRoomJoined: () => void;
   onLeaderboard: (leaderboard: LeaderboardEntry[]) => void;
+  onQuestionStarted: (question: PublicQuestion) => void;
+  onGameEnded: () => void;
 };
 
 export function useRoomRealtime({
@@ -32,6 +35,8 @@ export function useRoomRealtime({
   onRoomClosed,
   onRoomJoined,
   onLeaderboard,
+  onQuestionStarted,
+  onGameEnded,
 }: UseRoomRealtimeOptions): void {
   useEffect(() => {
     const handleRoomState = (response: WsResponse<Room>) => {
@@ -87,6 +92,42 @@ export function useRoomRealtime({
       offWs("game:leaderboard", handleLeaderboard);
     };
   }, [onLeaderboard, requestedRoomId]);
+
+  useEffect(() => {
+    const handleQuestionStarted = (
+      response: WsResponse<{ roomId: number; question: PublicQuestion }>,
+    ) => {
+      if (!response.success || !response.data || requestedRoomId === null) {
+        return;
+      }
+
+      if (response.data.roomId !== requestedRoomId) {
+        return;
+      }
+
+      onQuestionStarted(response.data.question);
+    };
+
+    const handleGameEnded = (response: WsResponse<{ roomId: number }>) => {
+      if (!response.success || !response.data || requestedRoomId === null) {
+        return;
+      }
+
+      if (response.data.roomId !== requestedRoomId) {
+        return;
+      }
+
+      onGameEnded();
+    };
+
+    onWs("game:question:started", handleQuestionStarted);
+    onWs("game:ended", handleGameEnded);
+
+    return () => {
+      offWs("game:question:started", handleQuestionStarted);
+      offWs("game:ended", handleGameEnded);
+    };
+  }, [onGameEnded, onQuestionStarted, requestedRoomId]);
 
   useEffect(() => {
     if (currentRoomId === null || userId === null) {
