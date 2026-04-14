@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
-import { login } from "../services/auth";
+import { login, loginWithFortyTwo } from "../services/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -10,6 +10,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const oauthError = new URLSearchParams(window.location.search).get(
+      "oauth_error",
+    );
+    if (oauthError) {
+      setError("Connexion OAuth impossible. Vérifie la configuration.");
+    }
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,6 +90,15 @@ export default function LoginPage() {
 
           <PrimaryButton className="w-full py-3 text-base" disabled={isSubmitting} type="submit">
             {isSubmitting ? "Connexion..." : "Se connecter"}
+          </PrimaryButton>
+
+          <PrimaryButton
+            className="mt-3 w-full bg-white/10 py-3 text-base hover:bg-white/20"
+            disabled={isSubmitting}
+            onClick={loginWithFortyTwo}
+            type="button"
+          >
+            Se connecter avec 42
           </PrimaryButton>
         </form>
 
