@@ -5,16 +5,25 @@ import { AuthGuard } from "@/modules/auth/guards/auth.guard";
 import { AuthPayload } from "@/modules/auth/types/auth-payload.type";
 import { User } from "@generated/prisma/client";
 import {
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
   ParseIntPipe,
+  Patch,
+  Post,
   UseFilters,
   UseGuards,
 } from "@nestjs/common";
 import { SafeUser } from "../auth/types/safe-user.type";
-import { UsersService } from "./users.service";
+import { FriendRequestActionDto } from "./dto/friend-request-action.dto";
+import { SendFriendRequestDto } from "./dto/send-friend-request.dto";
+import {
+  FriendActionResult,
+  FriendOverview,
+  UsersService,
+} from "./users.service";
 
 @Controller("users")
 @UseFilters(ApiExceptionFilter)
@@ -33,6 +42,39 @@ export class UsersController {
     }
 
     return ok(this.sanitizeUser(user));
+  }
+
+  @Get("me/friends")
+  @UseGuards(AuthGuard)
+  async getFriendOverview(
+    @CurrentUser() auth: AuthPayload,
+  ): Promise<ApiResponse<FriendOverview>> {
+    return ok(await this.usersService.getFriendOverview(auth.sub));
+  }
+
+  @Post("me/friends")
+  @UseGuards(AuthGuard)
+  async sendFriendRequest(
+    @CurrentUser() auth: AuthPayload,
+    @Body() dto: SendFriendRequestDto,
+  ): Promise<ApiResponse<FriendActionResult>> {
+    return ok(await this.usersService.sendFriendRequest(auth.sub, dto.username));
+  }
+
+  @Patch("me/friends/requests/:requestId")
+  @UseGuards(AuthGuard)
+  async respondToFriendRequest(
+    @CurrentUser() auth: AuthPayload,
+    @Param("requestId", ParseIntPipe) requestId: number,
+    @Body() dto: FriendRequestActionDto,
+  ): Promise<ApiResponse<FriendActionResult>> {
+    return ok(
+      await this.usersService.respondToFriendRequest(
+        auth.sub,
+        requestId,
+        dto.action,
+      ),
+    );
   }
 
   @Get(":id")
