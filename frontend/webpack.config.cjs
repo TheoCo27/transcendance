@@ -7,9 +7,22 @@ const frontendOrigin = process.env.FRONTEND_ORIGIN || "https://localhost:3000";
 const shouldUseHttps = frontendOrigin.startsWith("https://");
 const tlsKeyPath = process.env.TLS_KEY_FILE || "/certs/dev-localhost.key";
 const tlsCertPath = process.env.TLS_CERT_FILE || "/certs/dev-localhost.crt";
-const trustedCaPath = process.env.NODE_EXTRA_CA_CERTS || "/certs/mkcert-rootCA.pem";
+const trustedCaPath =
+  process.env.NODE_EXTRA_CA_CERTS || "/certs/mkcert-rootCA.pem";
 const hasCustomTlsFiles =
   fs.existsSync(tlsKeyPath) && fs.existsSync(tlsCertPath);
+
+const proxyPaths = [
+  "/api",
+  "/health",
+  "/auth",
+  "/users",
+  "/rooms",
+  "/game",
+  "/scores",
+  "/quizzes",
+  "/socket.io",
+];
 
 module.exports = {
   entry: "./src/main.tsx",
@@ -58,17 +71,22 @@ module.exports = {
     historyApiFallback: true,
     proxy: [
       {
-        context: [
-          "/api",
-          "/health",
-          "/auth",
-          "/users",
-          "/rooms",
-          "/game",
-          "/scores",
-          "/quizzes",
-          "/socket.io",
-        ],
+        context: (pathname, req) => {
+          if (!proxyPaths.some((prefix) => pathname.startsWith(prefix))) {
+            return false;
+          }
+
+          // Keep client-side routing working for /rooms/:roomId page loads.
+          if (
+            pathname.startsWith("/rooms") &&
+            req.headers.accept &&
+            req.headers.accept.includes("text/html")
+          ) {
+            return false;
+          }
+
+          return true;
+        },
         target: backendTarget,
         changeOrigin: true,
         secure: fs.existsSync(trustedCaPath),

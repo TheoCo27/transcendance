@@ -16,7 +16,7 @@ export type Room = {
   id: number;
   name: string;
   ownerUserId?: number;
-  rounds: number;
+  // rounds: number;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
   players: RoomPlayer[];
@@ -51,7 +51,7 @@ export class RoomsService {
       id: this.nextRoomId,
       name: dto.name,
       ownerUserId: dto.ownerUserId,
-      rounds: dto.rounds,
+      // rounds: dto.rounds,
       isPrivate: dto.isPrivate ?? false,
       status: "waiting",
       players:
