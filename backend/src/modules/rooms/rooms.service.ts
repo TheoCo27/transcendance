@@ -104,11 +104,11 @@ export class RoomsService {
     const room = await this.findRoomOrThrow(roomId);
 
     if (room.status !== "waiting") {
-      throw new ConflictException("Room is not joinable");
+      throw new ConflictException("La partie a déjà commencé, impossible de rejoindre");
     }
 
     if (room.isPrivate && room.password !== dto.password) {
-      throw new UnauthorizedException("Invalid room password");
+      throw new UnauthorizedException("Mot de passe incorrect pour rejoindre cette room");
     }
 
     await this.prisma.client.$transaction(async (tx) => {
@@ -159,11 +159,11 @@ export class RoomsService {
     const room = await this.findRoomOrThrow(roomId);
 
     if (room.ownerId !== requesterUserId) {
-      throw new UnauthorizedException("Only room owner can update room config");
+      throw new UnauthorizedException("Seul le propriétaire de la room peut modifier sa configuration");
     }
 
     if (room.status !== "waiting") {
-      throw new ConflictException("Room can only be configured while waiting");
+      throw new ConflictException("La configuration de la room ne peut être modifiée une fois la partie commencée");
     }
 
     const updateData: Prisma.RoomUpdateInput = {};
@@ -193,7 +193,7 @@ export class RoomsService {
         typeof dto.isPrivate === "boolean" ? dto.isPrivate : room.isPrivate;
       if (!isPrivate) {
         throw new BadRequestException(
-          "Password can only be set for private rooms",
+          "La room doit être privée pour définir un mot de passe",
         );
       }
 
@@ -207,7 +207,7 @@ export class RoomsService {
       const resolvedPassword =
         typeof dto.password === "string" ? dto.password : (room.password ?? "");
       if (resolvedPassword.length < 4) {
-        throw new BadRequestException("Private rooms require a password");
+        throw new BadRequestException("Le mot de passe doit comporter au moins 4 caractères");
       }
     }
 
@@ -238,7 +238,7 @@ export class RoomsService {
     });
 
     if (!existingPlayer) {
-      throw new ConflictException("User is not in this room");
+      throw new ConflictException("L'utilisateur n'est pas dans cette room");
     }
 
     await this.prisma.client.$transaction(async (tx) => {
@@ -277,7 +277,7 @@ export class RoomsService {
     const room = await this.findRoomOrThrow(roomId);
 
     if (room.status !== "waiting") {
-      throw new ConflictException("Room is not in waiting state");
+      throw new ConflictException("La partie a déjà commencé");
     }
 
     const isPlayer = await this.prisma.client.roomPlayer.findUnique({
@@ -291,11 +291,11 @@ export class RoomsService {
     });
 
     if (!isPlayer) {
-      throw new UnauthorizedException("User is not in this room");
+      throw new UnauthorizedException("L'utilisateur doit être dans la room pour démarrer la partie");
     }
 
     if (room.ownerId !== requesterUserId) {
-      throw new UnauthorizedException("Only room owner can start the game");
+      throw new UnauthorizedException("Seul le propriétaire de la room peut démarrer la partie");
     }
 
     const playerCount = await this.prisma.client.roomPlayer.count({
@@ -303,7 +303,7 @@ export class RoomsService {
     });
 
     if (playerCount < 1) {
-      throw new ConflictException("Cannot start a room without players");
+      throw new ConflictException("Il doit y avoir au moins un joueur dans la room pour démarrer la partie");
     }
 
     this.assertStartConfiguration(room);
@@ -324,7 +324,7 @@ export class RoomsService {
     const room = await this.findRoomOrThrow(roomId);
 
     if (room.status !== "playing") {
-      throw new ConflictException("Room is not in playing state");
+      throw new ConflictException("La partie n'est pas en cours");
     }
 
     await this.prisma.client.room.update({
@@ -342,14 +342,14 @@ export class RoomsService {
     const room = await this.findRoomOrThrow(roomId);
 
     if (room.status === "playing") {
-      throw new ConflictException("Cannot close a room while game is playing");
+      throw new ConflictException("Impossible de fermer une room avec une partie en cours");
     }
 
     const playerCount = await this.prisma.client.roomPlayer.count({
       where: { roomId },
     });
     if (playerCount > 0) {
-      throw new ConflictException("Cannot close a room with active players");
+      throw new ConflictException("Impossible de fermer une room tant qu'il y a des joueurs");
     }
 
     await this.prisma.client.room.delete({
@@ -426,13 +426,13 @@ export class RoomsService {
   }): void {
     if (!room.gameType) {
       throw new ConflictException(
-        "Room game type must be configured before start",
+        "La configuration de la room doit inclure un type de jeu avant de pouvoir démarrer la partie",
       );
     }
 
     if (!this.isObjectRecord(room.gameConfig)) {
       throw new ConflictException(
-        "Room game configuration is required before start",
+        "La configuration du jeu doit être un objet valide avant de pouvoir démarrer la partie",
       );
     }
 
@@ -447,7 +447,7 @@ export class RoomsService {
         wordLength > 8
       ) {
         throw new ConflictException(
-          "Wordle config requires wordLength between 4 and 8",
+          "La configuration de Wordle nécessite un mot de longueur entre 4 et 8 caractères",
         );
       }
 
@@ -458,7 +458,7 @@ export class RoomsService {
         maxAttempts > 10
       ) {
         throw new ConflictException(
-          "Wordle config requires maxAttempts between 3 and 10",
+          "La configuration de Wordle nécessite un nombre de tentatives entre 3 et 10",
         );
       }
 
@@ -473,7 +473,7 @@ export class RoomsService {
       pairsCount > 20
     ) {
       throw new ConflictException(
-        "Memory config requires pairsCount between 2 and 20",
+        "La configuration de Memory nécessite un nombre de paires entre 2 et 20",
       );
     }
   }
