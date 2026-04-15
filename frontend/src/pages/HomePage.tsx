@@ -1,47 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PrimaryButton from "../components/PrimaryButton";
+import { useToast } from "../components/ui/toast";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getRooms, type Room } from "../services/rooms";
 import { connectWs, emitWs, offWs, onWs } from "../services/ws";
 
-// const mockRooms = [
-//   {
-//     id: "room-1",
-//     name: "Word Sprint FR",
-//     game: "Wordle Express",
-//     players: 3,
-//     capacity: 6,
-//     status: "Ouverte",
-//   },
-//   {
-//     id: "room-2",
-//     name: "Lexi Duel",
-//     game: "Jeux de mots",
-//     players: 2,
-//     capacity: 4,
-//     status: "Ouverte",
-//   },
-//   {
-//     id: "room-3",
-//     name: "Night Quiz Squad",
-//     game: "Quiz Mix",
-//     players: 5,
-//     capacity: 8,
-//     status: "Ouverte",
-//   },
-//   {
-//     id: "room-4",
-//     name: "Rapid Synonymes",
-//     game: "Mot mystere",
-//     players: 1,
-//     capacity: 4,
-//     status: "Ouverte",
-//   },
-// ];
-
 export default function HomePage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { user } = useAuthSession();
   const [recentRooms, setRecentRooms] = useState<Room[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -82,9 +49,10 @@ export default function HomePage() {
       setIsCreatingRoom(false);
 
       if (!response.success || !response.data) {
-        setCreateError(
-          response.error?.message ?? "Impossible de créer la room",
-        );
+        const message =
+          response.error?.message ?? "Impossible de créer la room";
+        setCreateError(message);
+        toast.error(message);
         return;
       }
 
@@ -108,9 +76,10 @@ export default function HomePage() {
       setJoiningRoomId(null);
 
       if (!response.success || !response.data) {
-        setJoinError(
-          response.error?.message ?? "Impossible de rejoindre la room",
-        );
+        const message =
+          response.error?.message ?? "Impossible de rejoindre la room";
+        setJoinError(message);
+        toast.error(message);
         return;
       }
 
@@ -125,9 +94,10 @@ export default function HomePage() {
       error: { message: string } | null;
     }) => {
       setJoiningRoomId(null);
-      setJoinError(
-        response.error?.message ?? "Impossible de rejoindre la room",
-      );
+      const message =
+        response.error?.message ?? "Impossible de rejoindre la room";
+      setJoinError(message);
+      toast.error(message);
     };
 
     const handleRoomCreateError = (response: {
@@ -136,7 +106,9 @@ export default function HomePage() {
       error: { message: string } | null;
     }) => {
       setIsCreatingRoom(false);
-      setCreateError(response.error?.message ?? "Impossible de créer la room");
+      const message = response.error?.message ?? "Impossible de créer la room";
+      setCreateError(message);
+      toast.error(message);
     };
 
     const handleWsAuthError = (response: {
@@ -146,12 +118,11 @@ export default function HomePage() {
     }) => {
       setIsCreatingRoom(false);
       setJoiningRoomId(null);
-      setCreateError(
-        response.error?.message ?? "Authentification WebSocket requise",
-      );
-      setJoinError(
-        response.error?.message ?? "Authentification WebSocket requise",
-      );
+      const message =
+        response.error?.message ?? "Authentification WebSocket requise";
+      setCreateError(message);
+      setJoinError(message);
+      toast.error(message);
     };
 
     onWs("room:list", handleRoomList);
@@ -171,7 +142,7 @@ export default function HomePage() {
       offWs("room:create:error", handleRoomCreateError);
       offWs("ws:auth:error", handleWsAuthError);
     };
-  }, [navigate]);
+  }, [navigate, toast]);
 
   useEffect(() => {
     const loadRecentRooms = async () => {
@@ -202,7 +173,12 @@ export default function HomePage() {
   }, [user]);
 
   const createRoom = async () => {
-    if (!user) return;
+    if (!user) {
+      const msg = "Connecte-toi pour créer une room";
+      setCreateError(msg);
+      toast.error(msg);
+      return;
+    }
 
     try {
       setCreateError(null);
@@ -216,14 +192,18 @@ export default function HomePage() {
       });
     } catch (error) {
       setIsCreatingRoom(false);
-      setCreateError("Impossible de créer la room");
+      const message = "Impossible de créer la room";
+      setCreateError(message);
+      toast.error(message);
       console.error("Failed to create room:", error);
     }
   };
 
   const joinRoom = async (roomId: number) => {
     if (!user) {
-      setJoinError("Connecte-toi pour rejoindre une room");
+      const message = "Connecte-toi pour rejoindre une room";
+      setJoinError(message);
+      toast.error(message);
       return;
     }
 
@@ -238,7 +218,9 @@ export default function HomePage() {
       });
     } catch (error) {
       setJoiningRoomId(null);
-      setJoinError("Impossible de rejoindre la room");
+      const message = "Impossible de rejoindre la room";
+      setJoinError(message);
+      toast.error(message);
       console.error("Failed to join room:", error);
     }
   };
@@ -273,12 +255,6 @@ export default function HomePage() {
               Rejoindre une room existante
             </button>
           </div>
-
-          {createError ? (
-            <p className="mt-4 text-sm font-medium text-danger">
-              {createError}
-            </p>
-          ) : null}
         </section>
 
         <section>
@@ -323,10 +299,6 @@ export default function HomePage() {
               </article>
             ))}
           </div>
-
-          {joinError ? (
-            <p className="mt-4 text-sm font-medium text-danger">{joinError}</p>
-          ) : null}
         </section>
       </div>
     </main>

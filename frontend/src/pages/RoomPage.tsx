@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PrimaryButton from "../components/PrimaryButton";
+import { useToast } from "../components/ui/toast";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getRoomById, type Room, updateRoom } from "../services/rooms";
 import { connectWs, emitWs, offWs, onWs } from "../services/ws";
@@ -35,6 +36,7 @@ export default function RoomPage() {
   const { roomId: roomIdParam } = useParams();
   const roomId = Number(roomIdParam);
   const navigate = useNavigate();
+  const toast = useToast();
   const { user, isLoading } = useAuthSession();
   const [room, setRoom] = useState<Room | null>(null);
   const [form, setForm] = useState<RoomConfigForm>(DEFAULT_FORM);
@@ -90,11 +92,12 @@ export default function RoomPage() {
         setRoom(fetchedRoom);
         setForm(buildFormFromRoom(fetchedRoom));
       } catch (error) {
-        setPageError(
+        const message =
           error instanceof Error
             ? error.message
-            : "Impossible de charger la room",
-        );
+            : "Impossible de charger la room";
+        setPageError(message);
+        toast.error(message);
       } finally {
         setIsRoomLoading(false);
       }
@@ -140,7 +143,10 @@ export default function RoomPage() {
       error: { message: string } | null;
     }) => {
       setIsStarting(false);
-      setPageError(response.error?.message ?? "Impossible de demarrer la room");
+      const message =
+        response.error?.message ?? "Impossible de demarrer la room";
+      setPageError(message);
+      toast.error(message);
     };
 
     const handleRoomLeft = (response: {
@@ -180,6 +186,7 @@ export default function RoomPage() {
       }
 
       setPageError(message);
+      toast.error(message);
     };
 
     onWs("room:state", handleRoomState);
@@ -195,7 +202,7 @@ export default function RoomPage() {
       offWs("room:left", handleRoomLeft);
       offWs("room:leave:error", handleRoomLeaveError);
     };
-  }, [navigate, roomId, user?.id]);
+  }, [navigate, roomId, toast, user?.id]);
 
   const handleSave = async () => {
     if (!room) {
@@ -232,11 +239,12 @@ export default function RoomPage() {
         room: updatedRoom,
       });
     } catch (error) {
-      setPageError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Impossible d'enregistrer la configuration",
-      );
+          : "Impossible d'enregistrer la configuration";
+      setPageError(message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -260,11 +268,12 @@ export default function RoomPage() {
       });
     } catch (error) {
       setIsStarting(false);
-      setPageError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Impossible de demarrer la room",
-      );
+          : "Impossible de demarrer la room";
+      setPageError(message);
+      toast.error(message);
     }
   };
 
@@ -286,11 +295,12 @@ export default function RoomPage() {
       });
     } catch (error) {
       setIsLeaving(false);
-      setPageError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Impossible de quitter la room",
-      );
+          : "Impossible de quitter la room";
+      setPageError(message);
+      toast.error(message);
     }
   };
 
@@ -331,8 +341,6 @@ export default function RoomPage() {
             {isLeaving ? "Sortie..." : "Quitter la room"}
           </PrimaryButton>
         </section>
-
-        {pageError ? <p className="text-sm text-danger">{pageError}</p> : null}
 
         {isOwner && room.status === "waiting" ? (
           <section className="rounded-2xl border border-white/10 bg-surface p-6">
