@@ -50,6 +50,30 @@ export default function HomePage() {
   const [joiningRoomId, setJoiningRoomId] = useState<number | null>(null);
 
   useEffect(() => {
+    const handleRoomList = (response: {
+      success: boolean;
+      data: Room[] | null;
+      error: { message: string } | null;
+    }) => {
+      if (!response.success || !response.data) {
+        return;
+      }
+
+      setRecentRooms(response.data.slice(0, 5));
+    };
+
+    const handleRoomListUpdated = (response: {
+      success: boolean;
+      data: Room[] | null;
+      error: { message: string } | null;
+    }) => {
+      if (!response.success || !response.data) {
+        return;
+      }
+
+      setRecentRooms(response.data.slice(0, 5));
+    };
+
     const handleRoomCreated = (response: {
       success: boolean;
       data: Room | null;
@@ -130,6 +154,8 @@ export default function HomePage() {
       );
     };
 
+    onWs("room:list", handleRoomList);
+    onWs("room:list-updated", handleRoomListUpdated);
     onWs("room:created", handleRoomCreated);
     onWs("room:joined", handleRoomJoined);
     onWs("room:join:error", handleRoomJoinError);
@@ -137,6 +163,8 @@ export default function HomePage() {
     onWs("ws:auth:error", handleWsAuthError);
 
     return () => {
+      offWs("room:list", handleRoomList);
+      offWs("room:list-updated", handleRoomListUpdated);
       offWs("room:created", handleRoomCreated);
       offWs("room:joined", handleRoomJoined);
       offWs("room:join:error", handleRoomJoinError);
@@ -157,6 +185,21 @@ export default function HomePage() {
 
     void loadRecentRooms();
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const syncRoomList = async () => {
+      try {
+        await connectWs();
+        emitWs("room:list");
+      } catch {}
+    };
+
+    void syncRoomList();
+  }, [user]);
 
   const createRoom = async () => {
     if (!user) return;
@@ -257,7 +300,7 @@ export default function HomePage() {
                 <div className="mb-3 flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-lg font-semibold">{room.name}</h3>
-                    {/* <p className="text-sm text-text-muted">{room.rounds}</p> */}
+                    <p className="text-sm text-text-muted">{room.gameType}</p>
                   </div>
                   <span className="rounded-full border border-success/60 bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
                     {room.status}
