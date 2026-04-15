@@ -21,18 +21,22 @@ export class RealtimeRoomEventsService {
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
 
-  handleDisconnect(clientId: string, server: Server): void {
+  async handleDisconnect(clientId: string, server: Server): Promise<void> {
     const userId = this.presence.unregisterSocket(clientId);
     if (typeof userId === "number" && !this.presence.hasActiveSockets(userId)) {
-      this.removeUserFromRooms(userId, server);
+      await this.removeUserFromRooms(userId, server);
     }
   }
 
-  handleRoomList(client: Socket): void {
-    client.emit("room:list", this.response.ok(this.roomsService.list()));
+  async handleRoomList(client: Socket): Promise<void> {
+    client.emit("room:list", this.response.ok(await this.roomsService.list()));
   }
 
-  handleRoomCreate(rawPayload: unknown, client: Socket, server: Server): void {
+  async handleRoomCreate(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
     const payload = this.validation.validatePayload(
       RoomCreateEventDto,
       rawPayload,
@@ -42,7 +46,7 @@ export class RealtimeRoomEventsService {
       payload.userId,
     );
     const { userId, ...createDto } = payload;
-    const room = this.roomsService.create({
+    const room = await this.roomsService.create({
       ...createDto,
       ownerUserId: requesterUserId,
     });
@@ -52,15 +56,19 @@ export class RealtimeRoomEventsService {
     server
       .to(this.roomChannel(room.id))
       .emit("room:state", this.response.ok(room));
-    this.broadcastRoomList(server);
+    await this.broadcastRoomList(server);
   }
 
-  handleRoomJoin(rawPayload: unknown, client: Socket, server: Server): void {
+  async handleRoomJoin(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
     const payload = this.validation.validatePayload(
       RoomJoinEventDto,
       rawPayload,
     );
-    const room = this.roomsService.join(payload.roomId, {
+    const room = await this.roomsService.join(payload.roomId, {
       userId: this.presence.resolveSocketUser(client.id, payload.userId),
       password: payload.password,
     });
@@ -70,15 +78,19 @@ export class RealtimeRoomEventsService {
     server
       .to(this.roomChannel(payload.roomId))
       .emit("room:state", this.response.ok(room));
-    this.broadcastRoomList(server);
+    await this.broadcastRoomList(server);
   }
 
-  handleRoomLeave(rawPayload: unknown, client: Socket, server: Server): void {
+  async handleRoomLeave(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
     const payload = this.validation.validatePayload(RoomLeaveDto, rawPayload);
     const userId = this.presence.resolveSocketUser(client.id, payload.userId);
-    this.assertUserInRoom(payload.roomId, userId);
+    await this.assertUserInRoom(payload.roomId, userId);
 
-    const room = this.roomsService.leave(payload.roomId, userId);
+    const room = await this.roomsService.leave(payload.roomId, userId);
     const channel = this.roomChannel(payload.roomId);
 
     client.leave(channel);
@@ -88,7 +100,7 @@ export class RealtimeRoomEventsService {
     );
 
     if (room.players.length === 0) {
-      const closed = this.gameRuntime.closeRoom(
+      const closed = await this.gameRuntime.closeRoom(
         payload.roomId,
         "room_empty",
         server,
@@ -98,30 +110,38 @@ export class RealtimeRoomEventsService {
     }
 
     server.to(channel).emit("room:state", this.response.ok(room));
-    this.broadcastRoomList(server);
+    await this.broadcastRoomList(server);
   }
 
-  handleRoomStart(rawPayload: unknown, client: Socket, server: Server): void {
+  async handleRoomStart(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
     const payload = this.validation.validatePayload(RoomStartDto, rawPayload);
     const requesterUserId = this.presence.resolveSocketUser(
       client.id,
       payload.userId,
       "room:start requires a bound userId on this socket",
     );
-    this.assertUserInRoom(payload.roomId, requesterUserId);
+    await this.assertUserInRoom(payload.roomId, requesterUserId);
 
-    const room = this.roomsService.start(payload.roomId, requesterUserId);
+    const room = await this.roomsService.start(payload.roomId, requesterUserId);
     server
       .to(this.roomChannel(payload.roomId))
       .emit("room:started", this.response.ok(room));
-    this.gameRuntime.startGameLoop(payload.roomId, server);
-    this.broadcastRoomList(server);
+    await this.gameRuntime.startGameLoop(payload.roomId, server);
+    await this.broadcastRoomList(server);
   }
 
-  handleChatMessage(rawPayload: unknown, client: Socket, server: Server): void {
+  async handleChatMessage(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
     const payload = this.validation.validatePayload(ChatMessageDto, rawPayload);
     const userId = this.presence.resolveSocketUser(client.id, payload.userId);
-    this.assertUserInRoom(payload.roomId, userId);
+    await this.assertUserInRoom(payload.roomId, userId);
 
     const content = payload.content?.trim();
     if (!content) {
@@ -143,15 +163,18 @@ export class RealtimeRoomEventsService {
     );
   }
 
-  private removeUserFromRooms(userId: number, server: Server): void {
+  private async removeUserFromRooms(
+    userId: number,
+    server: Server,
+  ): Promise<void> {
     let listUpdated = false;
 
-    for (const room of this.roomsService.list()) {
+    for (const room of await this.roomsService.list()) {
       if (!room.players.some((player) => player.userId === userId)) {
         continue;
       }
 
-      const updatedRoom = this.roomsService.leave(room.id, userId);
+      const updatedRoom = await this.roomsService.leave(room.id, userId);
       const channel = this.roomChannel(room.id);
       server
         .to(channel)
@@ -168,22 +191,22 @@ export class RealtimeRoomEventsService {
     }
 
     if (listUpdated) {
-      this.broadcastRoomList(server);
+      await this.broadcastRoomList(server);
     }
   }
 
-  private assertUserInRoom(roomId: number, userId: number) {
-    const room = this.roomsService.getById(roomId);
+  private async assertUserInRoom(roomId: number, userId: number) {
+    const room = await this.roomsService.getById(roomId);
     if (!room.players.some((player) => player.userId === userId)) {
       throw new UnauthorizedException("User is not in this room");
     }
     return room;
   }
 
-  private broadcastRoomList(server: Server): void {
+  private async broadcastRoomList(server: Server): Promise<void> {
     server.emit(
       "room:list-updated",
-      this.response.ok(this.roomsService.list()),
+      this.response.ok(await this.roomsService.list()),
     );
   }
 

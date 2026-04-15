@@ -19,27 +19,29 @@ export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
   @Get()
-  list(): ApiResponse<Array<Omit<Room, "password">>> {
-    return ok(this.roomsService.list());
+  async list(): Promise<ApiResponse<Array<Omit<Room, "password">>>> {
+    return ok(await this.roomsService.list());
   }
 
   @Get(":roomId")
-  getById(
+  async getById(
     @Param("roomId", ParseIntPipe) roomId: number,
-  ): ApiResponse<Omit<Room, "password">> {
-    return ok(this.roomsService.getById(roomId));
+  ): Promise<ApiResponse<Omit<Room, "password">>> {
+    return ok(await this.roomsService.getById(roomId));
   }
 
   @Post()
-  create(@Body() dto: CreateRoomDto): ApiResponse<Omit<Room, "password">> {
-    return ok(this.roomsService.create(dto));
+  async create(
+    @Body() dto: CreateRoomDto,
+  ): Promise<ApiResponse<Omit<Room, "password">>> {
+    return ok(await this.roomsService.create(dto));
   }
 
   @Post(":roomId/join")
-  join(
+  async join(
     @Param("roomId", ParseIntPipe) roomId: number,
     @Body() dto: JoinRoomDto,
-  ): ApiResponse<Omit<Room, "password">> {
-    return ok(this.roomsService.join(roomId, dto));
+  ): Promise<ApiResponse<Omit<Room, "password">>> {
+    return ok(await this.roomsService.join(roomId, dto));
   }
 }
