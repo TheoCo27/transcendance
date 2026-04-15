@@ -21,11 +21,8 @@ export class RealtimeRoomEventsService {
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
 
-  async handleDisconnect(clientId: string, server: Server): Promise<void> {
-    const userId = this.presence.unregisterSocket(clientId);
-    if (typeof userId === "number" && !this.presence.hasActiveSockets(userId)) {
-      await this.removeUserFromRooms(userId, server);
-    }
+  async handleDisconnect(clientId: string): Promise<void> {
+    this.presence.unregisterSocket(clientId);
   }
 
   async handleRoomList(client: Socket): Promise<void> {
@@ -68,8 +65,13 @@ export class RealtimeRoomEventsService {
       RoomJoinEventDto,
       rawPayload,
     );
+    const requesterUserId = this.presence.resolveSocketUser(
+      client.id,
+      payload.userId,
+    );
+
     const room = await this.roomsService.join(payload.roomId, {
-      userId: this.presence.resolveSocketUser(client.id, payload.userId),
+      userId: requesterUserId,
       password: payload.password,
     });
 
@@ -106,6 +108,7 @@ export class RealtimeRoomEventsService {
         server,
       );
       client.emit("room:closed", this.response.ok(closed));
+      await this.broadcastRoomList(server);
       return;
     }
 
@@ -161,38 +164,6 @@ export class RealtimeRoomEventsService {
         sentAt: new Date().toISOString(),
       }),
     );
-  }
-
-  private async removeUserFromRooms(
-    userId: number,
-    server: Server,
-  ): Promise<void> {
-    let listUpdated = false;
-
-    for (const room of await this.roomsService.list()) {
-      if (!room.players.some((player) => player.userId === userId)) {
-        continue;
-      }
-
-      const updatedRoom = await this.roomsService.leave(room.id, userId);
-      const channel = this.roomChannel(room.id);
-      server
-        .to(channel)
-        .emit("room:left", this.response.ok({ roomId: room.id, userId }));
-
-      if (updatedRoom.players.length === 0) {
-        // Keep empty rooms alive on transient disconnects (browser refresh).
-        listUpdated = true;
-        continue;
-      }
-
-      server.to(channel).emit("room:state", this.response.ok(updatedRoom));
-      listUpdated = true;
-    }
-
-    if (listUpdated) {
-      await this.broadcastRoomList(server);
-    }
   }
 
   private async assertUserInRoom(roomId: number, userId: number) {

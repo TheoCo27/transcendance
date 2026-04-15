@@ -1,4 +1,5 @@
 import { PrismaService } from "@/prisma/prisma.service";
+import { Prisma } from "@generated/prisma/client";
 import {
   BadRequestException,
   ConflictException,
@@ -8,6 +9,7 @@ import {
 } from "@nestjs/common";
 import { CreateRoomDto } from "./dto/create-room.dto";
 import { JoinRoomDto } from "./dto/join-room.dto";
+import { UpdateRoomDto } from "./dto/update-room.dto";
 
 export type RoomPlayer = {
   userId: number;
@@ -149,6 +151,78 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  async update(
+    roomId: number,
+    requesterUserId: number,
+    dto: UpdateRoomDto,
+  ): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
+
+    if (room.ownerId !== requesterUserId) {
+      throw new UnauthorizedException("Only room owner can update room config");
+    }
+
+    if (room.status !== "waiting") {
+      throw new ConflictException("Room can only be configured while waiting");
+    }
+
+    const updateData: Prisma.RoomUpdateInput = {};
+
+    if (typeof dto.name === "string") {
+      updateData.name = dto.name;
+    }
+
+    if (typeof dto.gameType === "string") {
+      updateData.gameType = dto.gameType;
+      updateData.gameConfig = Prisma.JsonNull;
+    }
+
+    if (typeof dto.gameConfig === "object" && dto.gameConfig !== null) {
+      updateData.gameConfig = dto.gameConfig as Prisma.InputJsonValue;
+    }
+
+    if (typeof dto.isPrivate === "boolean") {
+      updateData.isPrivate = dto.isPrivate;
+      if (!dto.isPrivate) {
+        updateData.password = null;
+      }
+    }
+
+    if (typeof dto.password === "string") {
+      const isPrivate =
+        typeof dto.isPrivate === "boolean" ? dto.isPrivate : room.isPrivate;
+      if (!isPrivate) {
+        throw new BadRequestException(
+          "Password can only be set for private rooms",
+        );
+      }
+
+      updateData.password = dto.password;
+    }
+
+    if (
+      (typeof dto.isPrivate === "boolean" && dto.isPrivate) ||
+      (room.isPrivate && typeof dto.isPrivate !== "boolean")
+    ) {
+      const resolvedPassword =
+        typeof dto.password === "string" ? dto.password : (room.password ?? "");
+      if (resolvedPassword.length < 4) {
+        throw new BadRequestException("Private rooms require a password");
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return this.getById(roomId);
+    }
+
+    await this.prisma.client.room.update({
+      where: { id: roomId },
+      data: updateData,
+    });
+
+    return this.getById(roomId);
+  }
+
   async leave(roomId: number, userId: number): Promise<Omit<Room, "password">> {
     const room = await this.findRoomOrThrow(roomId);
     const existingPlayer = await this.prisma.client.roomPlayer.findUnique({
@@ -231,6 +305,8 @@ export class RoomsService {
     if (playerCount < 1) {
       throw new ConflictException("Cannot start a room without players");
     }
+
+    this.assertStartConfiguration(room);
 
     await this.prisma.client.room.update({
       where: { id: roomId },
@@ -342,5 +418,67 @@ export class RoomsService {
       startedAt: room.startedAt?.toISOString() ?? null,
       finishedAt: room.finishedAt?.toISOString() ?? null,
     };
+  }
+
+  private assertStartConfiguration(room: {
+    gameType: "wordle" | "memory" | null;
+    gameConfig: unknown;
+  }): void {
+    if (!room.gameType) {
+      throw new ConflictException(
+        "Room game type must be configured before start",
+      );
+    }
+
+    if (!this.isObjectRecord(room.gameConfig)) {
+      throw new ConflictException(
+        "Room game configuration is required before start",
+      );
+    }
+
+    if (room.gameType === "wordle") {
+      const wordLength = room.gameConfig.wordLength;
+      const maxAttempts = room.gameConfig.maxAttempts;
+
+      if (
+        typeof wordLength !== "number" ||
+        !Number.isInteger(wordLength) ||
+        wordLength < 4 ||
+        wordLength > 8
+      ) {
+        throw new ConflictException(
+          "Wordle config requires wordLength between 4 and 8",
+        );
+      }
+
+      if (
+        typeof maxAttempts !== "number" ||
+        !Number.isInteger(maxAttempts) ||
+        maxAttempts < 3 ||
+        maxAttempts > 10
+      ) {
+        throw new ConflictException(
+          "Wordle config requires maxAttempts between 3 and 10",
+        );
+      }
+
+      return;
+    }
+
+    const pairsCount = room.gameConfig.pairsCount;
+    if (
+      typeof pairsCount !== "number" ||
+      !Number.isInteger(pairsCount) ||
+      pairsCount < 2 ||
+      pairsCount > 20
+    ) {
+      throw new ConflictException(
+        "Memory config requires pairsCount between 2 and 20",
+      );
+    }
+  }
+
+  private isObjectRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
   }
 }

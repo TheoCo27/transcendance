@@ -12,11 +12,15 @@ export type RoomPlayer = {
 export type Room = {
   id: number;
   name: string;
-  // rounds: number;
+  ownerUserId: number;
   isPrivate: boolean;
+  gameType: "wordle" | "memory" | null;
+  gameConfig: Record<string, unknown> | null;
   status: "waiting" | "playing" | "finished";
   players: RoomPlayer[];
   createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
 };
 
 export type CreateRoomPayload = {
@@ -31,8 +35,20 @@ export type JoinRoomPayload = {
   password?: string;
 };
 
+export type UpdateRoomPayload = {
+  name?: string;
+  gameType?: "wordle" | "memory";
+  gameConfig?: Record<string, unknown>;
+  isPrivate?: boolean;
+  password?: string;
+};
+
 export function getRooms(): Promise<Room[]> {
   return apiRequest<Room[]>("/rooms");
+}
+
+export function getRoomById(roomId: number): Promise<Room> {
+  return apiRequest<Room>(`/rooms/${roomId}`);
 }
 
 export function createRoom(payload: CreateRoomPayload): Promise<Room> {
@@ -42,9 +58,22 @@ export function createRoom(payload: CreateRoomPayload): Promise<Room> {
   });
 }
 
-export function joinRoom(roomId: number, payload: JoinRoomPayload): Promise<Room> {
+export function joinRoom(
+  roomId: number,
+  payload: JoinRoomPayload,
+): Promise<Room> {
   return apiRequest<Room>(`/rooms/${roomId}/join`, {
     method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateRoom(
+  roomId: number,
+  payload: UpdateRoomPayload,
+): Promise<Room> {
+  return apiRequest<Room>(`/rooms/${roomId}`, {
+    method: "PATCH",
     body: JSON.stringify(payload),
   });
 }

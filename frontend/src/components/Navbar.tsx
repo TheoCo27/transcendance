@@ -18,16 +18,21 @@ export default function Navbar() {
         </Link>
         <div className="flex items-center gap-5">
           {currentUser !== null ? (
-            <PrimaryButton
-              className="px-4 py-2 text-sm"
-              onClick={() => {
-                void (async () => {
-                  await logout();
-                })();
-              }}
-            >
-              Se déconnecter
-            </PrimaryButton>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center rounded-full justify-center p-2 px-3.5 pointer-events-none bg-accent">
+                {currentUser.username[0].toUpperCase()}
+              </div>
+              <PrimaryButton
+                className="px-4 py-2 text-sm"
+                onClick={() => {
+                  void (async () => {
+                    await logout();
+                  })();
+                }}
+              >
+                Se déconnecter
+              </PrimaryButton>
+            </div>
           ) : (
             <>
               <Link className="text-sm font-medium text-text" to="/login">
