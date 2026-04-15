@@ -76,7 +76,12 @@ export class GameService {
       {
         id: 102,
         text: "Quel endpoint est utilise pour rejoindre une room ?",
-        options: ["/room/join", "/rooms/join", "/rooms/:roomId/join", "/join-room"],
+        options: [
+          "/room/join",
+          "/rooms/join",
+          "/rooms/:roomId/join",
+          "/join-room",
+        ],
         correctAnswerIndex: 2,
       },
     ],
@@ -93,15 +98,18 @@ export class GameService {
 
   constructor(private readonly roomsService: RoomsService) {}
 
-  getRoomState(roomId: number): GameState {
-    const room = this.roomsService.getById(roomId);
+  async getRoomState(roomId: number): Promise<GameState> {
+    const room = await this.roomsService.getById(roomId);
     const runtime = this.getRoomRuntime(roomId);
-    this.syncScoresWithPlayers(room.players.map((player) => player.userId), runtime);
+    this.syncScoresWithPlayers(
+      room.players.map((player) => player.userId),
+      runtime,
+    );
 
     const existing = this.roomStates.get(roomId);
     if (existing) {
       existing.status = room.status;
-      existing.totalQuestions = Math.max(existing.totalQuestions, room.rounds);
+      existing.totalQuestions = Math.max(existing.totalQuestions, 1);
       existing.startedAt = room.startedAt ?? existing.startedAt;
       existing.endedAt = room.finishedAt ?? existing.endedAt;
       existing.leaderboard = this.buildLeaderboard(runtime);
@@ -117,14 +125,15 @@ export class GameService {
       status: room.status,
       currentQuestionId: null,
       currentQuestionNumber: 0,
-      totalQuestions: room.rounds,
+      totalQuestions: 1,
       questionDurationMs: null,
       questionStartedAt: null,
       questionEndsAt: null,
       answersForCurrentQuestion: 0,
       totalAnswers: runtime.totalAnswers,
       leaderboard,
-      winnerUserId: room.status === "finished" ? leaderboard[0]?.userId ?? null : null,
+      winnerUserId:
+        room.status === "finished" ? (leaderboard[0]?.userId ?? null) : null,
       startedAt: room.startedAt,
       endedAt: room.finishedAt,
       updatedAt: new Date().toISOString(),
@@ -134,20 +143,23 @@ export class GameService {
     return state;
   }
 
-  startGame(
+  async startGame(
     roomId: number,
     totalQuestions: number,
     questionDurationMs: number,
-  ): GameState {
-    const room = this.roomsService.getById(roomId);
+  ): Promise<GameState> {
+    const room = await this.roomsService.getById(roomId);
     const runtime = this.getRoomRuntime(roomId);
-    const state = this.getRoomState(roomId);
+    const state = await this.getRoomState(roomId);
     const now = new Date().toISOString();
 
     runtime.answeredByQuestion.clear();
     runtime.scoresByUser.clear();
     runtime.totalAnswers = 0;
-    this.syncScoresWithPlayers(room.players.map((player) => player.userId), runtime);
+    this.syncScoresWithPlayers(
+      room.players.map((player) => player.userId),
+      runtime,
+    );
 
     state.status = "playing";
     state.currentQuestionId = null;
@@ -167,7 +179,7 @@ export class GameService {
     return state;
   }
 
-  startQuestion(params: {
+  async startQuestion(params: {
     roomId: number;
     questionId: number;
     questionNumber: number;
@@ -175,8 +187,8 @@ export class GameService {
     questionDurationMs: number;
     startsAt: string;
     endsAt: string;
-  }): GameState {
-    const state = this.getRoomState(params.roomId);
+  }): Promise<GameState> {
+    const state = await this.getRoomState(params.roomId);
 
     state.status = "playing";
     state.currentQuestionId = params.questionId;
@@ -191,14 +203,14 @@ export class GameService {
     return state;
   }
 
-  markQuestionTimedOut(roomId: number): GameState {
-    const state = this.getRoomState(roomId);
+  async markQuestionTimedOut(roomId: number): Promise<GameState> {
+    const state = await this.getRoomState(roomId);
     state.updatedAt = new Date().toISOString();
     return state;
   }
 
-  submitAnswer(dto: SubmitAnswerDto): SubmitAnswerResult {
-    const room = this.roomsService.getById(dto.roomId);
+  async submitAnswer(dto: SubmitAnswerDto): Promise<SubmitAnswerResult> {
+    const room = await this.roomsService.getById(dto.roomId);
     if (room.status !== "playing") {
       throw new ConflictException("Game is not running for this room");
     }
@@ -207,8 +219,11 @@ export class GameService {
       throw new UnauthorizedException("User is not in this room");
     }
 
-    const state = this.getRoomState(dto.roomId);
-    if (state.currentQuestionId === null || state.currentQuestionId !== dto.questionId) {
+    const state = await this.getRoomState(dto.roomId);
+    if (
+      state.currentQuestionId === null ||
+      state.currentQuestionId !== dto.questionId
+    ) {
       throw new ConflictException("Question is not active");
     }
 
@@ -251,9 +266,9 @@ export class GameService {
     };
   }
 
-  finishGame(roomId: number): GameState {
-    const room = this.roomsService.getById(roomId);
-    const state = this.getRoomState(roomId);
+  async finishGame(roomId: number): Promise<GameState> {
+    const room = await this.roomsService.getById(roomId);
+    const state = await this.getRoomState(roomId);
 
     state.status = "finished";
     state.leaderboard = this.buildLeaderboard(this.getRoomRuntime(roomId));
@@ -278,8 +293,8 @@ export class GameService {
     };
   }
 
-  getRoomLeaderboard(roomId: number): GameLeaderboardEntry[] {
-    this.getRoomState(roomId);
+  async getRoomLeaderboard(roomId: number): Promise<GameLeaderboardEntry[]> {
+    await this.getRoomState(roomId);
     return this.buildLeaderboard(this.getRoomRuntime(roomId));
   }
 
@@ -307,10 +322,15 @@ export class GameService {
   private buildLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
     return [...runtime.scoresByUser.entries()]
       .map(([userId, score]) => ({ userId, score }))
-      .sort((left, right) => right.score - left.score || left.userId - right.userId);
+      .sort(
+        (left, right) => right.score - left.score || left.userId - right.userId,
+      );
   }
 
-  private syncScoresWithPlayers(playerIds: number[], runtime: RoomRuntime): void {
+  private syncScoresWithPlayers(
+    playerIds: number[],
+    runtime: RoomRuntime,
+  ): void {
     const playerIdSet = new Set(playerIds);
 
     for (const playerId of playerIds) {
