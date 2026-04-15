@@ -1,9 +1,9 @@
-import { RoomsService } from "@/modules/rooms/rooms.service";
 import { ChatMessageDto } from "@/modules/realtime/dto/chat-message.dto";
 import { RoomCreateEventDto } from "@/modules/realtime/dto/room-create-event.dto";
 import { RoomJoinEventDto } from "@/modules/realtime/dto/room-join-event.dto";
 import { RoomLeaveDto } from "@/modules/realtime/dto/room-leave.dto";
 import { RoomStartDto } from "@/modules/realtime/dto/room-start.dto";
+import { RoomsService } from "@/modules/rooms/rooms.service";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { RealtimeGameRuntimeService } from "./realtime-game-runtime.service";
@@ -33,8 +33,14 @@ export class RealtimeRoomEventsService {
   }
 
   handleRoomCreate(rawPayload: unknown, client: Socket, server: Server): void {
-    const payload = this.validation.validatePayload(RoomCreateEventDto, rawPayload);
-    const requesterUserId = this.presence.resolveSocketUser(client.id, payload.userId);
+    const payload = this.validation.validatePayload(
+      RoomCreateEventDto,
+      rawPayload,
+    );
+    const requesterUserId = this.presence.resolveSocketUser(
+      client.id,
+      payload.userId,
+    );
     const { userId, ...createDto } = payload;
     const room = this.roomsService.create({
       ...createDto,
@@ -43,12 +49,17 @@ export class RealtimeRoomEventsService {
 
     client.join(this.roomChannel(room.id));
     client.emit("room:created", this.response.ok(room));
-    server.to(this.roomChannel(room.id)).emit("room:state", this.response.ok(room));
+    server
+      .to(this.roomChannel(room.id))
+      .emit("room:state", this.response.ok(room));
     this.broadcastRoomList(server);
   }
 
   handleRoomJoin(rawPayload: unknown, client: Socket, server: Server): void {
-    const payload = this.validation.validatePayload(RoomJoinEventDto, rawPayload);
+    const payload = this.validation.validatePayload(
+      RoomJoinEventDto,
+      rawPayload,
+    );
     const room = this.roomsService.join(payload.roomId, {
       userId: this.presence.resolveSocketUser(client.id, payload.userId),
       password: payload.password,
@@ -71,10 +82,17 @@ export class RealtimeRoomEventsService {
     const channel = this.roomChannel(payload.roomId);
 
     client.leave(channel);
-    client.emit("room:left", this.response.ok({ roomId: payload.roomId, userId }));
+    client.emit(
+      "room:left",
+      this.response.ok({ roomId: payload.roomId, userId }),
+    );
 
     if (room.players.length === 0) {
-      const closed = this.gameRuntime.closeRoom(payload.roomId, "room_empty", server);
+      const closed = this.gameRuntime.closeRoom(
+        payload.roomId,
+        "room_empty",
+        server,
+      );
       client.emit("room:closed", this.response.ok(closed));
       return;
     }
@@ -93,8 +111,10 @@ export class RealtimeRoomEventsService {
     this.assertUserInRoom(payload.roomId, requesterUserId);
 
     const room = this.roomsService.start(payload.roomId, requesterUserId);
-    server.to(this.roomChannel(payload.roomId)).emit("room:started", this.response.ok(room));
-    this.gameRuntime.startGameLoop(payload.roomId, room.rounds, server);
+    server
+      .to(this.roomChannel(payload.roomId))
+      .emit("room:started", this.response.ok(room));
+    this.gameRuntime.startGameLoop(payload.roomId, server);
     this.broadcastRoomList(server);
   }
 
@@ -138,7 +158,8 @@ export class RealtimeRoomEventsService {
         .emit("room:left", this.response.ok({ roomId: room.id, userId }));
 
       if (updatedRoom.players.length === 0) {
-        this.gameRuntime.closeRoom(room.id, "socket_disconnect", server);
+        // Keep empty rooms alive on transient disconnects (browser refresh).
+        listUpdated = true;
         continue;
       }
 
@@ -160,7 +181,10 @@ export class RealtimeRoomEventsService {
   }
 
   private broadcastRoomList(server: Server): void {
-    server.emit("room:list-updated", this.response.ok(this.roomsService.list()));
+    server.emit(
+      "room:list-updated",
+      this.response.ok(this.roomsService.list()),
+    );
   }
 
   private roomChannel(roomId: number): string {

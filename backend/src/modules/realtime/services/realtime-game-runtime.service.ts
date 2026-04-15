@@ -4,12 +4,12 @@ import { ScoresService } from "@/modules/scores/scores.service";
 import { ConflictException, Injectable } from "@nestjs/common";
 import { Server } from "socket.io";
 import { RoomTimerRuntime } from "../realtime.types";
+import { RealtimeResponseService } from "./realtime-response.service";
 import {
   broadcastRoomList,
   getQuestionIdForTurn,
   roomChannel,
 } from "./realtime-runtime-utils";
-import { RealtimeResponseService } from "./realtime-response.service";
 
 @Injectable()
 export class RealtimeGameRuntimeService {
@@ -38,12 +38,16 @@ export class RealtimeGameRuntimeService {
     }
   }
 
-  startGameLoop(roomId: number, roomRounds: number, server: Server): void {
-    const totalQuestions = Math.max(1, roomRounds);
+  startGameLoop(roomId: number, server: Server): void {
+    const totalQuestions = Math.max(1);
     this.gameService.startGame(roomId, totalQuestions, this.questionDurationMs);
     server.to(roomChannel(roomId)).emit(
       "game:started",
-      this.response.ok({ roomId, totalQuestions, questionDurationMs: this.questionDurationMs }),
+      this.response.ok({
+        roomId,
+        totalQuestions,
+        questionDurationMs: this.questionDurationMs,
+      }),
     );
     this.startQuestionTimer(roomId, 1, totalQuestions, server);
   }
@@ -90,7 +94,13 @@ export class RealtimeGameRuntimeService {
       totalQuestions,
       endsAtMs,
       tickInterval: setInterval(() => {
-        this.emitTimerTick(roomId, questionId, questionNumber, totalQuestions, server);
+        this.emitTimerTick(
+          roomId,
+          questionId,
+          questionNumber,
+          totalQuestions,
+          server,
+        );
       }, this.timerTickMs),
       endTimeout: setTimeout(() => {
         this.onQuestionTimeout(roomId, server);
@@ -121,7 +131,13 @@ export class RealtimeGameRuntimeService {
       }),
     );
     server.to(channel).emit("game:state", this.response.ok(state));
-    this.emitTimerTick(roomId, questionId, questionNumber, totalQuestions, server);
+    this.emitTimerTick(
+      roomId,
+      questionId,
+      questionNumber,
+      totalQuestions,
+      server,
+    );
   }
 
   private emitTimerTick(
@@ -169,7 +185,12 @@ export class RealtimeGameRuntimeService {
       this.endGame(roomId, "timer_completed", server);
       return;
     }
-    this.startQuestionTimer(roomId, runtime.questionNumber + 1, runtime.totalQuestions, server);
+    this.startQuestionTimer(
+      roomId,
+      runtime.questionNumber + 1,
+      runtime.totalQuestions,
+      server,
+    );
   }
 
   private endGame(roomId: number, reason: string, server: Server): void {
@@ -185,10 +206,12 @@ export class RealtimeGameRuntimeService {
     server.to(channel).emit("room:state", this.response.ok(room));
     server.to(channel).emit("game:leaderboard", this.response.ok(leaderboard));
     server.to(channel).emit("game:state", this.response.ok(gameState));
-    server.to(channel).emit(
-      "game:ended",
-      this.response.ok({ roomId, reason, winnerUserId, leaderboard }),
-    );
+    server
+      .to(channel)
+      .emit(
+        "game:ended",
+        this.response.ok({ roomId, reason, winnerUserId, leaderboard }),
+      );
 
     broadcastRoomList(server, this.roomsService, this.response);
   }

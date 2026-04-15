@@ -1,49 +1,44 @@
 import { apiRequest } from "./api";
 
-export const QUIZ_ROOM_NAME_MIN_LENGTH = 2;
-export const QUIZ_ROOM_PASSWORD_MIN_LENGTH = 4;
-export const QUIZ_ROOM_ROUNDS_DEFAULT = 5;
-
-export type RoomPlayer = {
-  userId: number;
-  joinedAt: string;
-};
-
-export type Room = {
+export type QuizQuestion = {
   id: number;
-  name: string;
-  rounds: number;
-  isPrivate: boolean;
-  status: "waiting" | "playing" | "finished";
-  players: RoomPlayer[];
+  questionText: string;
+  answers: string[];
+  correctAnswer: string;
+  position: number;
+  points: number;
   createdAt: string;
 };
 
-export type CreateRoomPayload = {
-  name: string;
-  rounds: number;
-  isPrivate: boolean;
-  password?: string;
+export type Quiz = {
+  id: number;
+  title: string;
+  createdAt: string;
+  questionDurationSec: number | null;
+  questions: QuizQuestion[];
 };
 
-export type JoinRoomPayload = {
-  userId: number;
-  password?: string;
+export type CreateQuizPayload = {
+  title: string;
+  questionDurationSec?: 10 | 30 | null;
+  questions: Array<{
+    questionText: string;
+    answers: string[];
+    correctAnswerIndex: number;
+    points?: number;
+  }>;
 };
 
-export function getRooms(): Promise<Room[]> {
-  return apiRequest<Room[]>("/rooms");
+export function getQuizzes(): Promise<Quiz[]> {
+  return apiRequest<Quiz[]>("/quizzes");
 }
 
-export function createRoom(payload: CreateRoomPayload): Promise<Room> {
-  return apiRequest<Room>("/rooms", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+export function getQuizById(id: number): Promise<Quiz> {
+  return apiRequest<Quiz>(`/quizzes/${id}`);
 }
 
-export function joinRoom(roomId: number, payload: JoinRoomPayload): Promise<Room> {
-  return apiRequest<Room>(`/rooms/${roomId}/join`, {
+export function createQuiz(payload: CreateQuizPayload): Promise<Quiz> {
+  return apiRequest<Quiz>("Quizzes/", {
     method: "POST",
     body: JSON.stringify(payload),
   });

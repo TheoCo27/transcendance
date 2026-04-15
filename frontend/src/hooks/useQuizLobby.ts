@@ -5,7 +5,7 @@ import {
   joinRoom,
   type CreateRoomPayload,
   type Room,
-} from "../services/quiz";
+} from "../services/rooms";
 
 type UseQuizLobbyOptions = {
   userId: number | null;
@@ -31,7 +31,9 @@ export function useQuizLobby({ userId }: UseQuizLobbyOptions) {
       setRooms(fetchedRooms);
     } catch (error) {
       setRoomsError(
-        error instanceof Error ? error.message : "Impossible de charger les rooms",
+        error instanceof Error
+          ? error.message
+          : "Impossible de charger les rooms",
       );
     } finally {
       setRoomsLoading(false);
@@ -64,7 +66,9 @@ export function useQuizLobby({ userId }: UseQuizLobbyOptions) {
         await loadRooms();
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Impossible de rejoindre la room";
+          error instanceof Error
+            ? error.message
+            : "Impossible de rejoindre la room";
         setJoinError(message);
         throw error;
       } finally {
