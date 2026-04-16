@@ -307,6 +307,8 @@ export default function RoomPage() {
         return;
       }
 
+      const gameEndedData = response.data;
+
       setCurrentQuestion(null);
       setRemainingMs(null);
       setHasAnsweredCurrentQuestion(false);
@@ -316,8 +318,8 @@ export default function RoomPage() {
           ? {
               ...currentState,
               status: "finished",
-              leaderboard: response.data.leaderboard,
-              winnerUserId: response.data.winnerUserId,
+              leaderboard: gameEndedData.leaderboard,
+              winnerUserId: gameEndedData.winnerUserId,
             }
           : currentState,
       );
