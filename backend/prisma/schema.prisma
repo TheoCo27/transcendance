@@ -25,6 +25,11 @@ enum RoomStatus {
   finished
 }
 
+enum RoomGameType {
+  wordle
+  memory
+}
+
 enum GameStatus {
   waiting
   in_progress
@@ -76,7 +81,11 @@ model Room {
   owner   User @relation("RoomOwner", fields: [ownerId], references: [id])
   ownerId Int
 
-  status RoomStatus @default(waiting)
+  status     RoomStatus    @default(waiting)
+  gameType   RoomGameType?
+  gameConfig Json?
+  isPrivate  Boolean       @default(false)
+  password   String?
 
   players  RoomPlayer[] @relation("RoomPlayers")
   messages Messages[]   @relation("RoomMessages")

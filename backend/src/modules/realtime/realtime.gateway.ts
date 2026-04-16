@@ -45,7 +45,7 @@ export class RealtimeGateway
     try {
       const userId = await this.auth.authenticateSocket(client);
       this.presence.bindSocketToUser(client.id, userId);
-      this.roomEvents.syncSocketRoomMembership(userId, client);
+      await this.roomEvents.syncSocketRoomMembership(userId, client);
 
       client.emit(
         "ws:connected",
@@ -59,16 +59,13 @@ export class RealtimeGateway
       const message =
         error instanceof Error ? error.message : "Authentication required";
 
-      client.emit(
-        "ws:auth:error",
-        this.response.fail("UNAUTHORIZED", message),
-      );
+      client.emit("ws:auth:error", this.response.fail("UNAUTHORIZED", message));
       client.disconnect(true);
     }
   }
 
-  handleDisconnect(client: Socket): void {
-    this.roomEvents.handleDisconnect(client.id, this.server);
+  async handleDisconnect(client: Socket): Promise<void> {
+    await this.roomEvents.handleDisconnect(client.id);
     this.logger.log(`Socket disconnected: ${client.id}`);
   }
 
@@ -78,84 +75,79 @@ export class RealtimeGateway
   }
 
   @SubscribeMessage("room:list")
-  handleRoomList(@ConnectedSocket() client: Socket): void {
-    this.runSafely(client, "room:list:error", () => {
-      this.roomEvents.handleRoomList(client);
+  async handleRoomList(@ConnectedSocket() client: Socket): Promise<void> {
+    await this.runSafely(client, "room:list:error", async () => {
+      await this.roomEvents.handleRoomList(client);
     });
   }
 
   @SubscribeMessage("room:create")
-  handleRoomCreate(
+  async handleRoomCreate(
     @MessageBody() payload: unknown,
     @ConnectedSocket() client: Socket,
-  ): void {
-    this.runSafely(client, "room:create:error", () => {
-      this.roomEvents.handleRoomCreate(payload, client, this.server);
+  ): Promise<void> {
+    await this.runSafely(client, "room:create:error", async () => {
+      await this.roomEvents.handleRoomCreate(payload, client, this.server);
     });
   }
 
   @SubscribeMessage("room:join")
-  handleRoomJoin(
+  async handleRoomJoin(
     @MessageBody() payload: unknown,
     @ConnectedSocket() client: Socket,
-  ): void {
-    this.runSafely(client, "room:join:error", () => {
-      this.roomEvents.handleRoomJoin(payload, client, this.server);
+  ): Promise<void> {
+    await this.runSafely(client, "room:join:error", async () => {
+      await this.roomEvents.handleRoomJoin(payload, client, this.server);
     });
   }
 
   @SubscribeMessage("room:leave")
-  handleRoomLeave(
+  async handleRoomLeave(
     @MessageBody() payload: unknown,
     @ConnectedSocket() client: Socket,
-  ): void {
-    this.runSafely(client, "room:leave:error", () => {
-      this.roomEvents.handleRoomLeave(payload, client, this.server);
+  ): Promise<void> {
+    await this.runSafely(client, "room:leave:error", async () => {
+      await this.roomEvents.handleRoomLeave(payload, client, this.server);
     });
   }
 
   @SubscribeMessage("room:start")
-  handleRoomStart(
+  async handleRoomStart(
     @MessageBody() payload: unknown,
     @ConnectedSocket() client: Socket,
-  ): void {
-    this.runSafely(client, "room:start:error", () => {
-      return this.roomEvents.handleRoomStart(payload, client, this.server);
+  ): Promise<void> {
+    await this.runSafely(client, "room:start:error", async () => {
+      await this.roomEvents.handleRoomStart(payload, client, this.server);
     });
   }
 
   @SubscribeMessage("game:answer")
-  handleGameAnswer(
+  async handleGameAnswer(
     @MessageBody() payload: unknown,
     @ConnectedSocket() client: Socket,
-  ): void {
-    this.runSafely(client, "game:answer:error", () => {
-      return this.gameEvents.handleGameAnswer(payload, client, this.server);
+  ): Promise<void> {
+    await this.runSafely(client, "game:answer:error", async () => {
+      await this.gameEvents.handleGameAnswer(payload, client, this.server);
     });
   }
 
   @SubscribeMessage("chat:message")
-  handleChatMessage(
+  async handleChatMessage(
     @MessageBody() payload: unknown,
     @ConnectedSocket() client: Socket,
-  ): void {
-    this.runSafely(client, "chat:message:error", () => {
-      this.roomEvents.handleChatMessage(payload, client, this.server);
+  ): Promise<void> {
+    await this.runSafely(client, "chat:message:error", async () => {
+      await this.roomEvents.handleChatMessage(payload, client, this.server);
     });
   }
 
-  private runSafely(
+  private async runSafely(
     client: Socket,
     errorEvent: string,
-    callback: () => void | Promise<void>,
-  ): void {
+    callback: () => Promise<void>,
+  ): Promise<void> {
     try {
-      const result = callback();
-      if (result && typeof result === "object" && "catch" in result) {
-        void (result as Promise<void>).catch((exception) => {
-          this.response.emitError(client, errorEvent, exception);
-        });
-      }
+      await callback();
     } catch (exception) {
       this.response.emitError(client, errorEvent, exception);
     }

@@ -4,8 +4,15 @@
   --color-background: #f8f4ec;
   --color-surface: #fff8ef;
   --color-primary: #f97316;
-  --color-danger: #dc2626;
+  --color-secondary: #f78c6b;
+  --color-accent: #ffd166;
+  --color-success: #7bd389;
+  --color-danger: #d62839;
+  --color-warning: #ffb703;
+  --color-bg: #f8f4ec;
   --color-text: #0f172a;
+  --color-text-muted: #7b6a55;
+  --color-border: #d8c4a8;
 }
 
 :root {
@@ -54,6 +61,11 @@ body::before {
 a {
   color: inherit;
   text-decoration: none;
+  cursor: pointer;
+}
+
+button {
+  cursor: pointer;
 }
 
 button,

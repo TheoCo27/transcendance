@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
+import { useToast } from "../components/ui/toast";
 import {
   AUTH_USERNAME_MIN_LENGTH,
   login,
@@ -11,6 +12,7 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [searchParams] = useSearchParams();
   const joinRoomParam = searchParams.get("joinRoom");
   const joinRoomId = Number(joinRoomParam);
@@ -22,6 +24,10 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
 
+  const navigateAfterAuth = () => {
+    navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
@@ -32,12 +38,13 @@ export default function LoginPage() {
         email: email.trim(),
         password,
       });
-      navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
+      toast.success("Connecte avec succes");
+      navigateAfterAuth();
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Échec de connexion",
+          : "Echec de connexion",
       );
     } finally {
       setIsSubmitting(false);
@@ -53,12 +60,13 @@ export default function LoginPage() {
       await loginAsGuest({
         username: guestUsername.trim(),
       });
-      navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
+      toast.success("Connexion invite reussie");
+      navigateAfterAuth();
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Échec de connexion invité",
+          : "Echec de connexion invite",
       );
     } finally {
       setIsGuestSubmitting(false);
@@ -122,7 +130,7 @@ export default function LoginPage() {
             {isSubmitting
               ? "Connexion..."
               : shouldJoinRoomAfterAuth
-                ? "Se connecter et join la room"
+                ? "Se connecter et rejoindre la room"
                 : "Se connecter"}
           </PrimaryButton>
         </form>
@@ -140,7 +148,7 @@ export default function LoginPage() {
             className="mb-2 block text-sm font-medium text-text/70"
             htmlFor="guest-username"
           >
-            Entrer comme invité
+            Entrer comme invite
           </label>
           <input
             className="mb-4 w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-text outline-none placeholder:text-text/40"
@@ -160,10 +168,10 @@ export default function LoginPage() {
             type="submit"
           >
             {isGuestSubmitting
-              ? "Connexion invité..."
+              ? "Connexion invite..."
               : shouldJoinRoomAfterAuth
-                ? "Continuer en tant qu'invite et join la room"
-                : "Continuer en invité"}
+                ? "Continuer en invite et rejoindre la room"
+                : "Continuer en invite"}
           </SecondaryButton>
         </form>
 
