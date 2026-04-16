@@ -30,7 +30,7 @@ export default function RoomsList({
             <div className="mb-3 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold">{room.name}</h3>
-                <p className="text-sm text-text-muted">{room.gameType}</p>
+                {/* <p className="text-sm text-text-muted">{room.gameType}</p> */}
               </div>
               <span className="rounded-full border border-success/60 bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
                 {room.status}

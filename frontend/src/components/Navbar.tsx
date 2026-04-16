@@ -9,7 +9,7 @@ export default function Navbar() {
   const { user: currentUser } = useAuthSession();
 
   return (
-    <nav className="sticky top-0 z-20 border-b border-slate-900/8 bg-[rgba(248,244,236,0.82)] text-slate-950 backdrop-blur">
+    <nav className="sticky top-0 z-20 border-b border-slate-900/8 bg-surface text-text backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 md:px-10">
         <Link className="flex items-center gap-3" to="/">
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-sm font-semibold uppercase tracking-[0.18em] text-white">
@@ -20,8 +20,8 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <div className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
-          <Link to="/admin">Creer</Link>
+        <div className="hidden items-center gap-6 text-sm font-medium md:flex">
+          <Link to="/admin">Créer</Link>
           <Link to="/friends">Amis</Link>
         </div>
 
