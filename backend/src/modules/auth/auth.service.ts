@@ -83,6 +83,12 @@ export class AuthService {
   async register(dto: RegisterDto, res: Response): Promise<SafeUser> {
     const email = dto.email.trim();
     const username = dto.username.trim();
+    const existingEmail = await this.usersService.findUserByEmail(email);
+
+    if (existingEmail) {
+      throw new ConflictException("Email already exists");
+    }
+
     const existingUsername = await this.usersService.findUserByUsername(username);
 
     if (existingUsername) {
@@ -105,6 +111,14 @@ export class AuthService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
+        const target = Array.isArray(error.meta?.target)
+          ? error.meta.target
+          : [];
+
+        if (target.includes("username")) {
+          throw new ConflictException("Username already exists");
+        }
+
         throw new ConflictException("Email already exists");
       }
 
