@@ -24,12 +24,12 @@ export class AuthService {
   async validateUser(dto: LoginDto): Promise<User> {
     const user = await this.usersService.findUserByEmail(dto.email);
     if (!user) {
-      throw new UnauthorizedException("Invalid email or password");
+      throw new UnauthorizedException("Le mail ou le mot de passe est incorrect");
     }
 
     const isValidPassword = await bcrypt.compare(dto.password, user.password);
     if (!isValidPassword) {
-      throw new UnauthorizedException("Invalid email or password");
+      throw new UnauthorizedException("Le mail ou le mot de passe est incorrect");
     }
 
     return user;
@@ -86,7 +86,7 @@ export class AuthService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new ConflictException("Email already exists");
+        throw new ConflictException("Un utilisateur avec cet email existe déjà");
       }
 
       throw error;

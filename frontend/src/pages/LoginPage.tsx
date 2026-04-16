@@ -3,9 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
 import { login } from "../services/auth";
+import { useToast } from "../components/ui/toast";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +23,7 @@ export default function LoginPage() {
         email: email.trim(),
         password,
       });
+      toast.success("Connecté avec succès");
       navigate("/");
     } catch (submitError) {
       setError(

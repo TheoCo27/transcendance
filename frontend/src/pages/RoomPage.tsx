@@ -4,7 +4,8 @@ import PrimaryButton from "../components/PrimaryButton";
 import { useToast } from "../components/ui/toast";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getRoomById, type Room, updateRoom } from "../services/rooms";
-import { connectWs, emitWs, offWs, onWs } from "../services/ws";
+import { getUserById } from "../services/users";
+import { connectWs, emitWs, offWs, onWs, WsResponse } from "../services/ws";
 
 type RoomStartPayload = {
   roomId: number;
@@ -22,6 +23,13 @@ type RoomConfigForm = {
   wordleWordLength: number;
   wordleMaxAttempts: number;
   memoryPairsCount: number;
+};
+
+type ChatMessagePayload = {
+  roomId: number;
+  userId: number;
+  content: string;
+  sentAt: string;
 };
 
 const DEFAULT_FORM: RoomConfigForm = {
@@ -46,6 +54,41 @@ export default function RoomPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessagePayload[]>([]);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [playerNames, setPlayerNames] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    const userIds = new Set<number>();
+
+    room?.players.forEach((player) => userIds.add(player.userId));
+    chatMessages.forEach((message) => userIds.add(message.userId));
+
+    if (userIds.size === 0) {
+      return;
+    }
+
+    const loadPlayerNames = async () => {
+      const nextEntries = await Promise.all(
+        [...userIds].map(async (userId) => {
+          try {
+            const fetchedUser = await getUserById(userId);
+            return [userId, fetchedUser.username] as const;
+          } catch {
+            return [userId, `Joueur #${userId}`] as const;
+          }
+        }),
+      );
+
+      setPlayerNames((currentNames) => ({
+        ...currentNames,
+        ...Object.fromEntries(nextEntries),
+      }));
+    };
+
+    void loadPlayerNames();
+  }, [chatMessages, room]);
 
   const canStart = useMemo(() => {
     if (!room || !user) return false;
@@ -189,11 +232,32 @@ export default function RoomPage() {
       toast.error(message);
     };
 
+    const handleChatMessage = (response: WsResponse<ChatMessagePayload>) => {
+      if (
+        !response.success ||
+        !response.data ||
+        response.data.roomId !== roomId
+      )
+        return;
+
+      const message = response.data;
+      setChatMessages((currentMessages) => [...currentMessages, message]);
+      setChatError(null);
+    };
+
+    const handleChatError = (response: WsResponse<never>) => {
+      if (response.success) return;
+
+      setChatError(response.error?.message ?? "Envoi du message impossible.");
+    };
+
     onWs("room:state", handleRoomState);
     onWs("room:started", handleRoomStarted);
     onWs("room:start:error", handleRoomStartError);
     onWs("room:left", handleRoomLeft);
     onWs("room:leave:error", handleRoomLeaveError);
+    onWs("chat:message", handleChatMessage);
+    onWs("chat:message:error", handleChatError);
 
     return () => {
       offWs("room:state", handleRoomState);
@@ -201,6 +265,8 @@ export default function RoomPage() {
       offWs("room:start:error", handleRoomStartError);
       offWs("room:left", handleRoomLeft);
       offWs("room:leave:error", handleRoomLeaveError);
+      offWs("chat:message", handleChatMessage);
+      offWs("chat:message:error", handleChatError);
     };
   }, [navigate, roomId, toast, user?.id]);
 
@@ -304,7 +370,43 @@ export default function RoomPage() {
     }
   };
 
+  const chatEntries = useMemo(
+    () =>
+      chatMessages.map((message) => ({
+        ...message,
+        username: playerNames[message.userId] ?? `Joueur #${message.userId}`,
+        isSelf: message.userId === user?.id,
+      })),
+    [chatMessages, playerNames, user?.id],
+  );
+
   const isOwner = user && room && user.id === room.ownerUserId;
+  const isUserInRoom = Boolean(
+    user && room?.players.some((player) => player.userId === user.id),
+  );
+
+  const sendChatMessage = async () => {
+    if (!user || !room || chatInput.trim().length === 0) {
+      return;
+    }
+
+    try {
+      setChatError(null);
+      await connectWs();
+      emitWs("chat:message", {
+        roomId: room.id,
+        userId: user.id,
+        content: chatInput.trim(),
+      });
+      setChatInput("");
+    } catch (error) {
+      setChatError(
+        error instanceof Error
+          ? error.message
+          : "Connexion temps reel impossible pour envoyer le message.",
+      );
+    }
+  };
 
   if (isLoading || !user || isRoomLoading) {
     return null;
@@ -471,6 +573,78 @@ export default function RoomPage() {
             ) : null}
           </section>
         ) : null}
+
+        <section className="rounded-4xl border border-slate-900/10 bg-white/82 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+            Chat room
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold text-slate-950">
+            Discussion en direct
+          </h2>
+
+          <div className="mt-6 max-h-90 space-y-3 overflow-y-auto rounded-3xl bg-slate-100/80 p-4">
+            {chatEntries.length > 0 ? (
+              chatEntries.map((message, index) => (
+                <article
+                  key={`${message.sentAt}-${message.userId}-${index}`}
+                  className={[
+                    "max-w-[88%] rounded-[1.25rem] px-4 py-3",
+                    message.isSelf
+                      ? "ml-auto bg-primary text-white"
+                      : "bg-white text-slate-900",
+                  ].join(" ")}
+                >
+                  <p
+                    className={[
+                      "text-xs font-semibold uppercase tracking-[0.18em]",
+                      message.isSelf ? "text-white/70" : "text-slate-500",
+                    ].join(" ")}
+                  >
+                    {message.username}
+                  </p>
+                  <p className="mt-2 text-sm leading-6">{message.content}</p>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-[1.25rem] bg-white px-4 py-4 text-sm text-slate-600">
+                Aucun message pour l'instant. Lance la conversation.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input
+              className="w-full rounded-md border border-slate-900/10 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-amber-500"
+              placeholder={
+                isUserInRoom
+                  ? "Ecrire un message a la room..."
+                  : "Rejoins la room pour discuter..."
+              }
+              value={chatInput}
+              disabled={!isUserInRoom}
+              onChange={(event) => setChatInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  sendChatMessage();
+                }
+              }}
+            />
+            <PrimaryButton
+              className="justify-center w-full max-w-40"
+              disabled={!isUserInRoom || chatInput.trim().length === 0}
+              onClick={sendChatMessage}
+            >
+              Envoyer
+            </PrimaryButton>
+          </div>
+
+          {chatError ? (
+            <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {chatError}
+            </p>
+          ) : null}
+        </section>
       </div>
     </main>
   );

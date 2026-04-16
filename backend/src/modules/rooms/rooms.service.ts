@@ -16,6 +16,14 @@ export type RoomPlayer = {
   joinedAt: string;
 };
 
+export type RoomMessage = {
+  id: number;
+  roomId: number;
+  userId: number;
+  content: string;
+  sentAt: string;
+};
+
 export type Room = {
   id: number;
   name: string;
@@ -103,12 +111,34 @@ export class RoomsService {
   ): Promise<Omit<Room, "password">> {
     const room = await this.findRoomOrThrow(roomId);
 
+    const existingPlayer = await this.prisma.client.roomPlayer.findUnique({
+      where: {
+        userId_roomId: {
+          userId: dto.userId,
+          roomId,
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    // Existing members can rebind a websocket session after refresh/reconnect,
+    // even if the room is no longer joinable for new players.
+    if (existingPlayer) {
+      return this.getById(roomId);
+    }
+
     if (room.status !== "waiting") {
-      throw new ConflictException("La partie a déjà commencé, impossible de rejoindre");
+      throw new ConflictException(
+        "La partie a déjà commencé, impossible de rejoindre",
+      );
     }
 
     if (room.isPrivate && room.password !== dto.password) {
-      throw new UnauthorizedException("Mot de passe incorrect pour rejoindre cette room");
+      throw new UnauthorizedException(
+        "Mot de passe incorrect pour rejoindre cette room",
+      );
     }
 
     await this.prisma.client.$transaction(async (tx) => {
@@ -151,6 +181,49 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  async listMessages(roomId: number, limit = 50): Promise<RoomMessage[]> {
+    await this.findRoomOrThrow(roomId);
+
+    const safeLimit = Math.min(Math.max(limit, 1), 200);
+    const messages = await this.prisma.client.messages.findMany({
+      where: { roomId },
+      orderBy: { sendAt: "asc" },
+      take: safeLimit,
+    });
+
+    return messages.map((message) => ({
+      id: message.id,
+      roomId: message.roomId,
+      userId: message.senderId,
+      content: message.content,
+      sentAt: message.sendAt.toISOString(),
+    }));
+  }
+
+  async createMessage(payload: {
+    roomId: number;
+    userId: number;
+    content: string;
+  }): Promise<RoomMessage> {
+    await this.findRoomOrThrow(payload.roomId);
+
+    const message = await this.prisma.client.messages.create({
+      data: {
+        roomId: payload.roomId,
+        senderId: payload.userId,
+        content: payload.content,
+      },
+    });
+
+    return {
+      id: message.id,
+      roomId: message.roomId,
+      userId: message.senderId,
+      content: message.content,
+      sentAt: message.sendAt.toISOString(),
+    };
+  }
+
   async update(
     roomId: number,
     requesterUserId: number,
@@ -159,11 +232,15 @@ export class RoomsService {
     const room = await this.findRoomOrThrow(roomId);
 
     if (room.ownerId !== requesterUserId) {
-      throw new UnauthorizedException("Seul le propriétaire de la room peut modifier sa configuration");
+      throw new UnauthorizedException(
+        "Seul le propriétaire de la room peut modifier sa configuration",
+      );
     }
 
     if (room.status !== "waiting") {
-      throw new ConflictException("La configuration de la room ne peut être modifiée une fois la partie commencée");
+      throw new ConflictException(
+        "La configuration de la room ne peut être modifiée une fois la partie commencée",
+      );
     }
 
     const updateData: Prisma.RoomUpdateInput = {};
@@ -207,7 +284,9 @@ export class RoomsService {
       const resolvedPassword =
         typeof dto.password === "string" ? dto.password : (room.password ?? "");
       if (resolvedPassword.length < 4) {
-        throw new BadRequestException("Le mot de passe doit comporter au moins 4 caractères");
+        throw new BadRequestException(
+          "Le mot de passe doit comporter au moins 4 caractères",
+        );
       }
     }
 
@@ -291,11 +370,15 @@ export class RoomsService {
     });
 
     if (!isPlayer) {
-      throw new UnauthorizedException("L'utilisateur doit être dans la room pour démarrer la partie");
+      throw new UnauthorizedException(
+        "L'utilisateur doit être dans la room pour démarrer la partie",
+      );
     }
 
     if (room.ownerId !== requesterUserId) {
-      throw new UnauthorizedException("Seul le propriétaire de la room peut démarrer la partie");
+      throw new UnauthorizedException(
+        "Seul le propriétaire de la room peut démarrer la partie",
+      );
     }
 
     const playerCount = await this.prisma.client.roomPlayer.count({
@@ -303,7 +386,9 @@ export class RoomsService {
     });
 
     if (playerCount < 1) {
-      throw new ConflictException("Il doit y avoir au moins un joueur dans la room pour démarrer la partie");
+      throw new ConflictException(
+        "Il doit y avoir au moins un joueur dans la room pour démarrer la partie",
+      );
     }
 
     this.assertStartConfiguration(room);
@@ -342,14 +427,18 @@ export class RoomsService {
     const room = await this.findRoomOrThrow(roomId);
 
     if (room.status === "playing") {
-      throw new ConflictException("Impossible de fermer une room avec une partie en cours");
+      throw new ConflictException(
+        "Impossible de fermer une room avec une partie en cours",
+      );
     }
 
     const playerCount = await this.prisma.client.roomPlayer.count({
       where: { roomId },
     });
     if (playerCount > 0) {
-      throw new ConflictException("Impossible de fermer une room tant qu'il y a des joueurs");
+      throw new ConflictException(
+        "Impossible de fermer une room tant qu'il y a des joueurs",
+      );
     }
 
     await this.prisma.client.room.delete({
