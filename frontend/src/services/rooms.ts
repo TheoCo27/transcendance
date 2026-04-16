@@ -12,7 +12,7 @@ export type RoomPlayer = {
 export type Room = {
   id: number;
   name: string;
-  ownerUserId?: number;
+  ownerUserId: number;
   quizId: number | null;
   rounds: number;
   questionDurationMs: number | null;
