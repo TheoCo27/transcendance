@@ -452,7 +452,7 @@ request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$WRONG_PASSWORD_PAYLOAD
 assert_status 401
 assert_body_contains '"success":false'
 assert_body_contains '"code":"UNAUTHORIZED"'
-assert_body_contains '"message":"Invalid email or password"'
+assert_body_contains '"message":"Le mail ou le mot de passe est incorrect"'
 pass "Login avec mauvais mot de passe refuse"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$LOGIN_PAYLOAD" "$COOKIE_JAR"

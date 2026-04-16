@@ -23,8 +23,28 @@ export class RealtimeRoomEventsService {
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
 
-  async handleDisconnect(clientId: string): Promise<void> {
-    this.presence.unregisterSocket(clientId);
+  async handleDisconnect(clientId: string, server: Server): Promise<void> {
+    const userId = this.presence.unregisterSocket(clientId);
+    if (typeof userId !== "number" || this.presence.hasActiveSockets(userId)) {
+      return;
+    }
+
+    let hasRoomStateChanged = false;
+    for (const room of await this.roomsService.list()) {
+      if (!room.players.some((player) => player.userId === userId)) {
+        continue;
+      }
+
+      const updatedRoom = await this.roomsService.leave(room.id, userId);
+      hasRoomStateChanged = true;
+      server
+        .to(this.roomChannel(room.id))
+        .emit("room:state", this.response.ok(updatedRoom));
+    }
+
+    if (hasRoomStateChanged) {
+      await this.broadcastRoomList(server);
+    }
   }
 
   async syncSocketRoomMembership(userId: number, client: Socket): Promise<void> {

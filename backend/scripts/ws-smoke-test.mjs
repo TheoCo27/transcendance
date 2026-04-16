@@ -65,7 +65,7 @@ async function run() {
 
     section("test websocket room lifecycle");
     sockets.push(owner.socket, guest.socket, outsider.socket);
-    const roomId = await createRoomWithOwner(owner, quizId);
+    const roomId = await createRoomWithOwner(owner, ownerSession.cookieHeader, quizId);
     await assertOutsiderCannotChat(outsider, roomId);
     await joinRoomAsGuest(guest, roomId);
     const ownerMirror = await connectAuthenticatedSocket(
@@ -88,7 +88,11 @@ async function run() {
 
     section("test websocket room persistence");
     await assertDisconnectUpdatesRoomState(owner, guest, roomId);
-    const waitingRoomId = await createRoomWithOwner(guest, quizId);
+    const waitingRoomId = await createRoomWithOwner(
+      guest,
+      guestSession.cookieHeader,
+      quizId,
+    );
     await assertWaitingRoomPersistsAfterLastDisconnect(
       WS_BASE_URL,
       guest,
@@ -127,7 +131,7 @@ async function createSmokeQuiz(baseUrl) {
   return quizId;
 }
 
-async function createRoomWithOwner(owner, quizId) {
+async function createRoomWithOwner(owner, ownerCookieHeader, quizId) {
   const roomCreatedPromise = waitForEvent(
     owner.socket,
     "room:created",
@@ -144,8 +148,39 @@ async function createRoomWithOwner(owner, quizId) {
   if (typeof roomId !== "number") fail("room:created payload missing room id");
   if (roomCreated?.data?.ownerUserId !== owner.userId) fail("room owner mismatch");
   if (roomCreated?.data?.quizId !== quizId) fail("room quiz mismatch");
+  await configureRoomForStart(WS_BASE_URL, roomId, ownerCookieHeader);
   pass(`Room creee par owner (id=${roomId})`);
   return roomId;
+}
+
+async function configureRoomForStart(baseUrl, roomId, cookieHeader) {
+  const response = await fetch(`${baseUrl}/rooms/${roomId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookieHeader,
+    },
+    body: JSON.stringify({
+      gameType: "wordle",
+      gameConfig: {
+        wordLength: 5,
+        maxAttempts: 6,
+      },
+    }),
+  });
+
+  const payload = await assertHealthyJsonResponse(
+    response,
+    "Room configuration endpoint",
+  );
+
+  if (
+    payload?.data?.gameType !== "wordle" ||
+    payload?.data?.gameConfig?.wordLength !== 5 ||
+    payload?.data?.gameConfig?.maxAttempts !== 6
+  ) {
+    fail("Room configuration payload is malformed");
+  }
 }
 
 async function assertOutsiderCannotChat(outsider, roomId) {
