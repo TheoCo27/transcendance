@@ -10,6 +10,7 @@ import RoomAccessPage from "./pages/RoomAccessPage";
 import RegisterPage from "./pages/RegisterPage";
 import JoinQuizRoomPage from "./pages/JoinQuizRoomPage";
 import ProfilePage from "./pages/ProfilePage";
+import FriendsPage from "./pages/FriendsPage";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/admin" element={<QuizAdminPage />} />
         <Route path="/join" element={<JoinQuizRoomPage />} />
+        <Route path="/friends" element={<FriendsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/quiz/:quizId" element={<QuizRoomPage />} />
         <Route path="/rooms/:roomId/access" element={<RoomAccessPage />} />

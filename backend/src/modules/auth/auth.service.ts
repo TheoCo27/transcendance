@@ -53,11 +53,19 @@ export class AuthService {
     };
   }
 
-  async login(user: User, res: Response): Promise<SafeUser> {
-    const updatedUser = await this.usersService.updateUser({
+  private async ensureUserIsOnline(user: User): Promise<User> {
+    if (user.status === "online") {
+      return user;
+    }
+
+    return this.usersService.updateUser({
       where: { id: user.id },
       data: { status: "online" },
     });
+  }
+
+  async login(user: User, res: Response): Promise<SafeUser> {
+    const updatedUser = await this.ensureUserIsOnline(user);
 
     const payload = {
       sub: updatedUser.id,
@@ -73,11 +81,26 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto, res: Response): Promise<SafeUser> {
+    const email = dto.email.trim();
+    const username = dto.username.trim();
+    const existingEmail = await this.usersService.findUserByEmail(email);
+
+    if (existingEmail) {
+      throw new ConflictException("Email already exists");
+    }
+
+    const existingUsername = await this.usersService.findUserByUsername(username);
+
+    if (existingUsername) {
+      throw new ConflictException("Username already exists");
+    }
+
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     try {
       const user = await this.usersService.createUser({
-        ...dto,
+        email,
+        username,
         password: hashedPassword,
         createdAt: new Date(),
       });
@@ -88,6 +111,14 @@ export class AuthService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
+        const target = Array.isArray(error.meta?.target)
+          ? error.meta.target
+          : [];
+
+        if (target.includes("username")) {
+          throw new ConflictException("Username already exists");
+        }
+
         throw new ConflictException("Email already exists");
       }
 
@@ -155,7 +186,7 @@ export class AuthService {
       throw new NotFoundException(`User ${userId} not found`);
     }
 
-    return this.sanitizeUser(user);
+    return this.sanitizeUser(await this.ensureUserIsOnline(user));
   }
 
   private async archiveGuestIdentity(userId: number): Promise<void> {

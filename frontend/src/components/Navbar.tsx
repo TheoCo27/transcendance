@@ -23,11 +23,18 @@ export default function Navbar() {
         <div className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
           <Link to="/admin">Creer</Link>
           <Link to="/join">Rejoindre</Link>
+          <Link to="/friends">Amis</Link>
         </div>
 
         <div className="flex items-center gap-3">
           {currentUser !== null ? (
             <>
+              <Link
+                className="hidden text-sm font-medium text-slate-600 sm:block"
+                to="/friends"
+              >
+                Amis
+              </Link>
               <Link
                 className="inline-flex items-center rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white"
                 to="/profile"
