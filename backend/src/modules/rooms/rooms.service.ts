@@ -1,28 +1,40 @@
+import { PrismaService } from "@/prisma/prisma.service";
+import { Prisma } from "@generated/prisma/client";
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import path from "node:path";
 import { CreateRoomDto } from "./dto/create-room.dto";
 import { JoinRoomDto } from "./dto/join-room.dto";
+import { UpdateRoomDto } from "./dto/update-room.dto";
 
 export type RoomPlayer = {
   userId: number;
   joinedAt: string;
 };
 
+export type RoomMessage = {
+  id: number;
+  roomId: number;
+  userId: number;
+  content: string;
+  sentAt: string;
+};
+
 export type Room = {
   id: number;
   name: string;
-  ownerUserId?: number;
+  ownerUserId: number;
+  isPrivate: boolean;
+  status: "waiting" | "playing" | "finished";
+  gameType: "wordle" | "memory" | null;
+  gameConfig: Record<string, unknown> | null;
   quizId: number | null;
   rounds: number;
   questionDurationMs: number | null;
-  isPrivate: boolean;
-  status: "waiting" | "playing" | "finished";
   players: RoomPlayer[];
   createdAt: string;
   startedAt: string | null;
@@ -30,225 +42,451 @@ export type Room = {
   password?: string;
 };
 
-type RoomsStore = {
-  nextRoomId: number;
-  rooms: Room[];
-};
-
 @Injectable()
 export class RoomsService {
-  private readonly storeFilePath = path.resolve(process.cwd(), ".runtime/rooms-store.json");
+  constructor(private readonly prisma: PrismaService) {}
 
-  private nextRoomId = 1;
+  async list(): Promise<Array<Omit<Room, "password">>> {
+    const rooms = await this.prisma.client.room.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        games: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            quizId: true,
+          },
+        },
+        players: {
+          select: {
+            userId: true,
+            joinedAt: true,
+          },
+          orderBy: {
+            joinedAt: "asc",
+          },
+        },
+      },
+    });
 
-  private rooms: Room[] = [];
-
-  constructor() {
-    this.loadStore();
+    return rooms.map((room) => this.stripPassword(this.toRoom(room)));
   }
 
-  list(): Array<Omit<Room, "password">> {
-    return this.rooms.map((room) => this.stripPassword(room));
+  async listByQuizId(quizId: number): Promise<Array<Omit<Room, "password">>> {
+    const rooms = await this.prisma.client.room.findMany({
+      where: {
+        games: {
+          some: {
+            quizId,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        games: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            quizId: true,
+          },
+        },
+        players: {
+          select: {
+            userId: true,
+            joinedAt: true,
+          },
+          orderBy: {
+            joinedAt: "asc",
+          },
+        },
+      },
+    });
+
+    return rooms.map((room) => this.stripPassword(this.toRoom(room)));
   }
 
-  getById(roomId: number): Omit<Room, "password"> {
-    const room = this.findRoomOrThrow(roomId);
-    return this.stripPassword(room);
+  async getById(roomId: number): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
+    return this.stripPassword(this.toRoom(room));
   }
 
-  create(
+  async create(
     dto: CreateRoomDto & {
       ownerUserId?: number;
     },
-  ): Omit<Room, "password"> {
-    const createdAt = new Date().toISOString();
-    const room: Room = {
-      id: this.nextRoomId,
-      name: dto.name,
-      ownerUserId: dto.ownerUserId,
-      quizId: dto.quizId ?? null,
-      rounds: dto.rounds,
-      questionDurationMs:
-        typeof dto.questionDurationSec === "number"
-          ? dto.questionDurationSec * 1000
-          : dto.questionDurationSec === null
-            ? null
-            : Number(process.env.GAME_QUESTION_DURATION_MS || 10000),
-      isPrivate: dto.isPrivate ?? false,
-      status: "waiting",
-      players:
-        typeof dto.ownerUserId === "number"
-          ? [{ userId: dto.ownerUserId, joinedAt: createdAt }]
-          : [],
-      createdAt,
-      startedAt: null,
-      finishedAt: null,
-      password: dto.password,
-    };
+  ): Promise<Omit<Room, "password">> {
+    if (typeof dto.ownerUserId !== "number") {
+      throw new BadRequestException("ownerUserId is required to create a room");
+    }
 
-    this.nextRoomId += 1;
-    this.rooms.unshift(room);
-    this.persistStore();
-    return this.stripPassword(room);
+    const room = await this.prisma.client.room.create({
+      data: {
+        name: dto.name.trim(),
+        ownerId: dto.ownerUserId,
+        status: "waiting",
+        isPrivate: dto.isPrivate ?? false,
+        password: dto.password,
+        players: {
+          create: {
+            userId: dto.ownerUserId,
+          },
+        },
+      },
+      include: {
+        games: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            quizId: true,
+          },
+        },
+        players: {
+          select: {
+            userId: true,
+            joinedAt: true,
+          },
+          orderBy: {
+            joinedAt: "asc",
+          },
+        },
+      },
+    });
+
+    return this.stripPassword(this.toRoom(room));
   }
 
-  listByQuizId(quizId: number): Array<Omit<Room, "password">> {
-    return this.rooms
-      .filter((room) => room.quizId === quizId)
-      .map((room) => this.stripPassword(room));
-  }
+  async join(
+    roomId: number,
+    dto: JoinRoomDto,
+  ): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
 
-  join(roomId: number, dto: JoinRoomDto): Omit<Room, "password"> {
-    const room = this.findRoomOrThrow(roomId);
+    const existingPlayer = await this.prisma.client.roomPlayer.findUnique({
+      where: {
+        userId_roomId: {
+          userId: dto.userId,
+          roomId,
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    if (existingPlayer) {
+      return this.getById(roomId);
+    }
 
     if (room.status !== "waiting") {
-      throw new ConflictException("Room is not joinable");
+      throw new ConflictException(
+        "La partie a deja commence, impossible de rejoindre",
+      );
     }
 
     if (room.isPrivate && room.password !== dto.password) {
-      throw new UnauthorizedException("Invalid room password");
+      throw new UnauthorizedException(
+        "Mot de passe incorrect pour rejoindre cette room",
+      );
     }
 
-    if (!room.players.some((player) => player.userId === dto.userId)) {
-      room.players.push({
-        userId: dto.userId,
-        joinedAt: new Date().toISOString(),
+    await this.prisma.client.$transaction(async (tx) => {
+      await tx.roomPlayer.create({
+        data: {
+          roomId,
+          userId: dto.userId,
+        },
       });
-    }
 
-    if (typeof room.ownerUserId !== "number") {
-      room.ownerUserId = dto.userId;
-    }
+      if (room.ownerId !== dto.userId) {
+        const hasOwnerPlayer = await tx.roomPlayer.findUnique({
+          where: {
+            userId_roomId: {
+              userId: room.ownerId,
+              roomId,
+            },
+          },
+          select: {
+            userId: true,
+          },
+        });
 
-    this.persistStore();
-    return this.stripPassword(room);
+        if (!hasOwnerPlayer) {
+          await tx.room.update({
+            where: { id: roomId },
+            data: { ownerId: dto.userId },
+          });
+        }
+      }
+    });
+
+    return this.getById(roomId);
   }
 
-  leave(roomId: number, userId: number): Omit<Room, "password"> {
-    const room = this.findRoomOrThrow(roomId);
-    const existingPlayer = room.players.find((player) => player.userId === userId);
+  async listMessages(roomId: number, limit = 50): Promise<RoomMessage[]> {
+    await this.findRoomOrThrow(roomId);
 
-    if (!existingPlayer) {
-      throw new ConflictException("User is not in this room");
-    }
+    const safeLimit = Math.min(Math.max(limit, 1), 200);
+    const messages = await this.prisma.client.messages.findMany({
+      where: { roomId },
+      orderBy: { sendAt: "asc" },
+      take: safeLimit,
+    });
 
-    room.players = room.players.filter((player) => player.userId !== userId);
-
-    if (room.players.length === 0) {
-      room.ownerUserId = undefined;
-      this.persistStore();
-      return this.stripPassword(room);
-    }
-
-    if (room.ownerUserId === userId) {
-      room.ownerUserId = room.players[0]?.userId;
-    }
-
-    this.persistStore();
-    return this.stripPassword(room);
+    return messages.map((message) => ({
+      id: message.id,
+      roomId: message.roomId,
+      userId: message.senderId,
+      content: message.content,
+      sentAt: message.sendAt.toISOString(),
+    }));
   }
 
-  start(roomId: number, requesterUserId: number): Omit<Room, "password"> {
-    const room = this.findRoomOrThrow(roomId);
+  async createMessage(payload: {
+    roomId: number;
+    userId: number;
+    content: string;
+  }): Promise<RoomMessage> {
+    await this.findRoomOrThrow(payload.roomId);
+
+    const message = await this.prisma.client.messages.create({
+      data: {
+        roomId: payload.roomId,
+        senderId: payload.userId,
+        content: payload.content,
+      },
+    });
+
+    return {
+      id: message.id,
+      roomId: message.roomId,
+      userId: message.senderId,
+      content: message.content,
+      sentAt: message.sendAt.toISOString(),
+    };
+  }
+
+  async update(
+    roomId: number,
+    requesterUserId: number,
+    dto: UpdateRoomDto,
+  ): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
+
+    if (room.ownerId !== requesterUserId) {
+      throw new UnauthorizedException(
+        "Seul le proprietaire de la room peut modifier sa configuration",
+      );
+    }
 
     if (room.status !== "waiting") {
-      throw new ConflictException("Room is not in waiting state");
+      throw new ConflictException(
+        "La configuration de la room ne peut etre modifiee une fois la partie commencee",
+      );
     }
 
-    if (!room.players.some((player) => player.userId === requesterUserId)) {
-      throw new UnauthorizedException("User is not in this room");
+    const updateData: Prisma.RoomUpdateInput = {};
+
+    if (typeof dto.name === "string") {
+      updateData.name = dto.name.trim();
+    }
+
+    if (typeof dto.gameType === "string") {
+      updateData.gameType = dto.gameType;
+      updateData.gameConfig = Prisma.JsonNull;
+    }
+
+    if (typeof dto.gameConfig === "object" && dto.gameConfig !== null) {
+      updateData.gameConfig = dto.gameConfig as Prisma.InputJsonValue;
+    }
+
+    if (typeof dto.isPrivate === "boolean") {
+      updateData.isPrivate = dto.isPrivate;
+      if (!dto.isPrivate) {
+        updateData.password = null;
+      }
+    }
+
+    if (typeof dto.password === "string") {
+      const isPrivate =
+        typeof dto.isPrivate === "boolean" ? dto.isPrivate : room.isPrivate;
+      if (!isPrivate) {
+        throw new BadRequestException(
+          "La room doit etre privee pour definir un mot de passe",
+        );
+      }
+
+      updateData.password = dto.password;
     }
 
     if (
-      typeof room.ownerUserId === "number" &&
-      room.ownerUserId !== requesterUserId
+      (typeof dto.isPrivate === "boolean" && dto.isPrivate) ||
+      (room.isPrivate && typeof dto.isPrivate !== "boolean")
     ) {
-      throw new UnauthorizedException("Only room owner can start the game");
+      const resolvedPassword =
+        typeof dto.password === "string" ? dto.password : (room.password ?? "");
+      if (resolvedPassword.length < 4) {
+        throw new BadRequestException(
+          "Le mot de passe doit comporter au moins 4 caracteres",
+        );
+      }
     }
 
-    if (room.players.length < 1) {
-      throw new ConflictException("Cannot start a room without players");
+    if (Object.keys(updateData).length === 0) {
+      return this.getById(roomId);
     }
 
-    room.status = "playing";
-    room.startedAt = new Date().toISOString();
-    room.finishedAt = null;
+    await this.prisma.client.room.update({
+      where: { id: roomId },
+      data: updateData,
+    });
 
-    this.persistStore();
-    return this.stripPassword(room);
+    return this.getById(roomId);
   }
 
-  finish(roomId: number): Omit<Room, "password"> {
-    const room = this.findRoomOrThrow(roomId);
+  async leave(roomId: number, userId: number): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
+    const existingPlayer = await this.prisma.client.roomPlayer.findUnique({
+      where: {
+        userId_roomId: {
+          userId,
+          roomId,
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    if (!existingPlayer) {
+      throw new ConflictException("L'utilisateur n'est pas dans cette room");
+    }
+
+    await this.prisma.client.$transaction(async (tx) => {
+      await tx.roomPlayer.delete({
+        where: {
+          userId_roomId: {
+            userId,
+            roomId,
+          },
+        },
+      });
+
+      if (room.ownerId === userId) {
+        const nextOwner = await tx.roomPlayer.findFirst({
+          where: { roomId },
+          orderBy: { joinedAt: "asc" },
+          select: { userId: true },
+        });
+
+        if (nextOwner) {
+          await tx.room.update({
+            where: { id: roomId },
+            data: { ownerId: nextOwner.userId },
+          });
+        }
+      }
+    });
+
+    return this.getById(roomId);
+  }
+
+  async start(
+    roomId: number,
+    requesterUserId: number,
+  ): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
+
+    if (room.status !== "waiting") {
+      throw new ConflictException("La partie a deja commence");
+    }
+
+    const isPlayer = await this.prisma.client.roomPlayer.findUnique({
+      where: {
+        userId_roomId: {
+          userId: requesterUserId,
+          roomId,
+        },
+      },
+      select: { userId: true },
+    });
+
+    if (!isPlayer) {
+      throw new UnauthorizedException(
+        "L'utilisateur doit etre dans la room pour demarrer la partie",
+      );
+    }
+
+    if (room.ownerId !== requesterUserId) {
+      throw new UnauthorizedException(
+        "Seul le proprietaire de la room peut demarrer la partie",
+      );
+    }
+
+    const playerCount = await this.prisma.client.roomPlayer.count({
+      where: { roomId },
+    });
+
+    if (playerCount < 1) {
+      throw new ConflictException(
+        "Il doit y avoir au moins un joueur dans la room pour demarrer la partie",
+      );
+    }
+
+    this.assertStartConfiguration(room);
+
+    await this.prisma.client.room.update({
+      where: { id: roomId },
+      data: {
+        status: "playing",
+        startedAt: new Date(),
+        finishedAt: null,
+      },
+    });
+
+    return this.getById(roomId);
+  }
+
+  async finish(roomId: number): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
 
     if (room.status !== "playing") {
-      throw new ConflictException("Room is not in playing state");
+      throw new ConflictException("La partie n'est pas en cours");
     }
 
-    room.status = "finished";
-    room.finishedAt = new Date().toISOString();
+    await this.prisma.client.room.update({
+      where: { id: roomId },
+      data: {
+        status: "finished",
+        finishedAt: new Date(),
+      },
+    });
 
-    this.persistStore();
-    return this.stripPassword(room);
+    return this.getById(roomId);
   }
 
-  close(roomId: number): { roomId: number } {
-    const index = this.rooms.findIndex((room) => room.id === roomId);
-    if (index === -1) {
-      throw new NotFoundException(`Room ${roomId} not found`);
-    }
+  async close(roomId: number): Promise<{ roomId: number }> {
+    const room = await this.findRoomOrThrow(roomId);
 
-    const room = this.rooms[index];
     if (room.status === "playing") {
-      throw new ConflictException("Cannot close a room while game is playing");
+      throw new ConflictException(
+        "Impossible de fermer une room avec une partie en cours",
+      );
     }
 
-    this.rooms.splice(index, 1);
-    this.persistStore();
+    const playerCount = await this.prisma.client.roomPlayer.count({
+      where: { roomId },
+    });
+    if (playerCount > 0) {
+      throw new ConflictException(
+        "Impossible de fermer une room tant qu'il y a des joueurs",
+      );
+    }
+
+    await this.prisma.client.room.delete({
+      where: { id: roomId },
+    });
 
     return { roomId };
-  }
-
-  private loadStore(): void {
-    if (!existsSync(this.storeFilePath)) {
-      return;
-    }
-
-    try {
-      const rawStore = JSON.parse(readFileSync(this.storeFilePath, "utf8")) as Partial<RoomsStore>;
-      const rooms = Array.isArray(rawStore.rooms)
-        ? rawStore.rooms.map((room) => this.normalizeRoom(room))
-        : [];
-      const highestRoomId = rooms.reduce(
-        (currentMax, room) => Math.max(currentMax, room.id),
-        0,
-      );
-
-      this.rooms = rooms.sort((left, right) => right.id - left.id);
-      this.nextRoomId = Math.max(
-        1,
-        typeof rawStore.nextRoomId === "number"
-          ? rawStore.nextRoomId
-          : highestRoomId + 1,
-      );
-    } catch {
-      this.rooms = [];
-      this.nextRoomId = 1;
-    }
-  }
-
-  private persistStore(): void {
-    const directory = path.dirname(this.storeFilePath);
-    mkdirSync(directory, { recursive: true });
-
-    const payload: RoomsStore = {
-      nextRoomId: this.nextRoomId,
-      rooms: this.rooms,
-    };
-    const temporaryFilePath = `${this.storeFilePath}.tmp`;
-
-    writeFileSync(temporaryFilePath, JSON.stringify(payload, null, 2), "utf8");
-    renameSync(temporaryFilePath, this.storeFilePath);
   }
 
   private stripPassword(room: Room): Omit<Room, "password"> {
@@ -256,49 +494,139 @@ export class RoomsService {
     return publicRoom;
   }
 
-  private normalizeRoom(value: unknown): Room {
-    const room = value as Partial<Room>;
-    const createdAt =
-      typeof room.createdAt === "string" ? room.createdAt : new Date().toISOString();
+  private async findRoomOrThrow(roomId: number) {
+    const room = await this.prisma.client.room.findUnique({
+      where: { id: roomId },
+      include: {
+        games: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            quizId: true,
+          },
+        },
+        players: {
+          select: {
+            userId: true,
+            joinedAt: true,
+          },
+          orderBy: {
+            joinedAt: "asc",
+          },
+        },
+      },
+    });
 
-    return {
-      id: typeof room.id === "number" ? room.id : this.nextRoomId,
-      name: typeof room.name === "string" ? room.name : "Room",
-      ownerUserId: typeof room.ownerUserId === "number" ? room.ownerUserId : undefined,
-      quizId: typeof room.quizId === "number" ? room.quizId : null,
-      rounds: typeof room.rounds === "number" ? room.rounds : 1,
-      questionDurationMs:
-        typeof room.questionDurationMs === "number" || room.questionDurationMs === null
-          ? room.questionDurationMs
-          : Number(process.env.GAME_QUESTION_DURATION_MS || 10000),
-      isPrivate: room.isPrivate === true,
-      status:
-        room.status === "playing" || room.status === "finished" ? room.status : "waiting",
-      players: Array.isArray(room.players)
-        ? room.players
-            .filter(
-              (player): player is RoomPlayer =>
-                typeof player?.userId === "number" &&
-                typeof player?.joinedAt === "string",
-            )
-            .sort(
-              (left, right) =>
-                new Date(left.joinedAt).getTime() - new Date(right.joinedAt).getTime(),
-            )
-        : [],
-      createdAt,
-      startedAt: typeof room.startedAt === "string" ? room.startedAt : null,
-      finishedAt: typeof room.finishedAt === "string" ? room.finishedAt : null,
-      password: typeof room.password === "string" ? room.password : undefined,
-    };
-  }
-
-  private findRoomOrThrow(roomId: number): Room {
-    const room = this.rooms.find((item) => item.id === roomId);
     if (!room) {
       throw new NotFoundException(`Room ${roomId} not found`);
     }
 
     return room;
+  }
+
+  private toRoom(room: {
+    id: number;
+    name: string;
+    ownerId: number;
+    status: "waiting" | "playing" | "finished";
+    gameType: "wordle" | "memory" | null;
+    gameConfig: Prisma.JsonValue | null;
+    isPrivate: boolean;
+    password: string | null;
+    createdAt: Date;
+    startedAt: Date | null;
+    finishedAt: Date | null;
+    games: Array<{ quizId: number }>;
+    players: Array<{ userId: number; joinedAt: Date }>;
+  }): Room {
+    return {
+      id: room.id,
+      name: room.name,
+      ownerUserId: room.ownerId,
+      status: room.status,
+      gameType: room.gameType,
+      gameConfig: this.toObjectRecord(room.gameConfig),
+      isPrivate: room.isPrivate,
+      quizId: room.games[0]?.quizId ?? null,
+      rounds: 1,
+      questionDurationMs: null,
+      password: room.password ?? undefined,
+      players: room.players.map((player) => ({
+        userId: player.userId,
+        joinedAt: player.joinedAt.toISOString(),
+      })),
+      createdAt: room.createdAt.toISOString(),
+      startedAt: room.startedAt?.toISOString() ?? null,
+      finishedAt: room.finishedAt?.toISOString() ?? null,
+    };
+  }
+
+  private assertStartConfiguration(room: {
+    gameType: "wordle" | "memory" | null;
+    gameConfig: Prisma.JsonValue | null;
+  }): void {
+    if (!room.gameType) {
+      throw new ConflictException(
+        "La configuration de la room doit inclure un type de jeu avant de pouvoir demarrer la partie",
+      );
+    }
+
+    const gameConfig = this.toObjectRecord(room.gameConfig);
+    if (!gameConfig) {
+      throw new ConflictException(
+        "La configuration du jeu doit etre un objet valide avant de pouvoir demarrer la partie",
+      );
+    }
+
+    if (room.gameType === "wordle") {
+      const wordLength = gameConfig.wordLength;
+      const maxAttempts = gameConfig.maxAttempts;
+
+      if (
+        typeof wordLength !== "number" ||
+        !Number.isInteger(wordLength) ||
+        wordLength < 4 ||
+        wordLength > 8
+      ) {
+        throw new ConflictException(
+          "La configuration de Wordle necessite un mot de longueur entre 4 et 8 caracteres",
+        );
+      }
+
+      if (
+        typeof maxAttempts !== "number" ||
+        !Number.isInteger(maxAttempts) ||
+        maxAttempts < 3 ||
+        maxAttempts > 10
+      ) {
+        throw new ConflictException(
+          "La configuration de Wordle necessite un nombre de tentatives entre 3 et 10",
+        );
+      }
+
+      return;
+    }
+
+    const pairsCount = gameConfig.pairsCount;
+    if (
+      typeof pairsCount !== "number" ||
+      !Number.isInteger(pairsCount) ||
+      pairsCount < 2 ||
+      pairsCount > 20
+    ) {
+      throw new ConflictException(
+        "La configuration de Memory necessite un nombre de paires entre 2 et 20",
+      );
+    }
+  }
+
+  private toObjectRecord(
+    value: Prisma.JsonValue | null,
+  ): Record<string, unknown> | null {
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+
+    return null;
   }
 }

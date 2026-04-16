@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
+import { useToast } from "../components/ui/toast";
 import { useAuthSession } from "../hooks/useAuthSession";
-import { getGameState, type GameLeaderboardEntry, type GameState } from "../services/game";
-import { getQuizById, type Quiz } from "../services/quizzes";
-import { getRoomById, type Room } from "../services/rooms";
+import { getGameState, type GameState } from "../services/game";
+import {
+  getRoomById,
+  type Room,
+  updateRoom,
+} from "../services/rooms";
 import { getUserById } from "../services/users";
 import {
   connectWs,
@@ -52,7 +56,7 @@ type GameEndedPayload = {
   roomId: number;
   reason: string;
   winnerUserId: number | null;
-  leaderboard: GameLeaderboardEntry[];
+  leaderboard: GameState["leaderboard"];
 };
 
 type ChatMessagePayload = {
@@ -62,13 +66,26 @@ type ChatMessagePayload = {
   sentAt: string;
 };
 
-function formatDurationLabel(questionDurationMs: number | null) {
-  if (questionDurationMs === null) {
-    return "Illimite";
-  }
+type ChatHistoryPayload = {
+  roomId: number;
+  messages: ChatMessagePayload[];
+};
 
-  return `${Math.ceil(questionDurationMs / 1000)} sec`;
-}
+type RoomConfigForm = {
+  name: string;
+  gameType: "wordle" | "memory";
+  wordleWordLength: number;
+  wordleMaxAttempts: number;
+  memoryPairsCount: number;
+};
+
+const DEFAULT_FORM: RoomConfigForm = {
+  name: "",
+  gameType: "wordle",
+  wordleWordLength: 5,
+  wordleMaxAttempts: 6,
+  memoryPairsCount: 8,
+};
 
 function formatRemainingTime(remainingMs: number | null, fallbackMs: number | null) {
   if (remainingMs === null && fallbackMs === null) {
@@ -95,12 +112,11 @@ export default function RoomPage() {
   const { roomId: roomIdParam } = useParams();
   const roomId = Number(roomIdParam);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const toast = useToast();
   const { user, isLoading: isSessionLoading } = useAuthSession();
-  const shouldAutoJoin = searchParams.get("join") === "1";
 
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
+  const [form, setForm] = useState<RoomConfigForm>(DEFAULT_FORM);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<PublicQuestion | null>(null);
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
@@ -114,7 +130,9 @@ export default function RoomPage() {
   const [roomActionError, setRoomActionError] = useState<string | null>(null);
   const [roomClosedReason, setRoomClosedReason] = useState<string | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
-  const [hasAttemptedAutoJoin, setHasAttemptedAutoJoin] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   const refreshRoom = async () => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -126,6 +144,7 @@ export default function RoomPage() {
     try {
       const fetchedRoom = await getRoomById(roomId);
       setRoom(fetchedRoom);
+      setForm(buildFormFromRoom(fetchedRoom));
       setRoomClosedReason(null);
       setGameState(await getGameState(roomId));
     } catch (error) {
@@ -135,42 +154,37 @@ export default function RoomPage() {
     }
   };
 
-  const loadRoomPage = async () => {
-    if (!Number.isFinite(roomId) || roomId <= 0) {
-      setPageError("URL de room invalide.");
-      setIsLoadingPage(false);
-      return;
-    }
-
-    setIsLoadingPage(true);
-    setPageError(null);
-    setRoomActionError(null);
-    setRoomClosedReason(null);
-
-    try {
-      const fetchedRoom = await getRoomById(roomId);
-      if (typeof fetchedRoom.quizId !== "number") {
-        throw new Error("Cette room n'est rattachee a aucun quiz.");
+  useEffect(() => {
+    const loadRoomPage = async () => {
+      if (!Number.isFinite(roomId) || roomId <= 0) {
+        setPageError("URL de room invalide.");
+        setIsLoadingPage(false);
+        return;
       }
 
-      const [fetchedQuiz, fetchedGameState] = await Promise.all([
-        getQuizById(fetchedRoom.quizId),
-        getGameState(roomId),
-      ]);
+      setIsLoadingPage(true);
+      setPageError(null);
+      setRoomActionError(null);
+      setRoomClosedReason(null);
 
-      setRoom(fetchedRoom);
-      setQuiz(fetchedQuiz);
-      setGameState(fetchedGameState);
-    } catch (error) {
-      setPageError(
-        error instanceof Error ? error.message : "Impossible de charger cette room.",
-      );
-    } finally {
-      setIsLoadingPage(false);
-    }
-  };
+      try {
+        const [fetchedRoom, fetchedGameState] = await Promise.all([
+          getRoomById(roomId),
+          getGameState(roomId),
+        ]);
 
-  useEffect(() => {
+        setRoom(fetchedRoom);
+        setForm(buildFormFromRoom(fetchedRoom));
+        setGameState(fetchedGameState);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Impossible de charger cette room.";
+        setPageError(message);
+      } finally {
+        setIsLoadingPage(false);
+      }
+    };
+
     void loadRoomPage();
   }, [roomId]);
 
@@ -181,7 +195,7 @@ export default function RoomPage() {
 
     if (user) {
       void connectWs().catch(() => {
-        // The page surfaces action-level errors when an actual room action is attempted.
+        // Action-level flows already surface feedback.
       });
       return;
     }
@@ -190,7 +204,7 @@ export default function RoomPage() {
   }, [isSessionLoading, user]);
 
   useEffect(() => {
-    if (!user || !Number.isFinite(roomId) || roomId <= 0) {
+    if (!Number.isFinite(roomId) || roomId <= 0) {
       return;
     }
 
@@ -200,15 +214,10 @@ export default function RoomPage() {
       }
 
       setRoom(response.data);
+      setForm(buildFormFromRoom(response.data));
       setRoomActionError(null);
       setRoomClosedReason(null);
-      void (async () => {
-        try {
-          setGameState(await getGameState(roomId));
-        } catch {
-          // Ignore transient refresh failures after join.
-        }
-      })();
+      void refreshRoom();
     };
 
     const handleRoomState = (response: WsResponse<Room>) => {
@@ -217,15 +226,10 @@ export default function RoomPage() {
       }
 
       setRoom(response.data);
+      setForm(buildFormFromRoom(response.data));
       setRoomActionError(null);
       setRoomClosedReason(null);
-      void (async () => {
-        try {
-          setGameState(await getGameState(roomId));
-        } catch {
-          // Ignore transient refresh failures while the room state updates.
-        }
-      })();
+      void refreshRoom();
     };
 
     const handleRoomStarted = (response: WsResponse<Room>) => {
@@ -233,15 +237,11 @@ export default function RoomPage() {
         return;
       }
 
+      setIsStarting(false);
       setRoom(response.data);
+      setForm(buildFormFromRoom(response.data));
       setRoomActionError(null);
-      void (async () => {
-        try {
-          setGameState(await getGameState(roomId));
-        } catch {
-          // Ignore transient refresh failures here.
-        }
-      })();
+      void refreshRoom();
     };
 
     const handleRoomLeft = (response: WsResponse<RoomLeftPayload>) => {
@@ -249,10 +249,10 @@ export default function RoomPage() {
         return;
       }
 
-      if (response.data.userId === user.id) {
-        setChatMessages([]);
-        setChatInput("");
-        setChatError(null);
+      if (user && response.data.userId === user.id) {
+        setIsLeaving(false);
+        navigate("/");
+        return;
       }
 
       void refreshRoom();
@@ -272,7 +272,7 @@ export default function RoomPage() {
       setChatMessages([]);
       setChatInput("");
       setChatError(null);
-      setRoomClosedReason("Cette room n'est plus active. Reviens au quiz pour en ouvrir une nouvelle.");
+      setRoomClosedReason("Cette room n'est plus active. Reviens a l'accueil pour en ouvrir une nouvelle.");
     };
 
     const handleQuestionStarted = (response: WsResponse<QuestionStartedPayload>) => {
@@ -284,7 +284,6 @@ export default function RoomPage() {
       setSelectedAnswer(null);
       setHasAnsweredCurrentQuestion(false);
       setRemainingMs(response.data.durationMs);
-      setRoomActionError(null);
     };
 
     const handleTimer = (response: WsResponse<TimerPayload>) => {
@@ -308,7 +307,6 @@ export default function RoomPage() {
         return;
       }
 
-      const endedGame = response.data;
       setCurrentQuestion(null);
       setRemainingMs(null);
       setHasAnsweredCurrentQuestion(false);
@@ -318,12 +316,20 @@ export default function RoomPage() {
           ? {
               ...currentState,
               status: "finished",
-              leaderboard: endedGame.leaderboard,
-              winnerUserId: endedGame.winnerUserId,
+              leaderboard: response.data.leaderboard,
+              winnerUserId: response.data.winnerUserId,
             }
           : currentState,
       );
       void refreshRoom();
+    };
+
+    const handleChatHistory = (response: WsResponse<ChatHistoryPayload>) => {
+      if (!response.success || !response.data || response.data.roomId !== roomId) {
+        return;
+      }
+
+      setChatMessages(response.data.messages);
     };
 
     const handleChatMessage = (response: WsResponse<ChatMessagePayload>) => {
@@ -349,6 +355,8 @@ export default function RoomPage() {
         return;
       }
 
+      setIsStarting(false);
+      setIsLeaving(false);
       setRoomActionError(response.error?.message ?? "Action room impossible.");
     };
 
@@ -361,6 +369,7 @@ export default function RoomPage() {
     onWs("room:start:error", handleRoomError);
     onWs("room:leave:error", handleRoomError);
     onWs("game:answer:error", handleRoomError);
+    onWs("chat:history", handleChatHistory);
     onWs("chat:message", handleChatMessage);
     onWs("chat:message:error", handleChatError);
     onWs("game:question:started", handleQuestionStarted);
@@ -378,6 +387,7 @@ export default function RoomPage() {
       offWs("room:start:error", handleRoomError);
       offWs("room:leave:error", handleRoomError);
       offWs("game:answer:error", handleRoomError);
+      offWs("chat:history", handleChatHistory);
       offWs("chat:message", handleChatMessage);
       offWs("chat:message:error", handleChatError);
       offWs("game:question:started", handleQuestionStarted);
@@ -385,7 +395,7 @@ export default function RoomPage() {
       offWs("game:state", handleGameState);
       offWs("game:ended", handleGameEnded);
     };
-  }, [roomId, user]);
+  }, [navigate, roomId, user]);
 
   useEffect(() => {
     const userIds = new Set<number>();
@@ -420,26 +430,6 @@ export default function RoomPage() {
   }, [chatMessages, gameState, room]);
 
   useEffect(() => {
-    if (!quiz || !gameState || gameState.currentQuestionId === null) {
-      return;
-    }
-
-    const matchingQuestion = quiz.questions.find(
-      (question) => question.id === gameState.currentQuestionId,
-    );
-
-    if (!matchingQuestion) {
-      return;
-    }
-
-    setCurrentQuestion({
-      id: matchingQuestion.id,
-      text: matchingQuestion.questionText,
-      options: matchingQuestion.answers,
-    });
-  }, [quiz, gameState]);
-
-  useEffect(() => {
     if (!gameState?.questionEndsAt) {
       return;
     }
@@ -457,13 +447,33 @@ export default function RoomPage() {
     };
   }, [gameState?.questionEndsAt]);
 
+  const isOwner = Boolean(user && room && room.ownerUserId === user.id);
   const isUserInRoom = Boolean(
     user && room?.players.some((player) => player.userId === user.id),
   );
 
-  useEffect(() => {
-    setHasAttemptedAutoJoin(false);
-  }, [roomId, user?.id, shouldAutoJoin]);
+  const canStart = useMemo(() => {
+    if (!room || !user || room.ownerUserId !== user.id || room.status !== "waiting") {
+      return false;
+    }
+
+    if (form.gameType === "wordle") {
+      return (
+        Number.isInteger(form.wordleWordLength) &&
+        form.wordleWordLength >= 4 &&
+        form.wordleWordLength <= 8 &&
+        Number.isInteger(form.wordleMaxAttempts) &&
+        form.wordleMaxAttempts >= 3 &&
+        form.wordleMaxAttempts <= 10
+      );
+    }
+
+    return (
+      Number.isInteger(form.memoryPairsCount) &&
+      form.memoryPairsCount >= 2 &&
+      form.memoryPairsCount <= 20
+    );
+  }, [form, room, user]);
 
   const scoreboard = useMemo(() => {
     const baseEntries =
@@ -493,8 +503,49 @@ export default function RoomPage() {
     [chatMessages, playerNames, user?.id],
   );
 
+  const handleSave = async () => {
+    if (!room) {
+      return;
+    }
+
+    setIsSaving(true);
+    setPageError(null);
+
+    try {
+      const nextConfig =
+        form.gameType === "wordle"
+          ? {
+              wordLength: form.wordleWordLength,
+              maxAttempts: form.wordleMaxAttempts,
+            }
+          : {
+              pairsCount: form.memoryPairsCount,
+            };
+
+      const updatedRoom = await updateRoom(room.id, {
+        name: form.name.trim(),
+        gameType: form.gameType,
+        gameConfig: nextConfig,
+      });
+
+      setRoom(updatedRoom);
+      setForm(buildFormFromRoom(updatedRoom));
+      toast.success("Configuration enregistree");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Impossible d'enregistrer la configuration";
+      setPageError(message);
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const joinRoom = async () => {
     if (!user || !room) {
+      navigate("/login");
       return;
     }
 
@@ -514,50 +565,13 @@ export default function RoomPage() {
     }
   };
 
-  useEffect(() => {
-    if (
-      !shouldAutoJoin ||
-      hasAttemptedAutoJoin ||
-      isSessionLoading ||
-      !user ||
-      !room
-    ) {
-      return;
-    }
-
-    if (isUserInRoom) {
-      navigate(`/rooms/${room.id}`, { replace: true });
-      return;
-    }
-
-    if (room.status !== "waiting") {
-      setRoomActionError("Cette room a deja demarre, elle n'accepte plus de nouveaux joueurs.");
-      setHasAttemptedAutoJoin(true);
-      navigate(`/rooms/${room.id}`, { replace: true });
-      return;
-    }
-
-    setHasAttemptedAutoJoin(true);
-    void (async () => {
-      await joinRoom();
-      navigate(`/rooms/${room.id}`, { replace: true });
-    })();
-  }, [
-    hasAttemptedAutoJoin,
-    isSessionLoading,
-    isUserInRoom,
-    navigate,
-    room,
-    shouldAutoJoin,
-    user,
-  ]);
-
   const leaveRoom = async () => {
     if (!user || !room || !isUserInRoom) {
       return;
     }
 
     try {
+      setIsLeaving(true);
       setRoomActionError(null);
       await connectWs();
       emitWs("room:leave", {
@@ -565,6 +579,7 @@ export default function RoomPage() {
         userId: user.id,
       });
     } catch (error) {
+      setIsLeaving(false);
       setRoomActionError(
         error instanceof Error
           ? error.message
@@ -579,6 +594,7 @@ export default function RoomPage() {
     }
 
     try {
+      setIsStarting(true);
       setRoomActionError(null);
       await connectWs();
       emitWs("room:start", {
@@ -586,6 +602,7 @@ export default function RoomPage() {
         userId: user.id,
       });
     } catch (error) {
+      setIsStarting(false);
       setRoomActionError(
         error instanceof Error
           ? error.message
@@ -655,19 +672,19 @@ export default function RoomPage() {
         </div>
       ) : null}
 
-      {roomClosedReason && quiz ? (
+      {roomClosedReason ? (
         <section className="mt-8 rounded-[2rem] border border-amber-200 bg-amber-50 p-6 text-amber-950">
           <h2 className="text-2xl font-semibold">Room fermee</h2>
           <p className="mt-3 text-sm leading-7 text-amber-900/80">{roomClosedReason}</p>
           <div className="mt-5">
-            <Link to={`/quiz/${quiz.id}`}>
-              <PrimaryButton>Retour au quiz</PrimaryButton>
+            <Link to="/">
+              <PrimaryButton>Retour a l'accueil</PrimaryButton>
             </Link>
           </div>
         </section>
       ) : null}
 
-      {!isLoadingPage && !pageError && room && quiz ? (
+      {!isLoadingPage && !pageError && room ? (
         <>
           <section className="grid gap-8 rounded-[2.75rem] border border-slate-900/10 bg-white/78 px-6 py-8 shadow-[0_40px_110px_rgba(15,23,42,0.08)] backdrop-blur md:px-10 md:py-10 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
@@ -675,20 +692,17 @@ export default function RoomPage() {
                 <span className="inline-flex rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white">
                   /rooms/{room.id}
                 </span>
-                <Link
-                  className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-700"
-                  to={`/quiz/${quiz.id}`}
-                >
-                  Retour au quiz
-                </Link>
+                <span className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-700">
+                  {room.gameType ?? "mini-game"}
+                </span>
               </div>
 
               <h1 className="mt-6 text-4xl font-semibold text-slate-950 md:text-5xl">
-                {quiz.title}
+                {room.name}
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-                Voici l'URL partageable de la room. C'est ici que se jouent la partie,
-                le chat en direct et le classement live des joueurs.
+                Ici, tu configures la room, lances la partie, joues en direct et
+                suis le classement des joueurs en temps reel.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -699,7 +713,7 @@ export default function RoomPage() {
                   {room.players.length} joueur{room.players.length > 1 ? "s" : ""}
                 </span>
                 <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
-                  {formatDurationLabel(room.questionDurationMs)}
+                  {room.gameType === "wordle" ? "Wordle" : room.gameType === "memory" ? "Memory" : "A configurer"}
                 </span>
               </div>
 
@@ -708,11 +722,12 @@ export default function RoomPage() {
                   className="justify-center"
                   onClick={() => {
                     void navigator.clipboard.writeText(
-                      `${window.location.origin}/rooms/${room.id}/access`,
+                      `${window.location.origin}/rooms/${room.id}`,
                     );
+                    toast.success("Lien de room copie");
                   }}
                 >
-                  Copier l'URL de la room
+                  Copier le lien de la room
                 </SecondaryButton>
                 <SecondaryButton className="justify-center" onClick={() => void refreshRoom()}>
                   Rafraichir
@@ -727,20 +742,20 @@ export default function RoomPage() {
               <div className="mt-6 space-y-4">
                 <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
                   <p className="text-xs uppercase tracking-[0.22em] text-amber-200">
-                    Owner
+                    Proprietaire
                   </p>
                   <p className="mt-3 text-base font-medium text-white">
-                    {room.ownerUserId
-                      ? playerNames[room.ownerUserId] ?? `Joueur #${room.ownerUserId}`
-                      : "Aucun"}
+                    {playerNames[room.ownerUserId] ?? `Joueur #${room.ownerUserId}`}
                   </p>
                 </div>
 
                 <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
                   <p className="text-xs uppercase tracking-[0.22em] text-amber-200">
-                    Quiz
+                    Timer
                   </p>
-                  <p className="mt-3 text-base font-medium text-white">{quiz.questions.length} questions</p>
+                  <p className="mt-3 text-base font-medium text-white">
+                    {formatRemainingTime(gameState?.questionDurationMs ?? null, null)}
+                  </p>
                 </div>
 
                 {!user && !isSessionLoading ? (
@@ -768,12 +783,16 @@ export default function RoomPage() {
                 {user && isUserInRoom ? (
                   <div className="flex flex-col gap-3">
                     {room.status === "waiting" && room.ownerUserId === user.id ? (
-                      <PrimaryButton className="w-full justify-center" onClick={startRoom}>
-                        Lancer le quiz
+                      <PrimaryButton
+                        className="w-full justify-center"
+                        disabled={isStarting || !canStart}
+                        onClick={startRoom}
+                      >
+                        {isStarting ? "Demarrage..." : "Lancer la partie"}
                       </PrimaryButton>
                     ) : null}
                     <SecondaryButton className="w-full justify-center" onClick={leaveRoom}>
-                      Quitter la room
+                      {isLeaving ? "Sortie..." : "Quitter la room"}
                     </SecondaryButton>
                   </div>
                 ) : null}
@@ -786,6 +805,121 @@ export default function RoomPage() {
               </div>
             </aside>
           </section>
+
+          {isOwner && room.status === "waiting" ? (
+            <section className="mt-8 rounded-[2rem] border border-slate-900/10 bg-white/82 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                Configuration
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold text-slate-950">
+                Reglages de la room
+              </h2>
+
+              <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-slate-600">Nom de la room</span>
+                  <input
+                    className="rounded-xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none"
+                    value={form.name}
+                    onChange={(event) => {
+                      setForm((previous) => ({
+                        ...previous,
+                        name: event.target.value,
+                      }));
+                    }}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-slate-600">Type de jeu</span>
+                  <select
+                    className="rounded-xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none"
+                    value={form.gameType}
+                    onChange={(event) => {
+                      const gameType = event.target.value as "wordle" | "memory";
+                      setForm((previous) => ({ ...previous, gameType }));
+                    }}
+                  >
+                    <option value="wordle">Wordle</option>
+                    <option value="memory">Memory</option>
+                  </select>
+                </label>
+
+                {form.gameType === "wordle" ? (
+                  <>
+                    <label className="flex flex-col gap-2">
+                      <span className="text-sm font-medium text-slate-600">
+                        Longueur du mot (4-8)
+                      </span>
+                      <input
+                        className="rounded-xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none"
+                        type="number"
+                        min={4}
+                        max={8}
+                        value={form.wordleWordLength}
+                        onChange={(event) => {
+                          setForm((previous) => ({
+                            ...previous,
+                            wordleWordLength: Number(event.target.value),
+                          }));
+                        }}
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2">
+                      <span className="text-sm font-medium text-slate-600">
+                        Essais max (3-10)
+                      </span>
+                      <input
+                        className="rounded-xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none"
+                        type="number"
+                        min={3}
+                        max={10}
+                        value={form.wordleMaxAttempts}
+                        onChange={(event) => {
+                          setForm((previous) => ({
+                            ...previous,
+                            wordleMaxAttempts: Number(event.target.value),
+                          }));
+                        }}
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <label className="flex flex-col gap-2 md:col-span-2">
+                    <span className="text-sm font-medium text-slate-600">
+                      Nombre de paires (2-20)
+                    </span>
+                    <input
+                      className="rounded-xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none"
+                      type="number"
+                      min={2}
+                      max={20}
+                      value={form.memoryPairsCount}
+                      onChange={(event) => {
+                        setForm((previous) => ({
+                          ...previous,
+                          memoryPairsCount: Number(event.target.value),
+                        }));
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <PrimaryButton
+                  className="px-5 py-2.5 text-sm"
+                  disabled={isSaving}
+                  onClick={() => {
+                    void handleSave();
+                  }}
+                >
+                  {isSaving ? "Enregistrement..." : "Enregistrer"}
+                </PrimaryButton>
+              </div>
+            </section>
+          ) : null}
 
           {roomActionError ? (
             <section className="mt-8 rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-rose-700">
@@ -906,7 +1040,7 @@ export default function RoomPage() {
                     <p className="text-sm text-white/68">
                       {isUserInRoom
                         ? "Bonne reponse a trouver avant la fin du timer."
-                        : "Tu dois etre dans la room pour repondre au quiz."}
+                        : "Tu dois etre dans la room pour repondre au mini-jeu."}
                     </p>
                   </div>
                 </section>
@@ -920,7 +1054,7 @@ export default function RoomPage() {
                   </h2>
                   <p className="mt-4 text-sm leading-7 text-slate-600">
                     {room.status === "waiting"
-                      ? "Des que l'owner lance la room, la question en cours apparait ici."
+                      ? "Des que le proprietaire lance la room, la question en cours apparait ici."
                       : room.status === "finished"
                         ? "La partie est terminee. Le classement final reste visible a gauche."
                         : "Connexion au flux de jeu en cours..."}
@@ -934,10 +1068,10 @@ export default function RoomPage() {
                     Partie terminee
                   </p>
                   <h2 className="mt-3 text-3xl font-semibold">
-                    La room a boucle son quiz.
+                    La room a termine sa partie.
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-emerald-800/85">
-                    Le classement final reste visible ici. Tu peux revenir au quiz
+                    Le classement final reste visible ici. Tu peux revenir a l'accueil
                     pour ouvrir une nouvelle room partageable.
                   </p>
                 </section>
@@ -995,14 +1129,16 @@ export default function RoomPage() {
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
-                        sendChatMessage();
+                        void sendChatMessage();
                       }
                     }}
                   />
                   <PrimaryButton
                     className="justify-center"
                     disabled={!isUserInRoom || chatInput.trim().length === 0}
-                    onClick={sendChatMessage}
+                    onClick={() => {
+                      void sendChatMessage();
+                    }}
                   >
                     Envoyer
                   </PrimaryButton>
@@ -1020,4 +1156,37 @@ export default function RoomPage() {
       ) : null}
     </main>
   );
+}
+
+function buildFormFromRoom(room: Room): RoomConfigForm {
+  const gameType = room.gameType ?? "wordle";
+  const config =
+    room.gameConfig && typeof room.gameConfig === "object"
+      ? room.gameConfig
+      : {};
+
+  const wordLengthRaw = (config as { wordLength?: unknown }).wordLength;
+  const maxAttemptsRaw = (config as { maxAttempts?: unknown }).maxAttempts;
+  const pairsCountRaw = (config as { pairsCount?: unknown }).pairsCount;
+
+  const wordleWordLength =
+    typeof wordLengthRaw === "number" && Number.isInteger(wordLengthRaw)
+      ? wordLengthRaw
+      : 5;
+  const wordleMaxAttempts =
+    typeof maxAttemptsRaw === "number" && Number.isInteger(maxAttemptsRaw)
+      ? maxAttemptsRaw
+      : 6;
+  const memoryPairsCount =
+    typeof pairsCountRaw === "number" && Number.isInteger(pairsCountRaw)
+      ? pairsCountRaw
+      : 8;
+
+  return {
+    name: room.name,
+    gameType,
+    wordleWordLength,
+    wordleMaxAttempts,
+    memoryPairsCount,
+  };
 }

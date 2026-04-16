@@ -1,32 +1,30 @@
 import { Route, Routes } from "react-router-dom";
 import Footer from "./components/Footer";
-import LoginPage from "./pages/LoginPage";
-import HomePage from "./pages/HomePage";
 import Navbar from "./components/Navbar";
-import QuizAdminPage from "./pages/QuizAdminPage";
-import QuizRoomPage from "./pages/QuizRoomPage";
-import RoomPage from "./pages/RoomPage";
-import RoomAccessPage from "./pages/RoomAccessPage";
-import RegisterPage from "./pages/RegisterPage";
-import JoinQuizRoomPage from "./pages/JoinQuizRoomPage";
-import ProfilePage from "./pages/ProfilePage";
 import FriendsPage from "./pages/FriendsPage";
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import NotFound from "./pages/NotFound";
+import ProfilePage from "./pages/ProfilePage";
+import QuizAdminPage from "./pages/QuizAdminPage";
+import QuizPage from "./pages/QuizPage";
+import RegisterPage from "./pages/RegisterPage";
+import RoomPage from "./pages/RoomPage";
 
 export default function App() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dvh flex-col">
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/admin" element={<QuizAdminPage />} />
-        <Route path="/join" element={<JoinQuizRoomPage />} />
         <Route path="/friends" element={<FriendsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/quiz/:quizId" element={<QuizRoomPage />} />
-        <Route path="/rooms/:roomId/access" element={<RoomAccessPage />} />
-        <Route path="/rooms/:roomId" element={<RoomPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/rooms/:roomId" element={<RoomPage />} />
+        <Route path="/quiz/:quizId" element={<QuizPage />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
     </div>

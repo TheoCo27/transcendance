@@ -18,14 +18,16 @@ export class GameController {
   constructor(private readonly gameService: GameService) {}
 
   @Get(":roomId/state")
-  getState(
+  async getState(
     @Param("roomId", ParseIntPipe) roomId: number,
-  ): ApiResponse<GameState> {
-    return ok(this.gameService.getRoomState(roomId));
+  ): Promise<ApiResponse<GameState>> {
+    return ok(await this.gameService.getRoomState(roomId));
   }
 
   @Post("answer")
-  submitAnswer(@Body() dto: SubmitAnswerDto): ApiResponse<SubmitAnswerResult> {
-    return ok(this.gameService.submitAnswer(dto));
+  async submitAnswer(
+    @Body() dto: SubmitAnswerDto,
+  ): Promise<ApiResponse<SubmitAnswerResult>> {
+    return ok(await this.gameService.submitAnswer(dto));
   }
 }

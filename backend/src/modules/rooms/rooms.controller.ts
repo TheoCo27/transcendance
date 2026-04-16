@@ -1,16 +1,22 @@
 import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ok, type ApiResponse } from "@/common/http/api-response";
+import { CurrentUser } from "@/modules/auth/decorators/current-user.decorator";
+import { AuthGuard } from "@/modules/auth/guards/auth.guard";
+import { AuthPayload } from "@/modules/auth/types/auth-payload.type";
 import {
   Body,
   Controller,
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UseFilters,
+  UseGuards,
 } from "@nestjs/common";
 import { CreateRoomDto } from "./dto/create-room.dto";
 import { JoinRoomDto } from "./dto/join-room.dto";
+import { UpdateRoomDto } from "./dto/update-room.dto";
 import { Room, RoomsService } from "./rooms.service";
 
 @Controller("rooms")
@@ -19,34 +25,48 @@ export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
   @Get()
-  list(): ApiResponse<Array<Omit<Room, "password">>> {
-    return ok(this.roomsService.list());
+  async list(): Promise<ApiResponse<Array<Omit<Room, "password">>>> {
+    return ok(await this.roomsService.list());
   }
 
   @Get("quizzes/:quizId")
-  listByQuizId(
+  async listByQuizId(
     @Param("quizId", ParseIntPipe) quizId: number,
-  ): ApiResponse<Array<Omit<Room, "password">>> {
-    return ok(this.roomsService.listByQuizId(quizId));
+  ): Promise<ApiResponse<Array<Omit<Room, "password">>>> {
+    return ok(await this.roomsService.listByQuizId(quizId));
   }
 
   @Get(":roomId")
-  getById(
+  async getById(
     @Param("roomId", ParseIntPipe) roomId: number,
-  ): ApiResponse<Omit<Room, "password">> {
-    return ok(this.roomsService.getById(roomId));
+  ): Promise<ApiResponse<Omit<Room, "password">>> {
+    return ok(await this.roomsService.getById(roomId));
   }
 
   @Post()
-  create(@Body() dto: CreateRoomDto): ApiResponse<Omit<Room, "password">> {
-    return ok(this.roomsService.create(dto));
+  @UseGuards(AuthGuard)
+  async create(
+    @CurrentUser() auth: AuthPayload,
+    @Body() dto: CreateRoomDto,
+  ): Promise<ApiResponse<Omit<Room, "password">>> {
+    return ok(await this.roomsService.create({ ...dto, ownerUserId: auth.sub }));
   }
 
   @Post(":roomId/join")
-  join(
+  async join(
     @Param("roomId", ParseIntPipe) roomId: number,
     @Body() dto: JoinRoomDto,
-  ): ApiResponse<Omit<Room, "password">> {
-    return ok(this.roomsService.join(roomId, dto));
+  ): Promise<ApiResponse<Omit<Room, "password">>> {
+    return ok(await this.roomsService.join(roomId, dto));
+  }
+
+  @Patch(":roomId")
+  @UseGuards(AuthGuard)
+  async update(
+    @Param("roomId", ParseIntPipe) roomId: number,
+    @CurrentUser() auth: AuthPayload,
+    @Body() dto: UpdateRoomDto,
+  ): Promise<ApiResponse<Omit<Room, "password">>> {
+    return ok(await this.roomsService.update(roomId, auth.sub, dto));
   }
 }

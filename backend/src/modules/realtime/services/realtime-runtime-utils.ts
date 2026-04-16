@@ -15,10 +15,10 @@ export function getQuestionIdForTurn(
   return gameService.getQuestionIdForTurn(roomId, turnNumber);
 }
 
-export function broadcastRoomList(
+export async function broadcastRoomList(
   server: Server,
   roomsService: RoomsService,
   response: RealtimeResponseService,
-): void {
-  server.emit("room:list-updated", response.ok(roomsService.list()));
+): Promise<void> {
+  server.emit("room:list-updated", response.ok(await roomsService.list()));
 }

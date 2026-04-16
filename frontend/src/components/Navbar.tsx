@@ -22,7 +22,6 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
           <Link to="/admin">Creer</Link>
-          <Link to="/join">Rejoindre</Link>
           <Link to="/friends">Amis</Link>
         </div>
 
@@ -41,7 +40,10 @@ export default function Navbar() {
               >
                 {currentUser.username}
               </Link>
-              <Link className="hidden text-sm font-medium text-slate-600 sm:block" to="/admin">
+              <Link
+                className="hidden text-sm font-medium text-slate-600 sm:block"
+                to="/admin"
+              >
                 Nouveau quiz
               </Link>
               <SecondaryButton
