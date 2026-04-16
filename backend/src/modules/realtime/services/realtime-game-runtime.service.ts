@@ -43,25 +43,24 @@ export class RealtimeGameRuntimeService {
   }
 
   async startGameLoop(roomId: number, server: Server): Promise<void> {
-    const totalQuestions = Math.max(
-      1,
-      [1, 2, 3].map((turnNumber) => this.gameService.getQuestionIdForTurn(roomId, turnNumber)).length,
-    );
+    const room = await this.roomsService.getById(roomId);
+    const totalQuestions = Math.max(1, room.rounds);
+    const questionDurationMs = room.questionDurationMs ?? this.questionDurationMs;
 
     await this.gameService.startGame(
       roomId,
       totalQuestions,
-      this.questionDurationMs,
+      questionDurationMs,
     );
     server.to(roomChannel(roomId)).emit(
       "game:started",
       this.response.ok({
         roomId,
         totalQuestions,
-        questionDurationMs: this.questionDurationMs,
+        questionDurationMs,
       }),
     );
-    await this.startQuestionTimer(roomId, 1, totalQuestions, server);
+    await this.startQuestionTimer(roomId, 1, totalQuestions, questionDurationMs, server);
   }
 
   async completeActiveQuestion(
@@ -108,6 +107,7 @@ export class RealtimeGameRuntimeService {
       roomId,
       runtime.questionNumber + 1,
       runtime.totalQuestions,
+      state.questionDurationMs ?? this.questionDurationMs,
       server,
     );
   }
@@ -137,6 +137,7 @@ export class RealtimeGameRuntimeService {
     roomId: number,
     questionNumber: number,
     totalQuestions: number,
+    questionDurationMs: number,
     server: Server,
   ): Promise<void> {
     this.stopRoomTimer(roomId);
@@ -147,7 +148,7 @@ export class RealtimeGameRuntimeService {
       questionNumber,
     );
     const startsAtMs = Date.now();
-    const endsAtMs = startsAtMs + this.questionDurationMs;
+    const endsAtMs = startsAtMs + questionDurationMs;
     const question = this.gameService.getPublicQuestion(roomId, questionId);
     const channel = roomChannel(roomId);
     const startsAt = new Date(startsAtMs).toISOString();
@@ -170,7 +171,7 @@ export class RealtimeGameRuntimeService {
       }, this.timerTickMs),
       endTimeout: setTimeout(() => {
         void this.completeActiveQuestion(roomId, "timeout", server);
-      }, this.questionDurationMs),
+      }, questionDurationMs),
     });
 
     const state = await this.gameService.startQuestion({
@@ -178,7 +179,7 @@ export class RealtimeGameRuntimeService {
       questionId,
       questionNumber,
       totalQuestions,
-      questionDurationMs: this.questionDurationMs,
+      questionDurationMs,
       startsAt,
       endsAt,
     });
@@ -191,7 +192,7 @@ export class RealtimeGameRuntimeService {
         question,
         questionNumber,
         totalQuestions,
-        durationMs: this.questionDurationMs,
+        durationMs: questionDurationMs,
         startsAt,
         endsAt,
       }),
@@ -244,7 +245,11 @@ export class RealtimeGameRuntimeService {
     const gameState = await this.gameService.finishGame(roomId);
     const channel = roomChannel(roomId);
 
-    await this.scoresService.recordGameResult(leaderboard, winnerUserId);
+    await this.scoresService.recordGameResult(
+      leaderboard,
+      winnerUserId,
+      room.quizId,
+    );
 
     server.to(channel).emit("room:state", this.response.ok(room));
     server.to(channel).emit("game:leaderboard", this.response.ok(leaderboard));

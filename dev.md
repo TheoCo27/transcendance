@@ -378,7 +378,7 @@ Fonctions importantes :
 - `validateUser(dto)` :
   - cherche le user avec `usersService.findUserByEmail(dto.email)`
   - compare le mot de passe avec `bcrypt.compare(dto.password, user.password)`
-  - renvoie `UnauthorizedException("Invalid email or password")` si les credentials sont faux
+  - renvoie `UnauthorizedException("Le mail ou le mot de passe est incorrect")` si les credentials sont faux
 - `sanitizeUser(user)` :
   - retire `password` de l'objet avant de l'envoyer au client
   - base commune de tous les retours `SafeUser`

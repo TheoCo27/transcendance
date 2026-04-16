@@ -16,10 +16,11 @@ export class CreateRoomDto {
   @MaxLength(40)
   name: string;
 
-  // @IsInt()
-  // @Min(1)
-  // @Max(20)
-  // rounds: number;
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  rounds?: number;
 
   @IsOptional()
   @IsInt()
