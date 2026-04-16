@@ -11,6 +11,8 @@ import { RealtimePresenceService } from "./realtime-presence.service";
 import { RealtimeResponseService } from "./realtime-response.service";
 import { RealtimeValidationService } from "./realtime-validation.service";
 
+const CHAT_HISTORY_LIMIT = 100;
+
 @Injectable()
 export class RealtimeRoomEventsService {
   constructor(
@@ -77,6 +79,16 @@ export class RealtimeRoomEventsService {
 
     client.join(this.roomChannel(payload.roomId));
     client.emit("room:joined", this.response.ok(room));
+    client.emit(
+      "chat:history",
+      this.response.ok({
+        roomId: payload.roomId,
+        messages: await this.roomsService.listMessages(
+          payload.roomId,
+          CHAT_HISTORY_LIMIT,
+        ),
+      }),
+    );
     server
       .to(this.roomChannel(payload.roomId))
       .emit("room:state", this.response.ok(room));
@@ -155,15 +167,15 @@ export class RealtimeRoomEventsService {
       return;
     }
 
-    server.to(this.roomChannel(payload.roomId)).emit(
-      "chat:message",
-      this.response.ok({
-        roomId: payload.roomId,
-        userId,
-        content,
-        sentAt: new Date().toISOString(),
-      }),
-    );
+    const message = await this.roomsService.createMessage({
+      roomId: payload.roomId,
+      userId,
+      content,
+    });
+
+    server
+      .to(this.roomChannel(payload.roomId))
+      .emit("chat:message", this.response.ok(message));
   }
 
   private async assertUserInRoom(roomId: number, userId: number) {
