@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme {
+/* @theme {
   --color-background: #f8f4ec;
   --color-surface: #fff8ef;
   --color-primary: #f97316;
@@ -13,11 +13,27 @@
   --color-text: #0f172a;
   --color-text-muted: #7b6a55;
   --color-border: #d8c4a8;
+} */
+
+@theme {
+  --color-primary: #ef476f;
+  --color-secondary: #f78c6b;
+  --color-accent: #ffd166;
+
+  --color-success: #7bd389;
+  --color-danger: #d62839;
+  --color-warning: #ffb703;
+
+  --color-bg: #2b2d42;
+  --color-surface: #3a3d5a;
+  --color-text: #fff8e7;
+  --color-text-muted: #ffd6bf;
+  --color-border: #f78c6b;
 }
 
-:root {
+/* :root {
   color-scheme: light;
-}
+} */
 
 * {
   box-sizing: border-box;
@@ -32,31 +48,40 @@ body {
   min-width: 320px;
   font-family: "Avenir Next", "Segoe UI", "Space Grotesk", sans-serif;
   color: var(--color-text);
-  background:
-    radial-gradient(circle at 20% 20%, rgba(251, 191, 36, 0.2), transparent 26%),
-    radial-gradient(circle at 80% 12%, rgba(249, 115, 22, 0.16), transparent 22%),
+  background: var(--color-bg);
+  /* background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(251, 191, 36, 0.2),
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at 80% 12%,
+      rgba(249, 115, 22, 0.16),
+      transparent 22%
+    ),
     radial-gradient(circle at 72% 78%, rgba(15, 23, 42, 0.08), transparent 20%),
     linear-gradient(180deg, #fdf9f2 0%, #f8f4ec 42%, #f4efe7 100%);
-  background-attachment: fixed;
+  background-attachment: fixed; */
 }
 
-body::before {
+/* body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image:
+  /* background-image:
     linear-gradient(rgba(15, 23, 42, 0.028) 1px, transparent 1px),
     linear-gradient(90deg, rgba(15, 23, 42, 0.028) 1px, transparent 1px);
   background-size: 80px 80px;
   mask-image: radial-gradient(circle at center, black 42%, transparent 92%);
-  opacity: 0.55;
-}
+  opacity: 0.55; */
+/* } */
 
-#root {
+/* #root {
   position: relative;
   min-height: 100vh;
-}
+} */
 
 a {
   color: inherit;
@@ -73,9 +98,4 @@ input,
 textarea,
 select {
   font: inherit;
-}
-
-::selection {
-  background: rgba(249, 115, 22, 0.22);
-  color: #0f172a;
 }
