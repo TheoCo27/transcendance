@@ -66,7 +66,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-10 md:px-10">
-        <div className="w-full rounded-[2rem] border border-slate-900/10 bg-white/70 p-8 text-slate-600 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+        <div className="w-full rounded-4xl border border-slate-900/10 bg-white/70 p-8 text-slate-600 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
           Chargement du profil...
         </div>
       </main>
@@ -220,7 +220,7 @@ export default function ProfilePage() {
           </p>
 
           <dl className="mt-8 grid gap-4">
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Photo de profil
               </dt>
@@ -279,7 +279,7 @@ export default function ProfilePage() {
                 </div>
               </dd>
             </div>
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Pseudo
               </dt>
@@ -287,7 +287,7 @@ export default function ProfilePage() {
                 {user.username}
               </dd>
             </div>
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 {user.isGuest ? "Type de compte" : "Email"}
               </dt>
@@ -295,7 +295,7 @@ export default function ProfilePage() {
                 {user.isGuest ? "Invite" : user.email}
               </dd>
             </div>
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Statut
               </dt>
