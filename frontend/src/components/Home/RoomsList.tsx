@@ -1,5 +1,5 @@
 import { Room } from "../../services/rooms";
-import PrimaryButton from "../PrimaryButton";
+import PrimaryButton from "../ui/PrimaryButton";
 
 type RoomListProps = {
   rooms: Room[];

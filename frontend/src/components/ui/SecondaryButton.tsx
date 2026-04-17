@@ -13,7 +13,7 @@ export default function SecondaryButton({
   return (
     <button
       className={[
-        "rounded-full border border-slate-800/15 bg-white/75 px-5 py-3",
+        "rounded-md border border-slate-800/15 bg-white/75 px-4 py-2",
         "font-semibold text-slate-900 transition hover:border-slate-900/30 hover:bg-white",
         "disabled:cursor-not-allowed disabled:opacity-60",
         className,

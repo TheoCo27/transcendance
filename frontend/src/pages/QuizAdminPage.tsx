@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import QuestionComposer from "../components/QuizBuilder/QuestionComposer";
 import QuizRulesCard from "../components/QuizBuilder/QuizRulesCard";
 import QuizSetupCard from "../components/QuizBuilder/QuizSetupCard";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { createQuiz } from "../services/quizzes";
 
@@ -25,7 +25,8 @@ export default function QuizAdminPage() {
   const { user, isLoading } = useAuthSession();
   const [title, setTitle] = useState("");
   const [rule, setRule] = useState<10 | 30 | "unlimited">(10);
-  const [draftQuestion, setDraftQuestion] = useState<DraftQuestion>(EMPTY_DRAFT);
+  const [draftQuestion, setDraftQuestion] =
+    useState<DraftQuestion>(EMPTY_DRAFT);
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -56,7 +57,10 @@ export default function QuizAdminPage() {
       correctAnswerIndex: draftQuestion.correctAnswerIndex,
     };
 
-    setQuestions((currentQuestions) => [...currentQuestions, normalizedQuestion]);
+    setQuestions((currentQuestions) => [
+      ...currentQuestions,
+      normalizedQuestion,
+    ]);
     setQuestionError(null);
 
     if (resetAfterSave) {
@@ -107,9 +111,7 @@ export default function QuizAdminPage() {
       navigate(`/quiz/${createdQuiz.id}`);
     } catch (error) {
       setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Impossible de creer le quiz.",
+        error instanceof Error ? error.message : "Impossible de creer le quiz.",
       );
     } finally {
       setIsSubmitting(false);
@@ -179,7 +181,9 @@ export default function QuizAdminPage() {
                         className="border-white/15 bg-white/10 px-3 py-2 text-xs text-white"
                         onClick={() =>
                           setQuestions((currentQuestions) =>
-                            currentQuestions.filter((_, currentIndex) => currentIndex !== index),
+                            currentQuestions.filter(
+                              (_, currentIndex) => currentIndex !== index,
+                            ),
                           )
                         }
                       >

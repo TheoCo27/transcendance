@@ -86,13 +86,13 @@ export class AuthService {
     const existingEmail = await this.usersService.findUserByEmail(email);
 
     if (existingEmail) {
-      throw new ConflictException("Email already exists");
+      throw new ConflictException("Cet email est déjà utilisé");
     }
 
     const existingUsername = await this.usersService.findUserByUsername(username);
 
     if (existingUsername) {
-      throw new ConflictException("Username already exists");
+      throw new ConflictException("Ce pseudo est déjà pris");
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -116,10 +116,10 @@ export class AuthService {
           : [];
 
         if (target.includes("username")) {
-          throw new ConflictException("Username already exists");
+          throw new ConflictException("Ce pseudo est déjà pris");
         }
 
-        throw new ConflictException("Email already exists");
+        throw new ConflictException("Cet email est déjà utilisé");
       }
 
       throw error;
@@ -134,7 +134,7 @@ export class AuthService {
       if (existingUser.isGuest && existingUser.status === "offline") {
         await this.archiveGuestIdentity(existingUser.id);
       } else {
-        throw new ConflictException("Username already exists");
+        throw new ConflictException("Ce pseudo est déjà pris");
       }
     }
 

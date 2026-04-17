@@ -1,5 +1,5 @@
-import PrimaryButton from "../PrimaryButton";
-import SecondaryButton from "../SecondaryButton";
+import PrimaryButton from "../ui/PrimaryButton";
+import SecondaryButton from "../ui/SecondaryButton";
 
 type QuestionComposerProps = {
   questionText: string;
@@ -103,7 +103,10 @@ export default function QuestionComposer({
       ) : null}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <SecondaryButton className="w-full sm:w-auto" onClick={onValidateQuestion}>
+        <SecondaryButton
+          className="w-full sm:w-auto"
+          onClick={onValidateQuestion}
+        >
           Valider la question
         </SecondaryButton>
         <PrimaryButton

@@ -17,7 +17,7 @@ export type Room = {
   rounds: number;
   questionDurationMs: number | null;
   isPrivate: boolean;
-  gameType: "wordle" | "memory" | null;
+  gameType: "wordle" | "memory" | "quiz" | null;
   gameConfig: Record<string, unknown> | null;
   status: "waiting" | "playing" | "finished";
   players: RoomPlayer[];
@@ -42,8 +42,9 @@ export type JoinRoomPayload = {
 
 export type UpdateRoomPayload = {
   name?: string;
-  gameType?: "wordle" | "memory";
+  gameType?: "wordle" | "memory" | "quiz";
   gameConfig?: Record<string, unknown>;
+  quizId?: number | null;
   isPrivate?: boolean;
   password?: string;
 };

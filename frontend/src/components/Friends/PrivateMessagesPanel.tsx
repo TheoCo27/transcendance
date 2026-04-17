@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import type { FriendUserSummary, PrivateMessage } from "../../services/users";
-import PrimaryButton from "../PrimaryButton";
+import PrimaryButton from "../ui/PrimaryButton";
 
 type PrivateMessagesPanelProps = {
   currentUserId: number;
@@ -112,7 +112,10 @@ export default function PrivateMessagesPanel({
             })}
           </div>
 
-          <form className="mt-5" onSubmit={(event) => void onMessageSubmit(event)}>
+          <form
+            className="mt-5"
+            onSubmit={(event) => void onMessageSubmit(event)}
+          >
             <label
               className="mb-2 block text-sm font-medium text-slate-600"
               htmlFor="private-message"

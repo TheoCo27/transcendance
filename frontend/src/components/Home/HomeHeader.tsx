@@ -1,4 +1,4 @@
-import PrimaryButton from "../PrimaryButton";
+import PrimaryButton from "../ui/PrimaryButton";
 
 type HomeHeaderProps = {
   isCreatingRoom: boolean;

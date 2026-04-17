@@ -4,8 +4,8 @@ import FriendNetworkPanel, {
   type FriendNotice,
 } from "../components/Friends/FriendNetworkPanel";
 import PrivateMessagesPanel from "../components/Friends/PrivateMessagesPanel";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
 import {
@@ -25,7 +25,9 @@ const CONVERSATION_POLL_INTERVAL_MS = 5000;
 
 export default function FriendsPage() {
   const { user, isLoading } = useAuthSession();
-  const [friendOverview, setFriendOverview] = useState<FriendOverview | null>(null);
+  const [friendOverview, setFriendOverview] = useState<FriendOverview | null>(
+    null,
+  );
   const [conversationSummaries, setConversationSummaries] = useState<
     PrivateConversationSummary[]
   >([]);
@@ -37,7 +39,9 @@ export default function FriendsPage() {
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
-  const [conversationError, setConversationError] = useState<string | null>(null);
+  const [conversationError, setConversationError] = useState<string | null>(
+    null,
+  );
   const [isConversationLoading, setIsConversationLoading] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -55,7 +59,8 @@ export default function FriendsPage() {
   );
 
   const selectedFriend =
-    friendOverview?.friends.find((friend) => friend.id === selectedFriendId) ?? null;
+    friendOverview?.friends.find((friend) => friend.id === selectedFriendId) ??
+    null;
 
   const refreshFriendData = async () => {
     const [overview, summaries] = await Promise.all([
@@ -144,7 +149,9 @@ export default function FriendsPage() {
     const prioritizedFriendId =
       conversationSummaries.find((summary) =>
         friendOverview.friends.some((friend) => friend.id === summary.friendId),
-      )?.friendId ?? friendOverview.friends[0]?.id ?? null;
+      )?.friendId ??
+      friendOverview.friends[0]?.id ??
+      null;
 
     setSelectedFriendId(prioritizedFriendId);
   }, [friendOverview, selectedFriendId, conversationSummaries]);
@@ -217,7 +224,8 @@ export default function FriendsPage() {
           </p>
           <h1 className="mt-4 text-4xl font-semibold">Connexion requise</h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-amber-900/80">
-            Connecte-toi pour gerer ta liste d'amis et ouvrir des messages prives.
+            Connecte-toi pour gerer ta liste d'amis et ouvrir des messages
+            prives.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link to="/login">
@@ -249,7 +257,9 @@ export default function FriendsPage() {
       setFriendNotice({
         kind: "error",
         message:
-          error instanceof Error ? error.message : "Impossible d'ajouter cet ami",
+          error instanceof Error
+            ? error.message
+            : "Impossible d'ajouter cet ami",
       });
     } finally {
       setIsSendingRequest(false);

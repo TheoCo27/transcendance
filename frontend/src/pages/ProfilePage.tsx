@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "../components/Avatar";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { updateMyAvatar } from "../services/users";
 
@@ -190,7 +190,9 @@ export default function ProfilePage() {
             username={user.username}
           />
           <h1 className="mt-6 text-3xl font-semibold">{user.username}</h1>
-          <p className="mt-2 text-sm text-white/70">{formatIdentityLabel(user)}</p>
+          <p className="mt-2 text-sm text-white/70">
+            {formatIdentityLabel(user)}
+          </p>
           <div className="mt-8 flex flex-wrap gap-3 text-sm">
             <span className="rounded-full bg-white/10 px-4 py-2">
               Statut: {user.status}
@@ -249,7 +251,9 @@ export default function ProfilePage() {
                         onClick={() => fileInputRef.current?.click()}
                         type="button"
                       >
-                        {isAvatarSubmitting ? "Mise a jour..." : "Changer la photo"}
+                        {isAvatarSubmitting
+                          ? "Mise a jour..."
+                          : "Changer la photo"}
                       </PrimaryButton>
                       <SecondaryButton
                         disabled={isAvatarSubmitting || !user.avatar_url}
