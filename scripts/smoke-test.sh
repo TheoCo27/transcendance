@@ -439,7 +439,7 @@ request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$DUPLICATE_REGISTER_
 assert_status 409
 assert_body_contains '"success":false'
 assert_body_contains '"code":"CONFLICT"'
-assert_body_contains '"message":"Email already exists"'
+assert_body_contains '"message":"Cet email est déjà utilisé"'
 pass "Register en doublon refuse"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$INVALID_LOGIN_PAYLOAD"
