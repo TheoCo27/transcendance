@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "Node16",
     "target": "ES2021",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "outDir": "./dist",
     "strict": true,
-    "ignoreDeprecations": "6.0",
     "sourceMap": true,
     "removeComments": true,
     "esModuleInterop": true,
@@ -15,11 +14,10 @@
     "emitDecoratorMetadata": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "baseUrl": "./",
     "paths": {
-      "@/*": ["src/*"],
-      "@prisma/*": ["prisma/*"],
-      "@generated/*": ["generated/*"]
+      "@/*": ["./src/*"],
+      "@prisma/*": ["./prisma/*"],
+      "@generated/*": ["./generated/*"]
     }
   },
   "include": ["src/**/*.ts", "generated/**/*.ts"],
