@@ -81,13 +81,13 @@ export default function RoomAccessPage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-10 md:px-10">
       {isLoadingPage ? (
-        <section className="rounded-[2rem] border border-slate-900/10 bg-white/70 p-8 text-slate-600">
+        <section className="rounded-4xl border border-slate-900/10 bg-white/70 p-8 text-slate-600">
           Chargement de l'invitation...
         </section>
       ) : null}
 
       {pageError ? (
-        <section className="rounded-[2rem] border border-rose-200 bg-rose-50 p-8 text-rose-700">
+        <section className="rounded-4xl border border-rose-200 bg-rose-50 p-8 text-rose-700">
           {pageError}
         </section>
       ) : null}
@@ -135,7 +135,7 @@ export default function RoomAccessPage() {
               </SecondaryButton>
             </div>
           ) : (
-            <div className="mt-8 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-amber-950">
+            <div className="mt-8 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
               Redirection vers la connexion pour rejoindre la room...
             </div>
           )}

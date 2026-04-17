@@ -208,7 +208,7 @@ export default function FriendsPage() {
   if (isLoading) {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 px-6 py-10 md:px-10">
-        <div className="w-full rounded-[2rem] border border-slate-900/10 bg-white/70 p-8 text-slate-600 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+        <div className="w-full rounded-4xl border border-slate-900/10 bg-white/70 p-8 text-slate-600 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
           Chargement de la page amis...
         </div>
       </main>

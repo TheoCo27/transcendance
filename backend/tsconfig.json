@@ -5,6 +5,7 @@
     "moduleResolution": "node",
     "outDir": "./dist",
     "strict": true,
+    "ignoreDeprecations": "6.0",
     "sourceMap": true,
     "removeComments": true,
     "esModuleInterop": true,

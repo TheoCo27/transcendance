@@ -69,7 +69,7 @@ export default function FriendNetworkPanel({
   usernameMinLength,
 }: FriendNetworkPanelProps) {
   return (
-    <section className="rounded-[2rem] bg-slate-100/80 p-6">
+    <section className="rounded-4xl bg-slate-100/80 p-6">
       {currentUser.isGuest ? (
         <div className="mt-8 rounded-[1.75rem] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950">
           <p className="text-sm font-semibold">Compte invite detecte</p>
@@ -85,7 +85,7 @@ export default function FriendNetworkPanel({
         </div>
       ) : (
         <>
-          <div className="rounded-[1.5rem] bg-slate-950 px-5 py-5 text-white">
+          <div className="rounded-3xl bg-slate-950 px-5 py-5 text-white">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-xl font-semibold">Liste d'amis</h3>
@@ -100,13 +100,13 @@ export default function FriendNetworkPanel({
             </div>
 
             {friendsError ? (
-              <div className="mt-5 rounded-[1.5rem] bg-rose-500/15 px-5 py-4 text-sm text-rose-100">
+              <div className="mt-5 rounded-3xl bg-rose-500/15 px-5 py-4 text-sm text-rose-100">
                 {friendsError}
               </div>
             ) : null}
 
             {isFriendsLoading && !friendOverview ? (
-              <div className="mt-5 rounded-[1.5rem] bg-white/10 px-5 py-5 text-sm text-white/75">
+              <div className="mt-5 rounded-3xl bg-white/10 px-5 py-5 text-sm text-white/75">
                 Chargement de ta liste d'amis...
               </div>
             ) : null}
@@ -114,7 +114,7 @@ export default function FriendNetworkPanel({
             {!friendsError &&
             !isFriendsLoading &&
             (friendOverview?.friends.length ?? 0) === 0 ? (
-              <div className="mt-5 rounded-[1.5rem] bg-white/10 px-5 py-5 text-sm leading-7 text-white/75">
+              <div className="mt-5 rounded-3xl bg-white/10 px-5 py-5 text-sm leading-7 text-white/75">
                 Aucun ami pour l'instant. Commence par rechercher un joueur avec
                 son pseudo.
               </div>
@@ -128,7 +128,7 @@ export default function FriendNetworkPanel({
                 return (
                   <button
                     key={friend.id}
-                    className={`w-full rounded-[1.5rem] border px-5 py-4 text-left transition ${
+                    className={`w-full rounded-3xl border px-5 py-4 text-left transition ${
                       isSelected
                         ? "border-white/35 bg-white/16"
                         : "border-white/10 bg-white/8 hover:bg-white/12"
@@ -241,7 +241,7 @@ export default function FriendNetworkPanel({
             ) : null}
           </form>
 
-          <div className="mt-5 rounded-[1.5rem] bg-white px-5 py-4">
+          <div className="mt-5 rounded-3xl bg-white px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Demandes recues
@@ -306,7 +306,7 @@ export default function FriendNetworkPanel({
             </div>
           </div>
 
-          <div className="mt-5 rounded-[1.5rem] bg-white px-5 py-4">
+          <div className="mt-5 rounded-3xl bg-white px-5 py-4">
             <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
               Demandes envoyees
             </h4>

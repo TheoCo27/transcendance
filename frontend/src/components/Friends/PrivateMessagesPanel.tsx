@@ -39,7 +39,7 @@ export default function PrivateMessagesPanel({
   isSendingMessage,
 }: PrivateMessagesPanelProps) {
   return (
-    <section className="flex min-h-[44rem] flex-col rounded-[2rem] bg-white/88 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+    <section className="flex min-h-176 flex-col rounded-4xl bg-white/88 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
       <div className="border-b border-slate-900/8 pb-5">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
           Messages prives
@@ -123,7 +123,7 @@ export default function PrivateMessagesPanel({
               Ecrire a {selectedFriend.username}
             </label>
             <textarea
-              className="min-h-32 w-full rounded-[1.5rem] border border-slate-900/10 bg-slate-50 px-4 py-4 text-slate-950 outline-none placeholder:text-slate-400"
+              className="min-h-32 w-full rounded-3xl border border-slate-900/10 bg-slate-50 px-4 py-4 text-slate-950 outline-none placeholder:text-slate-400"
               id="private-message"
               placeholder="Ecris un message prive..."
               value={messageInput}
