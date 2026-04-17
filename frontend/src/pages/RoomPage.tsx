@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import Avatar from "../components/Avatar";
-import Input from "../components/ui/input";
+import RoomChatSection from "../components/room/RoomChatSection";
+import RoomConfigSection from "../components/room/RoomConfigSection";
+import RoomGameSection from "../components/room/RoomGameSection";
+import RoomLeaderboardSection from "../components/room/RoomLeaderboardSection";
+import RoomPlayersSection from "../components/room/RoomPlayersSection";
+import type { ChatEntry, RoomConfigForm } from "../components/room/room-types";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useToast } from "../components/ui/toast";
@@ -70,15 +75,6 @@ type ChatHistoryPayload = {
   messages: ChatMessagePayload[];
 };
 
-type RoomConfigForm = {
-  name: string;
-  quizId: number | null;
-  gameType: "wordle" | "memory" | "quiz";
-  wordleWordLength: number;
-  wordleMaxAttempts: number;
-  memoryPairsCount: number;
-};
-
 const DEFAULT_FORM: RoomConfigForm = {
   name: "",
   quizId: null,
@@ -112,19 +108,6 @@ function formatRoomStatus(status: Room["status"]) {
   return "Terminee";
 }
 
-function formatChatTime(sentAt: string): string {
-  const parsed = new Date(sentAt);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(parsed);
-}
-
 export default function RoomPage() {
   const { roomId: roomIdParam } = useParams();
   const roomId = Number(roomIdParam);
@@ -156,8 +139,10 @@ export default function RoomPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [isRoomLinkCopied, setIsRoomLinkCopied] = useState(false);
   const [availableQuizzes, setAvailableQuizzes] = useState<Quiz[]>([]);
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
+  const roomLinkCopiedTimeoutRef = useRef<number | null>(null);
 
   const refreshRoom = async () => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -571,6 +556,15 @@ export default function RoomPage() {
     };
   }, [gameState?.questionEndsAt]);
 
+  useEffect(
+    () => () => {
+      if (roomLinkCopiedTimeoutRef.current !== null) {
+        window.clearTimeout(roomLinkCopiedTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
   const isOwner = Boolean(user && room && room.ownerUserId === user.id);
   const isUserInRoom = Boolean(
     user && room?.players.some((player) => player.userId === user.id),
@@ -608,6 +602,19 @@ export default function RoomPage() {
     );
   }, [form, room, user]);
 
+  const isQuizSelectionSaved = useMemo(() => {
+    if (!room || form.gameType !== "quiz") {
+      return false;
+    }
+
+    return (
+      room.gameType === "quiz" &&
+      typeof room.quizId === "number" &&
+      room.quizId > 0 &&
+      form.quizId === room.quizId
+    );
+  }, [form.gameType, form.quizId, room]);
+
   const scoreboard = useMemo(() => {
     const baseEntries =
       gameState?.leaderboard.length && gameState.leaderboard.length > 0
@@ -629,7 +636,7 @@ export default function RoomPage() {
       }));
   }, [gameState, playerAvatars, playerNames, room]);
 
-  const chatEntries = useMemo(
+  const chatEntries = useMemo<ChatEntry[]>(
     () =>
       chatMessages.map((message) => ({
         ...message,
@@ -804,10 +811,24 @@ export default function RoomPage() {
     }
   };
 
+  const copyRoomLink = async () => {
+    if (!room) return;
+
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/rooms/${room.id}`,
+      );
+
+      setIsRoomLinkCopied(true);
+    } catch {
+      toast.error("Impossible de copier le lien de la room.");
+    }
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
       {isLoadingPage ? (
-        <div className="rounded-4xl border border-slate-900/10 bg-white/70 p-8 text-slate-600">
+        <div className="rounded-4xl border border-white/10 bg-bg p-8 text-text">
           Chargement de la room...
         </div>
       ) : null}
@@ -869,17 +890,19 @@ export default function RoomPage() {
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <PrimaryButton
-                  className="justify-center"
+                  className="inline-flex items-center gap-2"
                   onClick={() => {
-                    void navigator.clipboard.writeText(
-                      `${window.location.origin}/rooms/${room.id}`,
-                    );
-                    toast.success(
-                      "Le lien de la room a été copié dans le presse-papier.",
-                    );
+                    void copyRoomLink();
                   }}
                 >
-                  Copier le lien de la room
+                  {isRoomLinkCopied
+                    ? "Lien copié"
+                    : "Copier le lien de la room"}
+                  {isRoomLinkCopied ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Copy className="size-4 rotate-180" />
+                  )}
                 </PrimaryButton>
                 <SecondaryButton onClick={() => void refreshRoom()}>
                   Rafraichir
@@ -972,183 +995,17 @@ export default function RoomPage() {
           </section>
 
           {isOwner && room.status === "waiting" ? (
-            <section className="mt-8 rounded-4xl border border-white/10 bg-surface text-text p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em]">
-                Configuration
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold text-text-muted">
-                Réglages de la room
-              </h2>
-
-              <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium">Nom de la room</span>
-                  <Input
-                    value={form.name}
-                    onChange={(event) => {
-                      setForm((previous) => ({
-                        ...previous,
-                        name: event.target.value,
-                      }));
-                    }}
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium">Type de jeu</span>
-                  <select
-                    className="rounded-xl border border-white/10 bg-bg px-4 py-3 outline-none placeholder:text-text/40"
-                    value={form.gameType}
-                    onChange={(event) => {
-                      const gameType = event.target.value as
-                        | "wordle"
-                        | "memory"
-                        | "quiz";
-                      setForm((previous) => ({ ...previous, gameType }));
-                    }}
-                  >
-                    <option value="wordle">Wordle</option>
-                    <option value="memory">Memory</option>
-                    <option value="quiz">Quiz</option>
-                  </select>
-                </label>
-
-                {form.gameType === "quiz" ? (
-                  <div className="md:col-span-2">
-                    <p className="text-sm font-medium">Choix du quiz</p>
-
-                    {isLoadingQuizzes ? (
-                      <p className="mt-3 rounded-xl border border-white/10 bg-bg px-4 py-3 text-sm text-slate-300">
-                        Chargement des quiz...
-                      </p>
-                    ) : availableQuizzes.length === 0 ? (
-                      <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                        Aucun quiz disponible pour l'instant. Cree un quiz avant
-                        de le selectionner ici.
-                      </p>
-                    ) : (
-                      <div className="mt-3 grid max-h-46 grid-cols-1 gap-2 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
-                        {availableQuizzes.map((quiz) => {
-                          const isSelected = form.quizId === quiz.id;
-
-                          return (
-                            <button
-                              key={`quiz-choice-${quiz.id}`}
-                              className={[
-                                "flex items-start justify-between rounded-xl border px-3 py-2.5 text-left transition",
-                                isSelected
-                                  ? "border-amber-300 bg-amber-300/12"
-                                  : "border-white/10 bg-bg hover:bg-white/5",
-                              ].join(" ")}
-                              type="button"
-                              onClick={() => {
-                                setForm((previous) => ({
-                                  ...previous,
-                                  quizId:
-                                    previous.quizId === quiz.id
-                                      ? null
-                                      : quiz.id,
-                                }));
-                              }}
-                            >
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-text-muted">
-                                  {quiz.title}
-                                </p>
-                                <p className="mt-0.5 text-xs text-slate-400">
-                                  {quiz.questions.length} question
-                                  {quiz.questions.length > 1 ? "s" : ""}
-                                </p>
-                              </div>
-
-                              <span
-                                aria-hidden="true"
-                                className={[
-                                  "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-bold",
-                                  isSelected
-                                    ? "border-amber-300 bg-amber-300/20 text-amber-100"
-                                    : "border-white/20 text-transparent",
-                                ].join(" ")}
-                              >
-                                ✓
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ) : form.gameType === "wordle" ? (
-                  <>
-                    <label className="flex flex-col gap-2">
-                      <span className="text-sm font-medium">
-                        Longueur du mot (4-8)
-                      </span>
-                      <Input
-                        type="number"
-                        min={4}
-                        max={8}
-                        value={form.wordleWordLength}
-                        onChange={(event) => {
-                          setForm((previous) => ({
-                            ...previous,
-                            wordleWordLength: Number(event.target.value),
-                          }));
-                        }}
-                      />
-                    </label>
-
-                    <label className="flex flex-col gap-2">
-                      <span className="text-sm font-medium ">
-                        Essais max (3-10)
-                      </span>
-                      <Input
-                        type="number"
-                        min={3}
-                        max={10}
-                        value={form.wordleMaxAttempts}
-                        onChange={(event) => {
-                          setForm((previous) => ({
-                            ...previous,
-                            wordleMaxAttempts: Number(event.target.value),
-                          }));
-                        }}
-                      />
-                    </label>
-                  </>
-                ) : (
-                  <label className="flex flex-col gap-2 md:col-span-2">
-                    <span className="text-sm font-medium">
-                      Nombre de paires (2-20)
-                    </span>
-                    <Input
-                      type="number"
-                      min={2}
-                      max={20}
-                      value={form.memoryPairsCount}
-                      onChange={(event) => {
-                        setForm((previous) => ({
-                          ...previous,
-                          memoryPairsCount: Number(event.target.value),
-                        }));
-                      }}
-                    />
-                  </label>
-                )}
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <PrimaryButton
-                  className="px-5 py-2.5 text-sm"
-                  disabled={isSaving}
-                  onClick={() => {
-                    void handleSave();
-                  }}
-                >
-                  {isSaving ? "Enregistrement..." : "Enregistrer"}
-                </PrimaryButton>
-              </div>
-            </section>
+            <RoomConfigSection
+              form={form}
+              setForm={setForm}
+              availableQuizzes={availableQuizzes}
+              isLoadingQuizzes={isLoadingQuizzes}
+              isQuizSelectionSaved={isQuizSelectionSaved}
+              isSaving={isSaving}
+              onSave={() => {
+                void handleSave();
+              }}
+            />
           ) : null}
 
           {roomActionError ? (
@@ -1159,298 +1016,38 @@ export default function RoomPage() {
 
           <section className="mt-8 grid gap-6 lg:grid-cols-[0.85fr_1.15fr] xl:grid-cols-[0.8fr_1.2fr] xl:items-stretch">
             <div className="flex flex-col gap-6 xl:min-h-full">
-              <section className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                  Joueurs de la room
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold text-text-muted">
-                  Roster en direct
-                </h2>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {room.players.map((player) => (
-                    <div
-                      key={`player-${player.userId}`}
-                      className="rounded-[1.25rem] border border-white/10 bg-bg px-4 py-4"
-                    >
-                      <p className="text-sm font-semibold text-text-muted">
-                        {playerNames[player.userId] ??
-                          `Joueur #${player.userId}`}
-                      </p>
-                      <p className="mt-1 text-xs uppercase text-slate-500">
-                        {room.ownerUserId === player.userId
-                          ? "Owner"
-                          : "Player"}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <RoomPlayersSection
+                players={room.players}
+                ownerUserId={room.ownerUserId}
+                playerNames={playerNames}
+              />
 
-              <section className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)] xl:flex xl:flex-1 xl:flex-col">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                  Leaderboard
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold text-text-muted">
-                  Classement de la room
-                </h2>
-                <div className="mt-6 space-y-3 xl:flex-1">
-                  {scoreboard.length > 0 ? (
-                    scoreboard.map((entry) => (
-                      <div
-                        key={`score-${entry.userId}`}
-                        className="flex items-center"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center justify-between rounded-[1.25rem] border border-white/10 bg-bg px-4 py-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <Avatar
-                              alt={`Avatar de ${entry.username}`}
-                              avatarUrl={entry.avatarUrl}
-                              className="h-10 w-10 shrink-0 border border-white/15"
-                              fallbackClassName="text-xs"
-                              username={entry.username}
-                            />
-                            <p className="truncate text-sm font-medium text-text-muted">
-                              {entry.username}
-                            </p>
-                          </div>
-
-                          <span className="rounded-full bg-white/8 px-3 py-1 text-base font-semibold">
-                            {entry.score}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-[1.25rem] border border-white/10 bg-bg px-4 py-4 text-sm">
-                      La room n'a pas encore de score.
-                    </div>
-                  )}
-                </div>
-              </section>
+              <RoomLeaderboardSection entries={scoreboard} />
             </div>
 
             <div className="flex flex-col gap-6 xl:min-h-full">
-              {gameState?.status === "playing" && currentQuestion ? (
-                <section className="rounded-4xl bg-slate-950 p-6 text-text shadow-[0_28px_90px_rgba(15,23,42,0.24)]">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/55">
-                        Manche {gameState.currentQuestionNumber}/
-                        {gameState.totalQuestions}
-                      </p>
-                      <h2 className="mt-3 text-3xl font-semibold">
-                        {currentQuestion.text}
-                      </h2>
-                    </div>
-                    <div className="rounded-full bg-white/10 px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-amber-200">
-                      {formatRemainingTime(
-                        remainingMs,
-                        gameState.questionDurationMs,
-                      )}
-                    </div>
-                  </div>
+              <RoomGameSection
+                roomStatus={room.status}
+                gameState={gameState}
+                currentQuestion={currentQuestion}
+                remainingMs={remainingMs}
+                isUserInRoom={isUserInRoom}
+                selectedAnswer={selectedAnswer}
+                hasAnsweredCurrentQuestion={hasAnsweredCurrentQuestion}
+                onSelectAnswer={setSelectedAnswer}
+                onSubmitAnswer={submitAnswer}
+              />
 
-                  <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    {currentQuestion.options.map((option, index) => (
-                      <button
-                        key={`answer-${currentQuestion.id}-${index + 1}`}
-                        className={[
-                          "rounded-3xl border px-5 py-5 text-left transition",
-                          selectedAnswer === index
-                            ? "border-amber-400 bg-amber-400/16"
-                            : "border-white/12 bg-white/5 hover:bg-white/10",
-                        ].join(" ")}
-                        type="button"
-                        disabled={!isUserInRoom || hasAnsweredCurrentQuestion}
-                        onClick={() => setSelectedAnswer(index)}
-                      >
-                        <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-                          Option {index + 1}
-                        </span>
-                        <span className="mt-3 block text-base font-medium text-white">
-                          {option}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <PrimaryButton
-                      disabled={
-                        !isUserInRoom ||
-                        selectedAnswer === null ||
-                        hasAnsweredCurrentQuestion
-                      }
-                      onClick={submitAnswer}
-                    >
-                      {hasAnsweredCurrentQuestion
-                        ? "Réponse envoyée"
-                        : "Valider ma réponse"}
-                    </PrimaryButton>
-                    <p className="text-sm text-white/68">
-                      {isUserInRoom
-                        ? "Bonne réponse à trouver avant la fin du timer."
-                        : "Tu dois être dans la room pour répondre au mini-jeu."}
-                    </p>
-                  </div>
-                </section>
-              ) : (
-                <section className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                    Zone de jeu
-                  </p>
-                  <h2 className="mt-3 text-2xl font-semibold text-text-muted">
-                    Le plateau s'affiche ici
-                  </h2>
-                  <p className="mt-4 text-sm leading-7">
-                    {room.status === "waiting"
-                      ? "Des que le proprietaire lance la room, la question en cours apparait ici."
-                      : room.status === "finished"
-                        ? "La partie est terminee. Le classement final reste visible a gauche."
-                        : "Connexion au flux de jeu en cours..."}
-                  </p>
-                </section>
-              )}
-
-              {room.status === "finished" ? (
-                <section className="rounded-4xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-950">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
-                    Partie terminee
-                  </p>
-                  <h2 className="mt-3 text-3xl font-semibold">
-                    La room a termine sa partie.
-                  </h2>
-                  <p className="mt-3 text-sm leading-7 text-emerald-800/85">
-                    Le classement final reste visible ici. Tu peux revenir a
-                    l'accueil pour ouvrir une nouvelle room partageable.
-                  </p>
-                </section>
-              ) : null}
-
-              <section className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                  Chat room
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold text-text-muted">
-                  Discussion en direct
-                </h2>
-
-                <div className="mt-6 max-h-90 space-y-4 overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-bg p-4">
-                  {chatEntries.length > 0 ? (
-                    chatEntries.map((message, index) => {
-                      const previousMessage = chatEntries[index - 1];
-                      const showSenderMeta =
-                        index === 0 ||
-                        previousMessage.userId !== message.userId;
-                      const sentTime = formatChatTime(message.sentAt);
-
-                      return (
-                        <article
-                          key={`${message.sentAt}-${message.userId}-${index}`}
-                        >
-                          {showSenderMeta ? (
-                            <div
-                              className={[
-                                "flex items-center gap-2",
-                                message.isSelf
-                                  ? "justify-end"
-                                  : "justify-start",
-                              ].join(" ")}
-                            >
-                              {message.isSelf ? (
-                                <>
-                                  <p className="text-xs font-medium text-slate-400/85">
-                                    {sentTime}
-                                  </p>
-                                  <p className="text-sm font-medium text-slate-300">
-                                    Moi
-                                  </p>
-                                  <Avatar
-                                    alt={`Avatar de ${message.username}`}
-                                    avatarUrl={message.avatarUrl}
-                                    className="h-9 w-9 shrink-0 border border-white/15"
-                                    fallbackClassName="text-xs"
-                                    username={message.username}
-                                  />
-                                </>
-                              ) : (
-                                <>
-                                  <Avatar
-                                    alt={`Avatar de ${message.username}`}
-                                    avatarUrl={message.avatarUrl}
-                                    className="h-9 w-9 shrink-0 border border-white/15"
-                                    fallbackClassName="text-xs"
-                                    username={message.username}
-                                  />
-                                  <p className="text-sm font-medium text-slate-300">
-                                    {message.username}
-                                  </p>
-                                  <p className="text-xs font-medium text-slate-400/85">
-                                    {sentTime}
-                                  </p>
-                                </>
-                              )}
-                            </div>
-                          ) : null}
-
-                          <div
-                            className={[
-                              "max-w-[70%] rounded-2xl border px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.2)]",
-                              showSenderMeta ? "mt-2" : "mt-0",
-                              message.isSelf
-                                ? "ml-auto mr-11 border-white/15 bg-primary text-white"
-                                : "ml-11 mr-auto border-amber-200/35 bg-accent text-amber-900",
-                            ].join(" ")}
-                          >
-                            <p className="whitespace-pre-wrap wrap-anywhere text-sm leading-6">
-                              {message.content}
-                            </p>
-                          </div>
-                        </article>
-                      );
-                    })
-                  ) : (
-                    <div className="rounded-[1.25rem] bg-surface border border-white/10 px-4 py-4 text-sm">
-                      Aucun message pour l'instant. Lance la conversation.
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                  <Input
-                    className="w-full "
-                    placeholder={
-                      isUserInRoom
-                        ? "Écrire un message a la room..."
-                        : "Rejoins la room pour discuter..."
-                    }
-                    value={chatInput}
-                    disabled={!isUserInRoom}
-                    onChange={(event) => setChatInput(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void sendChatMessage();
-                      }
-                    }}
-                  />
-                  <PrimaryButton
-                    className="justify-center"
-                    disabled={!isUserInRoom || chatInput.trim().length === 0}
-                    onClick={() => {
-                      void sendChatMessage();
-                    }}
-                  >
-                    Envoyer
-                  </PrimaryButton>
-                </div>
-
-                {chatError ? (
-                  <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {chatError}
-                  </p>
-                ) : null}
-              </section>
+              <RoomChatSection
+                entries={chatEntries}
+                chatInput={chatInput}
+                chatError={chatError}
+                isUserInRoom={isUserInRoom}
+                onChatInputChange={setChatInput}
+                onSendMessage={() => {
+                  void sendChatMessage();
+                }}
+              />
             </div>
           </section>
         </>
