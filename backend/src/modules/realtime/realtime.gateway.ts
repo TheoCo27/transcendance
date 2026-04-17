@@ -65,7 +65,7 @@ export class RealtimeGateway
   }
 
   async handleDisconnect(client: Socket): Promise<void> {
-    await this.roomEvents.handleDisconnect(client.id);
+    await this.roomEvents.handleDisconnect(client.id, this.server);
     this.logger.log(`Socket disconnected: ${client.id}`);
   }
 

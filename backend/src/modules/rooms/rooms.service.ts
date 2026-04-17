@@ -42,8 +42,16 @@ export type Room = {
   password?: string;
 };
 
+type TransientRoomConfig = {
+  quizId: number | null;
+  rounds: number;
+  questionDurationMs: number | null;
+};
+
 @Injectable()
 export class RoomsService {
+  private readonly transientConfigs = new Map<number, TransientRoomConfig>();
+
   constructor(private readonly prisma: PrismaService) {}
 
   async list(): Promise<Array<Omit<Room, "password">>> {
@@ -73,36 +81,7 @@ export class RoomsService {
   }
 
   async listByQuizId(quizId: number): Promise<Array<Omit<Room, "password">>> {
-    const rooms = await this.prisma.client.room.findMany({
-      where: {
-        games: {
-          some: {
-            quizId,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        games: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: {
-            quizId: true,
-          },
-        },
-        players: {
-          select: {
-            userId: true,
-            joinedAt: true,
-          },
-          orderBy: {
-            joinedAt: "asc",
-          },
-        },
-      },
-    });
-
-    return rooms.map((room) => this.stripPassword(this.toRoom(room)));
+    return (await this.list()).filter((room) => room.quizId === quizId);
   }
 
   async getById(roomId: number): Promise<Omit<Room, "password">> {
@@ -150,6 +129,15 @@ export class RoomsService {
           },
         },
       },
+    });
+
+    this.transientConfigs.set(room.id, {
+      quizId: dto.quizId ?? null,
+      rounds: dto.rounds ?? 1,
+      questionDurationMs:
+        typeof dto.questionDurationSec === "number"
+          ? dto.questionDurationSec * 1000
+          : null,
     });
 
     return this.stripPassword(this.toRoom(room));
@@ -485,6 +473,7 @@ export class RoomsService {
     await this.prisma.client.room.delete({
       where: { id: roomId },
     });
+    this.transientConfigs.delete(roomId);
 
     return { roomId };
   }
@@ -539,6 +528,8 @@ export class RoomsService {
     games: Array<{ quizId: number }>;
     players: Array<{ userId: number; joinedAt: Date }>;
   }): Room {
+    const transientConfig = this.transientConfigs.get(room.id);
+
     return {
       id: room.id,
       name: room.name,
@@ -547,9 +538,9 @@ export class RoomsService {
       gameType: room.gameType,
       gameConfig: this.toObjectRecord(room.gameConfig),
       isPrivate: room.isPrivate,
-      quizId: room.games[0]?.quizId ?? null,
-      rounds: 1,
-      questionDurationMs: null,
+      quizId: transientConfig?.quizId ?? room.games[0]?.quizId ?? null,
+      rounds: transientConfig?.rounds ?? 1,
+      questionDurationMs: transientConfig?.questionDurationMs ?? null,
       password: room.password ?? undefined,
       players: room.players.map((player) => ({
         userId: player.userId,
