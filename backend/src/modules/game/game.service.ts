@@ -1,4 +1,5 @@
 import { RoomsService } from "@/modules/rooms/rooms.service";
+import { QuizzesService } from "@/modules/quizzes/quizzes.service";
 import {
   BadRequestException,
   ConflictException,
@@ -59,20 +60,22 @@ type QuestionEntry = PublicQuestion & {
 
 @Injectable()
 export class GameService {
+  private readonly defaultQuestionBank: QuestionEntry[];
   private readonly roomStates = new Map<number, GameState>();
   private readonly roomRuntime = new Map<number, RoomRuntime>();
-  private readonly questionBank = new Map<number, QuestionEntry>([
-    [
-      101,
+  private readonly roomQuestions = new Map<number, QuestionEntry[]>();
+
+  constructor(
+    private readonly roomsService: RoomsService,
+    private readonly quizzesService: QuizzesService,
+  ) {
+    this.defaultQuestionBank = [
       {
         id: 101,
         text: "Quel est le language principal utilise pour ce backend ?",
         options: ["Python", "TypeScript", "Go", "Rust"],
         correctAnswerIndex: 1,
       },
-    ],
-    [
-      102,
       {
         id: 102,
         text: "Quel endpoint est utilise pour rejoindre une room ?",
@@ -84,22 +87,18 @@ export class GameService {
         ],
         correctAnswerIndex: 2,
       },
-    ],
-    [
-      103,
       {
         id: 103,
         text: "Quel event WebSocket diffuse le compte a rebours ?",
         options: ["game:start", "game:timer", "question:tick", "room:timer"],
         correctAnswerIndex: 1,
       },
-    ],
-  ]);
-
-  constructor(private readonly roomsService: RoomsService) {}
+    ];
+  }
 
   async getRoomState(roomId: number): Promise<GameState> {
     const room = await this.roomsService.getById(roomId);
+    await this.ensureRoomQuestions(roomId, room.quizId);
     const runtime = this.getRoomRuntime(roomId);
     this.syncScoresWithPlayers(
       room.players.map((player) => player.userId),
@@ -232,7 +231,7 @@ export class GameService {
     }
 
     const runtime = this.getRoomRuntime(dto.roomId);
-    const question = this.getQuestionEntry(dto.questionId);
+    const question = this.getQuestionEntry(dto.roomId, dto.questionId);
     if (dto.answerIndex >= question.options.length) {
       throw new BadRequestException("Answer index is out of range");
     }
@@ -284,7 +283,7 @@ export class GameService {
   }
 
   getQuestionIdForTurn(_roomId: number, turnNumber: number): number {
-    const questionOrder = [...this.questionBank.keys()].sort((left, right) => left - right);
+    const questionOrder = this.getRoomQuestionBank(_roomId).map((question) => question.id);
 
     if (questionOrder.length === 0) {
       throw new ConflictException("No questions configured");
@@ -294,7 +293,7 @@ export class GameService {
   }
 
   getPublicQuestion(_roomId: number, questionId: number): PublicQuestion {
-    const question = this.getQuestionEntry(questionId);
+    const question = this.getQuestionEntry(_roomId, questionId);
 
     return {
       id: question.id,
@@ -325,6 +324,7 @@ export class GameService {
   clearRoomState(roomId: number): void {
     this.roomStates.delete(roomId);
     this.roomRuntime.delete(roomId);
+    this.roomQuestions.delete(roomId);
   }
 
   private getRoomRuntime(roomId: number): RoomRuntime {
@@ -370,8 +370,52 @@ export class GameService {
     }
   }
 
-  private getQuestionEntry(questionId: number): QuestionEntry {
-    const question = this.questionBank.get(questionId);
+  private async ensureRoomQuestions(
+    roomId: number,
+    quizId: number | null,
+  ): Promise<void> {
+    if (this.roomQuestions.has(roomId)) {
+      return;
+    }
+
+    if (typeof quizId === "number") {
+      const quiz = await this.quizzesService.getQuizById(quizId);
+      const quizQuestions = quiz.questions.map((question) => {
+        const correctAnswerIndex = question.answers.findIndex(
+          (answer) => answer === question.correctAnswer,
+        );
+
+        if (correctAnswerIndex < 0) {
+          throw new ConflictException(
+            `Question ${question.id} has an invalid correct answer`,
+          );
+        }
+
+        return {
+          id: question.id,
+          text: question.questionText,
+          options: [...question.answers],
+          correctAnswerIndex,
+        } satisfies QuestionEntry;
+      });
+
+      if (quizQuestions.length > 0) {
+        this.roomQuestions.set(roomId, quizQuestions);
+        return;
+      }
+    }
+
+    this.roomQuestions.set(roomId, this.defaultQuestionBank);
+  }
+
+  private getRoomQuestionBank(roomId: number): QuestionEntry[] {
+    return this.roomQuestions.get(roomId) ?? this.defaultQuestionBank;
+  }
+
+  private getQuestionEntry(roomId: number, questionId: number): QuestionEntry {
+    const question = this.getRoomQuestionBank(roomId).find(
+      (entry) => entry.id === questionId,
+    );
     if (!question) {
       throw new ConflictException(`Question ${questionId} not configured`);
     }
