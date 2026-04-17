@@ -6,8 +6,8 @@ import type {
   PrivateConversationSummary,
 } from "../../services/users";
 import Avatar from "../Avatar";
-import PrimaryButton from "../PrimaryButton";
-import SecondaryButton from "../SecondaryButton";
+import PrimaryButton from "../ui/PrimaryButton";
+import SecondaryButton from "../ui/SecondaryButton";
 
 export type FriendNotice = {
   kind: "success" | "error";
@@ -195,7 +195,9 @@ export default function FriendNetworkPanel({
             aria-busy={isSendingRequest}
             onSubmit={(event) => void onFriendSubmit(event)}
           >
-            <h3 className="text-xl font-semibold text-slate-950">Ajouter un ami</h3>
+            <h3 className="text-xl font-semibold text-slate-950">
+              Ajouter un ami
+            </h3>
             <p className="mt-2 text-sm leading-7 text-slate-600">
               Saisis un pseudo exact. Si ce joueur t'a deja envoye une demande,
               elle sera acceptee automatiquement.
@@ -284,7 +286,9 @@ export default function FriendNetworkPanel({
                           void onFriendRequestAction(request.id, "accepted")
                         }
                       >
-                        {pendingActionId === request.id ? "Traitement..." : "Accepter"}
+                        {pendingActionId === request.id
+                          ? "Traitement..."
+                          : "Accepter"}
                       </PrimaryButton>
                       <SecondaryButton
                         className="px-5 py-2.5"
@@ -307,7 +311,8 @@ export default function FriendNetworkPanel({
               Demandes envoyees
             </h4>
 
-            {!isFriendsLoading && (friendOverview?.sentRequests.length ?? 0) === 0 ? (
+            {!isFriendsLoading &&
+            (friendOverview?.sentRequests.length ?? 0) === 0 ? (
               <p className="mt-4 text-sm leading-7 text-slate-600">
                 Aucune demande envoyee en attente.
               </p>

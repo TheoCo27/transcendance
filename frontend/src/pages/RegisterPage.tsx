@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
-import PrimaryButton from "../components/PrimaryButton";
+import Input from "../components/ui/input";
+import PrimaryButton from "../components/ui/PrimaryButton";
 import {
   AUTH_PASSWORD_MIN_LENGTH,
   AUTH_USERNAME_MIN_LENGTH,
@@ -46,15 +47,18 @@ export default function RegisterPage() {
     <main className="flex flex-1 items-center justify-center px-[10%] py-6">
       <Card className="w-full px-8 py-8">
         <h1 className="mb-6 text-3xl font-semibold text-text">S'inscrire</h1>
-        <form aria-busy={isSubmitting} onSubmit={(event) => void handleSubmit(event)}>
+        <form
+          aria-busy={isSubmitting}
+          onSubmit={(event) => void handleSubmit(event)}
+        >
           <label
             className="mb-2 block text-sm font-medium text-text/70"
             htmlFor="register-email"
           >
             Email
           </label>
-          <input
-            className="mb-4 w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-text outline-none placeholder:text-text/40"
+          <Input
+            className="mb-4 w-full"
             id="register-email"
             type="email"
             placeholder="email@exemple.com"
@@ -70,8 +74,8 @@ export default function RegisterPage() {
           >
             Pseudo
           </label>
-          <input
-            className="mb-4 w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-text outline-none placeholder:text-text/40"
+          <Input
+            className="mb-4 w-full"
             id="register-username"
             type="text"
             placeholder="Ton pseudo"
@@ -88,8 +92,8 @@ export default function RegisterPage() {
           >
             Mot de passe
           </label>
-          <input
-            className="mb-6 w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-text outline-none placeholder:text-text/40"
+          <Input
+            className="mb-6 w-full"
             id="register-password"
             type="password"
             placeholder={`Minimum ${AUTH_PASSWORD_MIN_LENGTH} caractères`}
@@ -107,7 +111,11 @@ export default function RegisterPage() {
             </p>
           ) : null}
 
-          <PrimaryButton className="w-full py-3 text-base" disabled={isSubmitting} type="submit">
+          <PrimaryButton
+            className="w-full py-3 text-base"
+            disabled={isSubmitting}
+            type="submit"
+          >
             {isSubmitting ? "Inscription..." : "Créer mon compte"}
           </PrimaryButton>
         </form>

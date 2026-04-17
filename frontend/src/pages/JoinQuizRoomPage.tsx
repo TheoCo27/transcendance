@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
-import { getRoomsByQuizId } from "../services/rooms";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { getQuizzes, type Quiz } from "../services/quizzes";
+import { getRoomsByQuizId } from "../services/rooms";
 
 type QuizWithRoomCount = Quiz & {
   activeRoomCount: number;
@@ -31,7 +31,9 @@ export default function JoinQuizRoomPage() {
         const quizzesWithRooms = await Promise.all(
           fetchedQuizzes.map(async (quiz) => {
             const rooms = await getRoomsByQuizId(quiz.id);
-            const activeRoomCount = rooms.filter((room) => room.status !== "finished").length;
+            const activeRoomCount = rooms.filter(
+              (room) => room.status !== "finished",
+            ).length;
 
             return {
               ...quiz,

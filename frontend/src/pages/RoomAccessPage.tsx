@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getQuizById, type Quiz } from "../services/quizzes";
 import { getRoomById, type Room } from "../services/rooms";
@@ -51,7 +51,9 @@ export default function RoomAccessPage() {
         }
       } catch (error) {
         setPageError(
-          error instanceof Error ? error.message : "Impossible de charger cette invitation.",
+          error instanceof Error
+            ? error.message
+            : "Impossible de charger cette invitation.",
         );
       } finally {
         setIsLoadingPage(false);
@@ -99,8 +101,8 @@ export default function RoomAccessPage() {
             {quiz?.title ?? `Room #${room.id}`}
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-            Cette page sert d'entree simple vers la room partagee. Si ta session est
-            deja ouverte, tu peux rejoindre directement la room ici.
+            Cette page sert d'entree simple vers la room partagee. Si ta session
+            est deja ouverte, tu peux rejoindre directement la room ici.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -140,7 +142,10 @@ export default function RoomAccessPage() {
 
           {quiz ? (
             <div className="mt-8">
-              <Link className="text-sm font-semibold text-slate-700 underline" to={`/quiz/${quiz.id}`}>
+              <Link
+                className="text-sm font-semibold text-slate-700 underline"
+                to={`/quiz/${quiz.id}`}
+              >
                 Voir aussi le hub du quiz
               </Link>
             </div>
