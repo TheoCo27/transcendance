@@ -1,6 +1,10 @@
 import { PrismaService } from "@/prisma/prisma.service";
 import { Prisma } from "@generated/prisma/client";
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { CreateQuizDto } from "./dto/create-quiz.dto";
 
 type QuizQuestionResponse = {
@@ -57,7 +61,9 @@ export class QuizzesService {
               answers,
               correctAnswer: answers[question.correctAnswerIndex],
               position: index + 1,
-              points: question.points ?? 1,
+              ...(typeof question.points === "number"
+                ? { points: question.points }
+                : {}),
             };
           }),
         },
@@ -146,6 +152,8 @@ export class QuizzesService {
       return [...value];
     }
 
-    throw new BadRequestException("Quiz answers are not stored in the expected format");
+    throw new BadRequestException(
+      "Quiz answers are not stored in the expected format",
+    );
   }
 }

@@ -1,5 +1,5 @@
-import { RoomsService } from "@/modules/rooms/rooms.service";
 import { QuizzesService } from "@/modules/quizzes/quizzes.service";
+import { RoomsService } from "@/modules/rooms/rooms.service";
 import {
   BadRequestException,
   ConflictException,
@@ -51,50 +51,30 @@ export type PublicQuestion = {
 type RoomRuntime = {
   answeredByQuestion: Map<number, Set<number>>;
   scoresByUser: Map<number, number>;
+  scoresAtGameStart: Map<number, number>;
   totalAnswers: number;
 };
 
 type QuestionEntry = PublicQuestion & {
   correctAnswerIndex: number;
+  points: number;
+};
+
+type RoomQuestionBank = {
+  sourceQuizId: number | null;
+  questions: QuestionEntry[];
 };
 
 @Injectable()
 export class GameService {
-  private readonly defaultQuestionBank: QuestionEntry[];
   private readonly roomStates = new Map<number, GameState>();
   private readonly roomRuntime = new Map<number, RoomRuntime>();
-  private readonly roomQuestions = new Map<number, QuestionEntry[]>();
+  private readonly roomQuestions = new Map<number, RoomQuestionBank>();
 
   constructor(
     private readonly roomsService: RoomsService,
     private readonly quizzesService: QuizzesService,
-  ) {
-    this.defaultQuestionBank = [
-      {
-        id: 101,
-        text: "Quel est le language principal utilise pour ce backend ?",
-        options: ["Python", "TypeScript", "Go", "Rust"],
-        correctAnswerIndex: 1,
-      },
-      {
-        id: 102,
-        text: "Quel endpoint est utilise pour rejoindre une room ?",
-        options: [
-          "/room/join",
-          "/rooms/join",
-          "/rooms/:roomId/join",
-          "/join-room",
-        ],
-        correctAnswerIndex: 2,
-      },
-      {
-        id: 103,
-        text: "Quel event WebSocket diffuse le compte a rebours ?",
-        options: ["game:start", "game:timer", "question:tick", "room:timer"],
-        correctAnswerIndex: 1,
-      },
-    ];
-  }
+  ) {}
 
   async getRoomState(roomId: number): Promise<GameState> {
     const room = await this.roomsService.getById(roomId);
@@ -107,18 +87,38 @@ export class GameService {
 
     const existing = this.roomStates.get(roomId);
     if (existing) {
+      // Keep last finished game result visible even if the room has been reset
+      // to waiting, until a new game actually starts.
+      if (existing.status === "finished" && room.status === "waiting") {
+        existing.totalQuestions = Math.max(existing.totalQuestions, 1);
+        existing.startedAt = existing.startedAt ?? room.startedAt;
+        existing.endedAt = existing.endedAt ?? room.finishedAt;
+        existing.leaderboard = this.buildLeaderboard(runtime);
+        existing.winnerUserId = existing.leaderboard[0]?.userId ?? null;
+        return existing;
+      }
+
       existing.status = room.status;
       existing.totalQuestions = Math.max(existing.totalQuestions, 1);
       existing.startedAt = room.startedAt ?? existing.startedAt;
       existing.endedAt = room.finishedAt ?? existing.endedAt;
-      existing.leaderboard = this.buildLeaderboard(runtime);
+      existing.leaderboard =
+        existing.status === "finished"
+          ? this.buildLeaderboard(runtime)
+          : this.buildFrozenLeaderboard(runtime);
       if (existing.status === "finished" && existing.winnerUserId === null) {
         existing.winnerUserId = existing.leaderboard[0]?.userId ?? null;
+      }
+      if (existing.status !== "finished") {
+        existing.winnerUserId = null;
       }
       return existing;
     }
 
-    const leaderboard = this.buildLeaderboard(runtime);
+    const leaderboard =
+      room.status === "finished"
+        ? this.buildLeaderboard(runtime)
+        : this.buildFrozenLeaderboard(runtime);
     const state: GameState = {
       roomId,
       status: room.status,
@@ -153,7 +153,6 @@ export class GameService {
     const now = new Date().toISOString();
 
     runtime.answeredByQuestion.clear();
-    runtime.scoresByUser.clear();
     runtime.totalAnswers = 0;
     this.syncScoresWithPlayers(
       room.players.map((player) => player.userId),
@@ -169,7 +168,8 @@ export class GameService {
     state.questionEndsAt = null;
     state.answersForCurrentQuestion = 0;
     state.totalAnswers = 0;
-    state.leaderboard = this.buildLeaderboard(runtime);
+    runtime.scoresAtGameStart = new Map(runtime.scoresByUser);
+    state.leaderboard = this.buildFrozenLeaderboard(runtime);
     state.winnerUserId = null;
     state.startedAt = room.startedAt ?? now;
     state.endedAt = null;
@@ -247,14 +247,14 @@ export class GameService {
     runtime.totalAnswers += 1;
 
     const isCorrect = question.correctAnswerIndex === dto.answerIndex;
-    const scoreDelta = isCorrect ? 100 : 0;
+    const scoreDelta = isCorrect ? question.points : 0;
     const previousScore = runtime.scoresByUser.get(dto.userId) ?? 0;
     const userTotalScore = previousScore + scoreDelta;
     runtime.scoresByUser.set(dto.userId, userTotalScore);
 
     state.answersForCurrentQuestion = answeredUsers.size;
     state.totalAnswers = runtime.totalAnswers;
-    state.leaderboard = this.buildLeaderboard(runtime);
+    state.leaderboard = this.buildFrozenLeaderboard(runtime);
     state.updatedAt = new Date().toISOString();
 
     return {
@@ -283,7 +283,9 @@ export class GameService {
   }
 
   getQuestionIdForTurn(_roomId: number, turnNumber: number): number {
-    const questionOrder = this.getRoomQuestionBank(_roomId).map((question) => question.id);
+    const questionOrder = this.getRoomQuestionBank(_roomId).map(
+      (question) => question.id,
+    );
 
     if (questionOrder.length === 0) {
       throw new ConflictException("No questions configured");
@@ -307,7 +309,15 @@ export class GameService {
     return this.buildLeaderboard(this.getRoomRuntime(roomId));
   }
 
-  async hasEveryPlayerAnsweredCurrentQuestion(roomId: number): Promise<boolean> {
+  async getQuestionCount(roomId: number): Promise<number> {
+    const room = await this.roomsService.getById(roomId);
+    await this.ensureRoomQuestions(roomId, room.quizId);
+    return this.getRoomQuestionBank(roomId).length;
+  }
+
+  async hasEveryPlayerAnsweredCurrentQuestion(
+    roomId: number,
+  ): Promise<boolean> {
     const room = await this.roomsService.getById(roomId);
     const state = await this.getRoomState(roomId);
     if (state.currentQuestionId === null || room.players.length === 0) {
@@ -315,8 +325,9 @@ export class GameService {
     }
 
     const answeredUsers =
-      this.getRoomRuntime(roomId).answeredByQuestion.get(state.currentQuestionId) ??
-      new Set<number>();
+      this.getRoomRuntime(roomId).answeredByQuestion.get(
+        state.currentQuestionId,
+      ) ?? new Set<number>();
 
     return answeredUsers.size >= room.players.length;
   }
@@ -336,6 +347,7 @@ export class GameService {
     const runtime: RoomRuntime = {
       answeredByQuestion: new Map<number, Set<number>>(),
       scoresByUser: new Map<number, number>(),
+      scoresAtGameStart: new Map<number, number>(),
       totalAnswers: 0,
     };
 
@@ -345,6 +357,25 @@ export class GameService {
 
   private buildLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
     return [...runtime.scoresByUser.entries()]
+      .map(([userId, score]) => ({ userId, score }))
+      .sort(
+        (left, right) => right.score - left.score || left.userId - right.userId,
+      );
+  }
+
+  private buildMaskedLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
+    return [...runtime.scoresByUser.keys()]
+      .sort((left, right) => left - right)
+      .map((userId) => ({ userId, score: 0 }));
+  }
+
+  private buildFrozenLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
+    const source =
+      runtime.scoresAtGameStart.size > 0
+        ? runtime.scoresAtGameStart
+        : runtime.scoresByUser;
+
+    return [...source.entries()]
       .map(([userId, score]) => ({ userId, score }))
       .sort(
         (left, right) => right.score - left.score || left.userId - right.userId,
@@ -374,7 +405,12 @@ export class GameService {
     roomId: number,
     quizId: number | null,
   ): Promise<void> {
-    if (this.roomQuestions.has(roomId)) {
+    const cached = this.roomQuestions.get(roomId);
+    if (
+      cached &&
+      cached.sourceQuizId === quizId &&
+      cached.questions.length > 0
+    ) {
       return;
     }
 
@@ -396,20 +432,27 @@ export class GameService {
           text: question.questionText,
           options: [...question.answers],
           correctAnswerIndex,
+          points: question.points,
         } satisfies QuestionEntry;
       });
 
       if (quizQuestions.length > 0) {
-        this.roomQuestions.set(roomId, quizQuestions);
+        this.roomQuestions.set(roomId, {
+          sourceQuizId: quizId,
+          questions: quizQuestions,
+        });
         return;
       }
     }
 
-    this.roomQuestions.set(roomId, this.defaultQuestionBank);
+    this.roomQuestions.set(roomId, {
+      sourceQuizId: quizId,
+      questions: [],
+    });
   }
 
   private getRoomQuestionBank(roomId: number): QuestionEntry[] {
-    return this.roomQuestions.get(roomId) ?? this.defaultQuestionBank;
+    return this.roomQuestions.get(roomId)?.questions ?? [];
   }
 
   private getQuestionEntry(roomId: number, questionId: number): QuestionEntry {
