@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import Avatar from "../Avatar";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
@@ -33,6 +34,40 @@ export default function RoomChatSection({
   onChatInputChange,
   onSendMessage,
 }: RoomChatSectionProps) {
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const hasInitializedScrollRef = useRef(false);
+
+  const isNearBottom = (container: HTMLDivElement) =>
+    container.scrollHeight - container.scrollTop - container.clientHeight <= 48;
+
+  const handleChatScroll = () => {
+    if (!chatContainerRef.current) {
+      return;
+    }
+
+    shouldAutoScrollRef.current = isNearBottom(chatContainerRef.current);
+  };
+
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    if (!hasInitializedScrollRef.current) {
+      container.scrollTop = container.scrollHeight;
+      shouldAutoScrollRef.current = true;
+      hasInitializedScrollRef.current = true;
+      return;
+    }
+
+    if (shouldAutoScrollRef.current) {
+      container.scrollTop = container.scrollHeight;
+      shouldAutoScrollRef.current = true;
+    }
+  }, [entries.length]);
+
   return (
     <section className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
@@ -42,16 +77,30 @@ export default function RoomChatSection({
         Discussion en direct
       </h2>
 
-      <div className="mt-6 max-h-90 space-y-4 overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-bg p-4">
+      <div
+        className="mt-6 max-h-90 overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-bg p-4"
+        onScroll={handleChatScroll}
+        ref={chatContainerRef}
+      >
         {entries.length > 0 ? (
           entries.map((message, index) => {
             const previousMessage = entries[index - 1];
-            const showSenderMeta =
-              index === 0 || previousMessage.userId !== message.userId;
+            const isConsecutiveFromSameSender =
+              index > 0 && previousMessage.userId === message.userId;
+            const showSenderMeta = !isConsecutiveFromSameSender;
             const sentTime = formatChatTime(message.sentAt);
 
             return (
-              <article key={`${message.sentAt}-${message.userId}-${index}`}>
+              <article
+                className={
+                  index === 0
+                    ? ""
+                    : isConsecutiveFromSameSender
+                      ? "mt-1"
+                      : "mt-4"
+                }
+                key={`${message.sentAt}-${message.userId}-${index}`}
+              >
                 {showSenderMeta ? (
                   <div
                     className={[
@@ -97,7 +146,7 @@ export default function RoomChatSection({
 
                 <div
                   className={[
-                    "max-w-[70%] rounded-2xl border px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.2)]",
+                    "w-fit max-w-[70%] rounded-2xl border px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.2)]",
                     showSenderMeta ? "mt-2" : "mt-0",
                     message.isSelf
                       ? "ml-auto mr-11 border-white/15 bg-primary text-white"

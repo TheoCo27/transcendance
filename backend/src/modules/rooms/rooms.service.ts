@@ -482,6 +482,25 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  async resetAfterGame(roomId: number): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
+
+    if (room.status !== "playing") {
+      throw new ConflictException("La partie n'est pas en cours");
+    }
+
+    await this.prisma.client.room.update({
+      where: { id: roomId },
+      data: {
+        status: "waiting",
+        startedAt: null,
+        finishedAt: null,
+      },
+    });
+
+    return this.getById(roomId);
+  }
+
   async close(roomId: number): Promise<{ roomId: number }> {
     const room = await this.findRoomOrThrow(roomId);
 

@@ -1,7 +1,7 @@
 generator client {
-  provider     = "prisma-client"
-  output       = "../generated/prisma"
-  moduleFormat = "cjs"
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  moduleFormat        = "cjs"
   importFileExtension = ""
 }
 
@@ -119,7 +119,7 @@ model QuizQuestion {
   correctAnswer String
 
   position  Int
-  points    Int      @default(1)
+  points    Int      @default(100)
   createdAt DateTime @default(now())
 
   gameQuestions GameQuestion[] @relation("QuestionGameQuestions")
