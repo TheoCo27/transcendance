@@ -6,6 +6,7 @@ import RoomConfigSection from "../components/room/RoomConfigSection";
 import RoomGameSection from "../components/room/RoomGameSection";
 import RoomLeaderboardSection from "../components/room/RoomLeaderboardSection";
 import RoomPlayersSection from "../components/room/RoomPlayersSection";
+import RoomSectionLabel from "../components/room/room-section-label";
 import type { ChatEntry } from "../components/room/room-types";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
@@ -224,9 +225,7 @@ export default function RoomPage() {
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <PrimaryButton
                   className="inline-flex items-center gap-2"
-                  onClick={() => {
-                    void copyRoomLink();
-                  }}
+                  onClick={() => copyRoomLink()}
                 >
                   {isRoomLinkCopied
                     ? "Lien copié"
@@ -244,12 +243,12 @@ export default function RoomPage() {
             </div>
 
             <aside className="rounded-4xl bg-slate-950 p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/55">
+              <RoomSectionLabel className="text-white/55">
                 Contrôle de room
-              </p>
+              </RoomSectionLabel>
               <div className="mt-6 space-y-4">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-amber-200">
+                  <p className="text-xs uppercase font-medium tracking-wide text-amber-200">
                     Propriétaire
                   </p>
                   <p className="mt-3 text-base font-medium text-white">
@@ -298,8 +297,7 @@ export default function RoomPage() {
 
                 {user && isUserInRoom ? (
                   <div className="flex flex-col gap-3">
-                    {room.status === "waiting" &&
-                    room.ownerUserId === user.id ? (
+                    {room.status === "waiting" && isOwner ? (
                       <PrimaryButton
                         className="w-full justify-center"
                         disabled={isStarting || !canStart}
@@ -308,12 +306,19 @@ export default function RoomPage() {
                         {isStarting ? "Demarrage..." : "Lancer la partie"}
                       </PrimaryButton>
                     ) : null}
-                    <SecondaryButton
-                      className="w-full justify-center"
-                      onClick={leaveRoom}
-                    >
-                      {isLeaving ? "Sortie..." : "Quitter la room"}
-                    </SecondaryButton>
+                    <div className="w-full flex gap-2">
+                      <SecondaryButton
+                        className="w-full justify-center"
+                        onClick={leaveRoom}
+                      >
+                        {isLeaving ? "Sortie..." : "Quitter la room"}
+                      </SecondaryButton>
+                      {isOwner ? (
+                        <PrimaryButton className="w-full justify-center">
+                          Supprimer la room
+                        </PrimaryButton>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
 

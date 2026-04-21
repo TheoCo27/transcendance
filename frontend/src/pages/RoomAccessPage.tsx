@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import RoomSection from "../components/room/RoomSection";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
@@ -81,9 +82,9 @@ export default function RoomAccessPage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-10 md:px-10">
       {isLoadingPage ? (
-        <section className="rounded-4xl border border-slate-900/10 bg-white/70 p-8 text-slate-600">
+        <RoomSection className="p-8 text-slate-600">
           Chargement de l'invitation...
-        </section>
+        </RoomSection>
       ) : null}
 
       {pageError ? (
