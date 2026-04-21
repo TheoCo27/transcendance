@@ -1,11 +1,14 @@
 import {
   IsBoolean,
   IsIn,
+  IsInt,
   IsObject,
   IsOptional,
   IsString,
   MaxLength,
+  Min,
   MinLength,
+  ValidateIf,
 } from "class-validator";
 
 export class UpdateRoomDto {
@@ -16,8 +19,8 @@ export class UpdateRoomDto {
   name?: string;
 
   @IsOptional()
-  @IsIn(["wordle", "memory"])
-  gameType?: "wordle" | "memory";
+  @IsIn(["wordle", "memory", "quiz"])
+  gameType?: "wordle" | "memory" | "quiz";
 
   @IsOptional()
   @IsObject()
@@ -32,4 +35,10 @@ export class UpdateRoomDto {
   @MinLength(4)
   @MaxLength(64)
   password?: string;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(1)
+  quizId?: number | null;
 }

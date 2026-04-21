@@ -71,6 +71,7 @@ export class RealtimeGateway
 
   onModuleDestroy(): void {
     this.gameRuntime.stopAllTimers();
+    this.roomEvents.clearDisconnectCleanupTimers();
     this.presence.clear();
   }
 

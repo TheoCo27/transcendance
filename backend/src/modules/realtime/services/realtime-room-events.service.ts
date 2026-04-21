@@ -12,9 +12,12 @@ import { RealtimeResponseService } from "./realtime-response.service";
 import { RealtimeValidationService } from "./realtime-validation.service";
 
 const CHAT_HISTORY_LIMIT = 100;
+const DISCONNECT_GRACE_PERIOD_MS = 10_000;
 
 @Injectable()
 export class RealtimeRoomEventsService {
+  private readonly pendingDisconnectCleanup = new Map<number, NodeJS.Timeout>();
+
   constructor(
     private readonly roomsService: RoomsService,
     private readonly validation: RealtimeValidationService,
@@ -26,6 +29,70 @@ export class RealtimeRoomEventsService {
   async handleDisconnect(clientId: string, server: Server): Promise<void> {
     const userId = this.presence.unregisterSocket(clientId);
     if (typeof userId !== "number" || this.presence.hasActiveSockets(userId)) {
+      return;
+    }
+
+    this.scheduleDisconnectCleanup(userId, server);
+  }
+
+  async syncSocketRoomMembership(
+    userId: number,
+    client: Socket,
+  ): Promise<void> {
+    this.cancelPendingDisconnectCleanup(userId);
+
+    for (const room of await this.roomsService.list()) {
+      if (!room.players.some((player) => player.userId === userId)) {
+        continue;
+      }
+
+      client.join(this.roomChannel(room.id));
+      client.emit(
+        "chat:history",
+        this.response.ok({
+          roomId: room.id,
+          messages: await this.roomsService.listMessages(
+            room.id,
+            CHAT_HISTORY_LIMIT,
+          ),
+        }),
+      );
+    }
+  }
+
+  clearDisconnectCleanupTimers(): void {
+    this.pendingDisconnectCleanup.forEach((timeout) => {
+      clearTimeout(timeout);
+    });
+    this.pendingDisconnectCleanup.clear();
+  }
+
+  private scheduleDisconnectCleanup(userId: number, server: Server): void {
+    this.cancelPendingDisconnectCleanup(userId);
+
+    const timeout = setTimeout(() => {
+      this.pendingDisconnectCleanup.delete(userId);
+      void this.runDisconnectCleanup(userId, server);
+    }, DISCONNECT_GRACE_PERIOD_MS);
+
+    this.pendingDisconnectCleanup.set(userId, timeout);
+  }
+
+  private cancelPendingDisconnectCleanup(userId: number): void {
+    const timeout = this.pendingDisconnectCleanup.get(userId);
+    if (!timeout) {
+      return;
+    }
+
+    clearTimeout(timeout);
+    this.pendingDisconnectCleanup.delete(userId);
+  }
+
+  private async runDisconnectCleanup(
+    userId: number,
+    server: Server,
+  ): Promise<void> {
+    if (this.presence.hasActiveSockets(userId)) {
       return;
     }
 
@@ -44,16 +111,6 @@ export class RealtimeRoomEventsService {
 
     if (hasRoomStateChanged) {
       await this.broadcastRoomList(server);
-    }
-  }
-
-  async syncSocketRoomMembership(userId: number, client: Socket): Promise<void> {
-    for (const room of await this.roomsService.list()) {
-      if (!room.players.some((player) => player.userId === userId)) {
-        continue;
-      }
-
-      client.join(this.roomChannel(room.id));
     }
   }
 
@@ -82,7 +139,9 @@ export class RealtimeRoomEventsService {
 
     client.join(this.roomChannel(room.id));
     client.emit("room:created", this.response.ok(room));
-    server.to(this.roomChannel(room.id)).emit("room:state", this.response.ok(room));
+    server
+      .to(this.roomChannel(room.id))
+      .emit("room:state", this.response.ok(room));
     await this.broadcastRoomList(server);
   }
 

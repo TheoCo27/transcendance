@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
+import Input from "../components/ui/input";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { useToast } from "../components/ui/toast";
 import {
   AUTH_USERNAME_MIN_LENGTH,
@@ -84,15 +85,18 @@ export default function LoginPage() {
             ? `Connecte-toi ou continue en invite pour rejoindre directement la room #${joinRoomId}.`
             : "Connecte-toi avec ton compte ou entre rapidement en invite avec un pseudo unique."}
         </p>
-        <form aria-busy={isSubmitting} onSubmit={(event) => void handleSubmit(event)}>
+        <form
+          aria-busy={isSubmitting}
+          onSubmit={(event) => void handleSubmit(event)}
+        >
           <label
             className="mb-2 block text-sm font-medium text-text/70"
             htmlFor="login-email"
           >
             Email
           </label>
-          <input
-            className="mb-4 w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-text outline-none placeholder:text-text/40"
+          <Input
+            className="mb-4 w-full"
             id="login-email"
             type="email"
             placeholder="email@exemple.com"
@@ -108,8 +112,8 @@ export default function LoginPage() {
           >
             Mot de passe
           </label>
-          <input
-            className="mb-6 w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-text outline-none placeholder:text-text/40"
+          <Input
+            className="mb-6 w-full"
             id="login-password"
             type="password"
             placeholder="Mot de passe"
@@ -126,7 +130,11 @@ export default function LoginPage() {
             </p>
           ) : null}
 
-          <PrimaryButton className="w-full py-3 text-base" disabled={isSubmitting} type="submit">
+          <PrimaryButton
+            className="w-full py-3 text-base"
+            disabled={isSubmitting}
+            type="submit"
+          >
             {isSubmitting
               ? "Connexion..."
               : shouldJoinRoomAfterAuth
@@ -143,15 +151,18 @@ export default function LoginPage() {
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
-        <form aria-busy={isGuestSubmitting} onSubmit={(event) => void handleGuestSubmit(event)}>
+        <form
+          aria-busy={isGuestSubmitting}
+          onSubmit={(event) => void handleGuestSubmit(event)}
+        >
           <label
             className="mb-2 block text-sm font-medium text-text/70"
             htmlFor="guest-username"
           >
             Entrer comme invite
           </label>
-          <input
-            className="mb-4 w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-text outline-none placeholder:text-text/40"
+          <Input
+            className="mb-4 w-full"
             id="guest-username"
             type="text"
             placeholder="Pseudo unique"
