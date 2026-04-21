@@ -1,5 +1,8 @@
 import Avatar from "../Avatar";
+import RoomSectionHeader from "./room-section-header";
+import RoomSectionLabel from "./room-section-label";
 import type { LeaderboardEntry } from "./room-types";
+import RoomSection from "./RoomSection";
 
 type RoomLeaderboardSectionProps = {
   entries: LeaderboardEntry[];
@@ -9,13 +12,11 @@ export default function RoomLeaderboardSection({
   entries,
 }: RoomLeaderboardSectionProps) {
   return (
-    <section className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)] xl:flex xl:flex-1 xl:flex-col">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+    <RoomSection className="xl:flex xl:flex-1 xl:flex-col">
+      <RoomSectionLabel className="text-slate-400">
         Leaderboard
-      </p>
-      <h2 className="mt-3 text-2xl font-semibold text-text-muted">
-        Classement de la room
-      </h2>
+      </RoomSectionLabel>
+      <RoomSectionHeader>Classement de la room</RoomSectionHeader>
 
       <div className="mt-6 space-y-3 xl:flex-1">
         {entries.length > 0 ? (
@@ -47,6 +48,6 @@ export default function RoomLeaderboardSection({
           </div>
         )}
       </div>
-    </section>
+    </RoomSection>
   );
 }

@@ -2,7 +2,10 @@ import { useEffect, useRef } from "react";
 import Avatar from "../Avatar";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
+import RoomSectionHeader from "./room-section-header";
+import RoomSectionLabel from "./room-section-label";
 import type { ChatEntry } from "./room-types";
+import RoomSection from "./RoomSection";
 
 type RoomChatSectionProps = {
   entries: ChatEntry[];
@@ -69,20 +72,20 @@ export default function RoomChatSection({
   }, [entries.length]);
 
   return (
-    <section className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-        Chat room
-      </p>
-      <h2 className="mt-3 text-2xl font-semibold text-text-muted">
-        Discussion en direct
-      </h2>
+    <RoomSection>
+      <RoomSectionLabel className="text-slate-400">Chat room</RoomSectionLabel>
+      <RoomSectionHeader>Discussion en direct</RoomSectionHeader>
 
       <div
         className="mt-6 max-h-90 overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-bg p-4"
         onScroll={handleChatScroll}
         ref={chatContainerRef}
       >
-        {entries.length > 0 ? (
+        {!isUserInRoom ? (
+          <div className="rounded-[1.25rem] bg-surface border border-white/10 px-4 py-4 text-sm">
+            Veuillez rejoindre la room pour participer à la discussion.
+          </div>
+        ) : entries.length > 0 ? (
           entries.map((message, index) => {
             const previousMessage = entries[index - 1];
             const isConsecutiveFromSameSender =
@@ -169,7 +172,7 @@ export default function RoomChatSection({
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <Input
-          className="w-full "
+          className="w-full"
           placeholder={
             isUserInRoom
               ? "Écrire un message a la room..."
@@ -186,7 +189,6 @@ export default function RoomChatSection({
           }}
         />
         <PrimaryButton
-          className="justify-center"
           disabled={!isUserInRoom || chatInput.trim().length === 0}
           onClick={onSendMessage}
         >
@@ -199,6 +201,6 @@ export default function RoomChatSection({
           {chatError}
         </p>
       ) : null}
-    </section>
+    </RoomSection>
   );
 }

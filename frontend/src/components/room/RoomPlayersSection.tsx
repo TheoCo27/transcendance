@@ -1,4 +1,7 @@
 import type { Room } from "../../services/rooms";
+import RoomSectionHeader from "./room-section-header";
+import RoomSectionLabel from "./room-section-label";
+import RoomSection from "./RoomSection";
 
 type RoomPlayersSectionProps = {
   players: Room["players"];
@@ -12,13 +15,11 @@ export default function RoomPlayersSection({
   playerNames,
 }: RoomPlayersSectionProps) {
   return (
-    <section className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+    <RoomSection className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+      <RoomSectionLabel className="text-slate-400">
         Joueurs de la room
-      </p>
-      <h2 className="mt-3 text-2xl font-semibold text-text-muted">
-        Roster en direct
-      </h2>
+      </RoomSectionLabel>
+      <RoomSectionHeader>Roster en direct</RoomSectionHeader>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {players.map((player) => (
           <div
@@ -34,6 +35,6 @@ export default function RoomPlayersSection({
           </div>
         ))}
       </div>
-    </section>
+    </RoomSection>
   );
 }

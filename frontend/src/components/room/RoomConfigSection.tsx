@@ -11,6 +11,8 @@ import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import type { RoomConfigForm } from "./room-types";
+import RoomSectionHeader from "./room-section-header";
+import RoomSectionLabel from "./room-section-label";
 
 type RoomConfigSectionProps = {
   form: RoomConfigForm;
@@ -87,12 +89,10 @@ export default function RoomConfigSection({
 
   return (
     <section className="mt-8 rounded-4xl border border-white/10 bg-surface text-text p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em]">
-        Configuration
-      </p>
-      <h2 className="mt-3 text-2xl font-semibold text-text-muted">
+      <RoomSectionLabel className="text-slate-400">Configuration</RoomSectionLabel>
+      <RoomSectionHeader>
         Réglages de la room
-      </h2>
+      </RoomSectionHeader>
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-2">
@@ -134,18 +134,18 @@ export default function RoomConfigSection({
             {!shouldShowQuizPicker ? (
               <div className="mt-3 rounded-2xl border border-emerald-300/35 bg-emerald-300/10 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100/90">
-                    Quiz selectionne
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-100/90">
+                    Quiz selectionné
                   </p>
                   <SecondaryButton
-                    className="px-3 py-1.5 text-xs inline-flex items-center gap-1"
+                    className="inline-flex items-center gap-2"
                     type="button"
                     onClick={() => {
                       setIsEditingSavedQuiz(true);
                     }}
                   >
-                    <PenLine className="size-4" />
-                    Changer
+                    <PenLine className="size-3" />
+                    <span className="text-sm">Changer</span>
                   </SecondaryButton>
                 </div>
 
@@ -155,7 +155,13 @@ export default function RoomConfigSection({
 
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
                   <div className="rounded-lg border border-emerald-100/20 bg-emerald-950/25 px-2.5 py-2">
-                    <p className="text-emerald-100/70">Questions</p>
+                    <p className="text-emerald-100/70">
+                      Question
+                      {selectedQuiz?.questions.length &&
+                      selectedQuiz?.questions.length > 1
+                        ? "s"
+                        : ""}
+                    </p>
                     <p className="mt-1 font-semibold text-emerald-50">
                       {selectedQuiz?.questions.length ?? 0}
                     </p>
@@ -176,7 +182,7 @@ export default function RoomConfigSection({
                   </div>
 
                   <div className="rounded-lg border border-emerald-100/20 bg-emerald-950/25 px-2.5 py-2">
-                    <p className="text-emerald-100/70">Cree le</p>
+                    <p className="text-emerald-100/70">Crée le</p>
                     <p className="mt-1 font-semibold text-emerald-50">
                       {selectedQuizCreatedAtLabel}
                     </p>
@@ -298,7 +304,10 @@ export default function RoomConfigSection({
         <PrimaryButton
           className="px-5 py-2.5 text-sm"
           disabled={isSaving}
-          onClick={onSave}
+          onClick={() => {
+            onSave();
+            if (isEditingSavedQuiz) setIsEditingSavedQuiz(false);
+          }}
         >
           {isSaving ? "Enregistrement..." : "Enregistrer"}
         </PrimaryButton>
