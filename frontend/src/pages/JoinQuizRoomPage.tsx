@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
-import { getRoomsByQuizId } from "../services/rooms";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { getQuizzes, type Quiz } from "../services/quizzes";
+import { getRoomsByQuizId } from "../services/rooms";
 
 type QuizWithRoomCount = Quiz & {
   activeRoomCount: number;
@@ -31,7 +31,9 @@ export default function JoinQuizRoomPage() {
         const quizzesWithRooms = await Promise.all(
           fetchedQuizzes.map(async (quiz) => {
             const rooms = await getRoomsByQuizId(quiz.id);
-            const activeRoomCount = rooms.filter((room) => room.status !== "finished").length;
+            const activeRoomCount = rooms.filter(
+              (room) => room.status !== "finished",
+            ).length;
 
             return {
               ...quiz,
@@ -72,19 +74,19 @@ export default function JoinQuizRoomPage() {
 
       <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {isLoading ? (
-          <div className="rounded-[2rem] border border-slate-900/10 bg-white/70 p-6 text-slate-600">
+          <div className="rounded-4xl border border-slate-900/10 bg-white/70 p-6 text-slate-600">
             Chargement des quiz...
           </div>
         ) : null}
 
         {error ? (
-          <div className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-rose-700">
+          <div className="rounded-4xl border border-rose-200 bg-rose-50 p-6 text-rose-700">
             {error}
           </div>
         ) : null}
 
         {!isLoading && !error && quizzes.length === 0 ? (
-          <div className="rounded-[2rem] border border-dashed border-slate-900/15 bg-white/50 p-8 text-slate-600">
+          <div className="rounded-4xl border border-dashed border-slate-900/15 bg-white/50 p-8 text-slate-600">
             Aucun quiz n'a encore ete publie. Cree le premier depuis l'admin.
           </div>
         ) : null}
@@ -93,7 +95,7 @@ export default function JoinQuizRoomPage() {
           ? quizzes.map((quiz) => (
               <article
                 key={quiz.id}
-                className="flex h-full flex-col rounded-[2rem] border border-slate-900/10 bg-white/82 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)]"
+                className="flex h-full flex-col rounded-4xl border border-slate-900/10 bg-white/82 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)]"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>

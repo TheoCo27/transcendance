@@ -30,7 +30,7 @@ export type Room = {
   ownerUserId: number;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
-  gameType: "wordle" | "memory" | null;
+  gameType: "wordle" | "memory" | "quiz" | null;
   gameConfig: Record<string, unknown> | null;
   quizId: number | null;
   rounds: number;
@@ -273,13 +273,15 @@ export class RoomsService {
     }
 
     const updateData: Prisma.RoomUpdateInput = {};
+    let hasTransientConfigUpdate = false;
 
     if (typeof dto.name === "string") {
       updateData.name = dto.name.trim();
     }
 
     if (typeof dto.gameType === "string") {
-      updateData.gameType = dto.gameType;
+      updateData.gameType =
+        dto.gameType as unknown as Prisma.RoomUpdateInput["gameType"];
       updateData.gameConfig = Prisma.JsonNull;
     }
 
@@ -319,14 +321,37 @@ export class RoomsService {
       }
     }
 
-    if (Object.keys(updateData).length === 0) {
+    if (typeof dto.quizId === "number" || dto.quizId === null) {
+      if (typeof dto.quizId === "number") {
+        const quiz = await this.prisma.client.quiz.findUnique({
+          where: { id: dto.quizId },
+          select: { id: true },
+        });
+
+        if (!quiz) {
+          throw new NotFoundException(`Quiz ${dto.quizId} not found`);
+        }
+      }
+
+      const currentTransientConfig = this.transientConfigs.get(roomId);
+      this.transientConfigs.set(roomId, {
+        quizId: dto.quizId,
+        rounds: currentTransientConfig?.rounds ?? 1,
+        questionDurationMs: currentTransientConfig?.questionDurationMs ?? null,
+      });
+      hasTransientConfigUpdate = true;
+    }
+
+    if (Object.keys(updateData).length === 0 && !hasTransientConfigUpdate) {
       return this.getById(roomId);
     }
 
-    await this.prisma.client.room.update({
-      where: { id: roomId },
-      data: updateData,
-    });
+    if (Object.keys(updateData).length > 0) {
+      await this.prisma.client.room.update({
+        where: { id: roomId },
+        data: updateData,
+      });
+    }
 
     return this.getById(roomId);
   }
@@ -420,7 +445,12 @@ export class RoomsService {
       );
     }
 
-    this.assertStartConfiguration(room);
+    const transientConfig = this.transientConfigs.get(room.id);
+    this.assertStartConfiguration({
+      gameType: room.gameType,
+      gameConfig: room.gameConfig,
+      quizId: transientConfig?.quizId ?? room.games[0]?.quizId ?? null,
+    });
 
     await this.prisma.client.room.update({
       where: { id: roomId },
@@ -446,6 +476,25 @@ export class RoomsService {
       data: {
         status: "finished",
         finishedAt: new Date(),
+      },
+    });
+
+    return this.getById(roomId);
+  }
+
+  async resetAfterGame(roomId: number): Promise<Omit<Room, "password">> {
+    const room = await this.findRoomOrThrow(roomId);
+
+    if (room.status !== "playing") {
+      throw new ConflictException("La partie n'est pas en cours");
+    }
+
+    await this.prisma.client.room.update({
+      where: { id: roomId },
+      data: {
+        status: "waiting",
+        startedAt: null,
+        finishedAt: null,
       },
     });
 
@@ -518,7 +567,7 @@ export class RoomsService {
     name: string;
     ownerId: number;
     status: "waiting" | "playing" | "finished";
-    gameType: "wordle" | "memory" | null;
+    gameType: "wordle" | "memory" | "quiz" | null;
     gameConfig: Prisma.JsonValue | null;
     isPrivate: boolean;
     password: string | null;
@@ -553,13 +602,24 @@ export class RoomsService {
   }
 
   private assertStartConfiguration(room: {
-    gameType: "wordle" | "memory" | null;
+    gameType: "wordle" | "memory" | "quiz" | null;
     gameConfig: Prisma.JsonValue | null;
+    quizId: number | null;
   }): void {
     if (!room.gameType) {
       throw new ConflictException(
         "La configuration de la room doit inclure un type de jeu avant de pouvoir demarrer la partie",
       );
+    }
+
+    if (room.gameType === "quiz") {
+      if (typeof room.quizId !== "number") {
+        throw new ConflictException(
+          "La configuration Quiz necessite de selectionner un quiz avant de pouvoir demarrer la partie",
+        );
+      }
+
+      return;
     }
 
     const gameConfig = this.toObjectRecord(room.gameConfig);

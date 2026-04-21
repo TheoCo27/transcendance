@@ -65,7 +65,7 @@ export class AppService {
         "/rooms/:roomId",
         "/rooms/:roomId/join",
         "/game/:roomId/state",
-        "/game/answer",
+        "/game/answer", 
         "/scores/leaderboard",
         "/scores/users/:userId",
       ],

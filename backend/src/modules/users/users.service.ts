@@ -119,44 +119,46 @@ export class UsersService {
 
     this.ensureFriendSystemAvailable(currentUser);
 
-    const [acceptedRelations, receivedRequests, sentRequests] = await Promise.all([
-      this.prisma.client.friendRequests.findMany({
-        where: {
-          status: "accepted",
-          OR: [{ senderId: userId }, { receiverId: userId }],
-        },
-        include: {
-          sender: true,
-          receiver: true,
-        },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      }),
-      this.prisma.client.friendRequests.findMany({
-        where: {
-          receiverId: userId,
-          status: "pending",
-        },
-        include: {
-          sender: true,
-        },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      }),
-      this.prisma.client.friendRequests.findMany({
-        where: {
-          senderId: userId,
-          status: "pending",
-        },
-        include: {
-          receiver: true,
-        },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      }),
-    ]);
+    const [acceptedRelations, receivedRequests, sentRequests] =
+      await Promise.all([
+        this.prisma.client.friendRequests.findMany({
+          where: {
+            status: "accepted",
+            OR: [{ senderId: userId }, { receiverId: userId }],
+          },
+          include: {
+            sender: true,
+            receiver: true,
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        }),
+        this.prisma.client.friendRequests.findMany({
+          where: {
+            receiverId: userId,
+            status: "pending",
+          },
+          include: {
+            sender: true,
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        }),
+        this.prisma.client.friendRequests.findMany({
+          where: {
+            senderId: userId,
+            status: "pending",
+          },
+          include: {
+            receiver: true,
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        }),
+      ]);
 
     const uniqueFriends = new Map<number, FriendUserSummary>();
 
     for (const relation of acceptedRelations) {
-      const friend = relation.senderId === userId ? relation.receiver : relation.sender;
+      const friend =
+        relation.senderId === userId ? relation.receiver : relation.sender;
 
       if (!friend.isGuest) {
         uniqueFriends.set(friend.id, this.buildFriendUserSummary(friend));
@@ -234,7 +236,9 @@ export class UsersService {
     const matchingUsers = await this.findUsersByUsername(username, 2);
 
     if (matchingUsers.length === 0) {
-      throw new NotFoundException("No user found with this username");
+      throw new NotFoundException(
+        "Aucun utilisateur trouvé",
+      );
     }
 
     if (matchingUsers.length > 1) {
@@ -246,12 +250,15 @@ export class UsersService {
     const receiver = matchingUsers[0];
 
     if (receiver.id === senderId) {
-      throw new BadRequestException("You cannot add yourself as a friend");
+      throw new BadRequestException("Vous ne pouvez pas vous ajouter vous-même en ami");
     }
 
     this.ensureFriendSystemAvailable(receiver);
 
-    const activeRelation = await this.getActiveFriendRelation(senderId, receiver.id);
+    const activeRelation = await this.getActiveFriendRelation(
+      senderId,
+      receiver.id,
+    );
 
     if (activeRelation?.status === "accepted") {
       throw new ConflictException("You are already friends");
@@ -341,7 +348,10 @@ export class UsersService {
     };
   }
 
-  async updateAvatar(userId: number, avatarDataUrl: string | null): Promise<User> {
+  async updateAvatar(
+    userId: number,
+    avatarDataUrl: string | null,
+  ): Promise<User> {
     const user = await this.findUser({ id: userId });
 
     if (!user) {
@@ -420,7 +430,8 @@ export class UsersService {
       : base64Payload.endsWith("=")
         ? 1
         : 0;
-    const estimatedByteSize = Math.floor((base64Payload.length * 3) / 4) - paddingLength;
+    const estimatedByteSize =
+      Math.floor((base64Payload.length * 3) / 4) - paddingLength;
 
     if (estimatedByteSize > MAX_AVATAR_SIZE_BYTES) {
       throw new BadRequestException("Avatar image must be 2 MB or smaller");

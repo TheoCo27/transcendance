@@ -44,8 +44,12 @@ export class RealtimeGameRuntimeService {
 
   async startGameLoop(roomId: number, server: Server): Promise<void> {
     const room = await this.roomsService.getById(roomId);
-    const totalQuestions = Math.max(1, room.rounds);
-    const questionDurationMs = room.questionDurationMs ?? this.questionDurationMs;
+    const totalQuestions =
+      room.gameType === "quiz"
+        ? Math.max(1, await this.gameService.getQuestionCount(roomId))
+        : Math.max(1, room.rounds);
+    const questionDurationMs =
+      room.questionDurationMs ?? this.questionDurationMs;
 
     await this.gameService.startGame(
       roomId,
@@ -60,7 +64,13 @@ export class RealtimeGameRuntimeService {
         questionDurationMs,
       }),
     );
-    await this.startQuestionTimer(roomId, 1, totalQuestions, questionDurationMs, server);
+    await this.startQuestionTimer(
+      roomId,
+      1,
+      totalQuestions,
+      questionDurationMs,
+      server,
+    );
   }
 
   async completeActiveQuestion(
@@ -241,7 +251,7 @@ export class RealtimeGameRuntimeService {
     this.stopRoomTimer(roomId);
     const leaderboard = await this.gameService.getRoomLeaderboard(roomId);
     const winnerUserId = leaderboard.length > 0 ? leaderboard[0].userId : null;
-    const room = await this.roomsService.finish(roomId);
+    const room = await this.roomsService.resetAfterGame(roomId);
     const gameState = await this.gameService.finishGame(roomId);
     const channel = roomChannel(roomId);
 
@@ -254,10 +264,12 @@ export class RealtimeGameRuntimeService {
     server.to(channel).emit("room:state", this.response.ok(room));
     server.to(channel).emit("game:leaderboard", this.response.ok(leaderboard));
     server.to(channel).emit("game:state", this.response.ok(gameState));
-    server.to(channel).emit(
-      "game:ended",
-      this.response.ok({ roomId, reason, winnerUserId, leaderboard }),
-    );
+    server
+      .to(channel)
+      .emit(
+        "game:ended",
+        this.response.ok({ roomId, reason, winnerUserId, leaderboard }),
+      );
 
     await broadcastRoomList(server, this.roomsService, this.response);
   }

@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "../components/Avatar";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { updateMyAvatar } from "../services/users";
 
@@ -66,7 +66,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-10 md:px-10">
-        <div className="w-full rounded-[2rem] border border-slate-900/10 bg-white/70 p-8 text-slate-600 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+        <div className="w-full rounded-4xl border border-slate-900/10 bg-white/70 p-8 text-slate-600 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
           Chargement du profil...
         </div>
       </main>
@@ -190,7 +190,9 @@ export default function ProfilePage() {
             username={user.username}
           />
           <h1 className="mt-6 text-3xl font-semibold">{user.username}</h1>
-          <p className="mt-2 text-sm text-white/70">{formatIdentityLabel(user)}</p>
+          <p className="mt-2 text-sm text-white/70">
+            {formatIdentityLabel(user)}
+          </p>
           <div className="mt-8 flex flex-wrap gap-3 text-sm">
             <span className="rounded-full bg-white/10 px-4 py-2">
               Statut: {user.status}
@@ -218,7 +220,7 @@ export default function ProfilePage() {
           </p>
 
           <dl className="mt-8 grid gap-4">
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Photo de profil
               </dt>
@@ -249,7 +251,9 @@ export default function ProfilePage() {
                         onClick={() => fileInputRef.current?.click()}
                         type="button"
                       >
-                        {isAvatarSubmitting ? "Mise a jour..." : "Changer la photo"}
+                        {isAvatarSubmitting
+                          ? "Mise a jour..."
+                          : "Changer la photo"}
                       </PrimaryButton>
                       <SecondaryButton
                         disabled={isAvatarSubmitting || !user.avatar_url}
@@ -275,7 +279,7 @@ export default function ProfilePage() {
                 </div>
               </dd>
             </div>
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Pseudo
               </dt>
@@ -283,7 +287,7 @@ export default function ProfilePage() {
                 {user.username}
               </dd>
             </div>
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 {user.isGuest ? "Type de compte" : "Email"}
               </dt>
@@ -291,7 +295,7 @@ export default function ProfilePage() {
                 {user.isGuest ? "Invite" : user.email}
               </dd>
             </div>
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Statut
               </dt>
