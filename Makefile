@@ -20,11 +20,12 @@ all:
 	@if ! $(MAKE) env-check; then \
 		$(MAKE) env-init; \
 	fi
-	@$(MAKE) up
+	@$(MAKE) up-run
 
 help:
 	@echo "Usage: Docker"
 	@echo "  make up                  -> Build and start all containers in background"
+	@echo "  make dev                 -> Start frontend + backend + db with Swagger in dev"
 	@echo "  make down                -> Stop containers"
 	@echo "  make clean               -> Remove containers and images, keep volumes"
 	@echo "  make fclean              -> Full clean: containers, images and volumes"
@@ -77,8 +78,18 @@ compose-check:
 	}
 
 up: env-check compose-check
+	@$(MAKE) up-run
+
+up-run: compose-check
 	bash scripts/generate-dev-cert.sh
 	$(COMPOSE) up --build -d --wait
+
+dev: env-check compose-check
+	bash scripts/generate-dev-cert.sh
+	NODE_ENV=development $(COMPOSE) up --build -d --wait db backend frontend
+	@echo "Frontend    : https://localhost:$${FRONTEND_PORT:-3000}"
+	@echo "Backend dev : https://localhost:$${BACKEND_PORT:-4000}"
+	@echo "Swagger     : https://localhost:$${BACKEND_PORT:-4000}/docs"
 
 down: compose-check
 	$(COMPOSE) down

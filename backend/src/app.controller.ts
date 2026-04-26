@@ -1,4 +1,9 @@
-import { Controller, Get, ServiceUnavailableException } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { AppService } from "./app.service";
 
 @Controller()
@@ -18,6 +23,10 @@ export class AppController {
 
   @Get("api")
   getApi() {
+    if (process.env.NODE_ENV !== "development") {
+      throw new NotFoundException();
+    }
+
     return this.appService.getApi();
   }
 }

@@ -50,6 +50,7 @@ services:
       - .env
     environment:
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://localhost:3000}
+      NODE_ENV: ${NODE_ENV:-}
       NODE_EXTRA_CA_CERTS: /certs/mkcert-rootCA.pem
       SSL_CERT_FILE: /certs/mkcert-rootCA.pem
     depends_on:
