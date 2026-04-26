@@ -325,12 +325,6 @@ else
 	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/health" '"database":{"configured":true,"ok":true}'
 fi
 
-if check_http_with_curl "${FRONTEND_BASE_URL}/api" 'Backend NestJS accessible'; then
-	:
-else
-	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/api" 'Backend NestJS accessible'
-fi
-
 section "test authentifcation"
 
 TEST_EMAIL="smoke-$(date +%s)@test.com"

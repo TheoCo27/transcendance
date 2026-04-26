@@ -271,7 +271,6 @@ Ce test verifie :
 - que les 3 containers sont `healthy`
 - que le backend repond sur `/health`
 - que le frontend atteint bien `/health`
-- que le frontend atteint bien `/api`
 - que `register -> login -> session -> /users/me -> logout` fonctionne
 - que les erreurs d'auth utilisent bien le format API standard
 
