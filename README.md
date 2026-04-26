@@ -47,6 +47,9 @@ Variables attendues :
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
+- `GOOGLE_CLIENT_ID` (optionnel, pour activer la connexion Google)
+- `GOOGLE_CLIENT_SECRET` (optionnel, pour activer la connexion Google)
+- `GOOGLE_REDIRECT_URI` (optionnel, pour activer la connexion Google)
 - `GAME_QUESTION_DURATION_MS`
 
 ## CI
@@ -88,6 +91,8 @@ Etat actuel:
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `GET /auth/google/start`
+- `GET /auth/google/callback`
 - `POST /auth/logout`
 - `GET /auth/session`
 - `GET /users/me`

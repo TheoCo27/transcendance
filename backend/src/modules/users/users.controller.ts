@@ -151,7 +151,7 @@ export class UsersController {
   }
 
   private sanitizeUser(user: User): SafeUser {
-    const { password, ...safeUser } = user;
+    const { googleId, password, ...safeUser } = user;
     return safeUser;
   }
 }
