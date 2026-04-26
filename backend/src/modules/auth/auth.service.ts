@@ -88,13 +88,13 @@ export class AuthService {
     const user = await this.usersService.findUserByEmail(dto.email);
 
     if (!user) {
-      throw new UnauthorizedException("Le mail ou le mot de passe est incorrect");
+      throw new UnauthorizedException("Email inconnu");
     }
 
     const isValidPassword = await bcrypt.compare(dto.password, user.password);
 
     if (!isValidPassword) {
-      throw new UnauthorizedException("Le mail ou le mot de passe est incorrect");
+      throw new UnauthorizedException("Mot de passe est incorrect");
     }
 
     return user;
