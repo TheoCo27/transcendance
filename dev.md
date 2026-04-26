@@ -126,6 +126,7 @@ Les variables principales sont :
 - `DATABASE_URL`
 - `BACKEND_PORT`
 - `FRONTEND_PORT`
+- `PRISMA_STUDIO_PORT` (optionnel, utilise uniquement par `make dev`)
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
