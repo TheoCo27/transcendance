@@ -78,7 +78,14 @@ compose-check:
 
 up: env-check compose-check
 	bash scripts/generate-dev-cert.sh
-	$(COMPOSE) up --build -d --wait
+	$(COMPOSE) up --build -d
+	@echo "Waiting for containers..."
+	@for c in $$(docker ps -q); do \
+		echo "Checking $$c..."; \
+		until docker inspect --format '{{.State.Health.Status}}' $$c | grep -q healthy; do \
+			sleep 1; \
+		done; \
+	done
 
 down: compose-check
 	$(COMPOSE) down

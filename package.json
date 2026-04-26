@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "brew": "^0.0.8",
+    "mkcert": "^3.2.0"
+  }
+}
