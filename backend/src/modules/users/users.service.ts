@@ -7,6 +7,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { UpdateProfilePayload } from "./dto/update-profile-payload.dto";
 
 export type FriendUserSummary = Pick<
   User,
@@ -368,6 +369,29 @@ export class UsersService {
     });
   }
 
+  async updateProfile(userId: number, payload: UpdateProfilePayload): Promise<User> {
+    const user = await this.findUser({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    const username = this.normalizeUsername(payload.username);
+    const existingUser = await this.findUserByUsername(username);
+
+    if (existingUser && existingUser.id !== userId) {
+      throw new ConflictException("Username already exists");
+    }
+
+    return this.updateUser({
+      where: { id: userId },
+      data: {
+        username,
+        status: payload.status,
+      },
+    });
+  }
+
   private async getActiveFriendRelation(senderId: number, receiverId: number) {
     return this.prisma.client.friendRequests.findFirst({
       where: {
@@ -395,6 +419,16 @@ export class UsersService {
         "The friend system is not available for guest accounts",
       );
     }
+  }
+
+  private normalizeUsername(rawUsername: string): string {
+    const username = rawUsername.trim();
+
+    if (username.length < 2) {
+      throw new BadRequestException("Username must contain at least 2 characters");
+    }
+
+    return username;
   }
 
   private assertAvatarDataUrlIsValid(avatarDataUrl: string): void {
