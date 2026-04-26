@@ -70,6 +70,47 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  prisma-studio:
+    image: backend_img
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: quiz_prisma_studio
+    profiles:
+      - dev
+    command:
+      [
+        "sh",
+        "./scripts/start-prisma-studio-dev.sh",
+      ]
+    ports:
+      - "127.0.0.1:${PRISMA_STUDIO_PORT:-5555}:5555"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      PRISMA_STUDIO_PROXY_PORT: 5555
+      PRISMA_STUDIO_INTERNAL_PORT: 5556
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5555').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
   db:
     image: db_img
     build:
