@@ -20,7 +20,7 @@ export type RoomTimerRuntime = {
   questionId: number;
   questionNumber: number;
   totalQuestions: number;
-  endsAtMs: number | null;
-  tickInterval: NodeJS.Timeout | null;
-  endTimeout: NodeJS.Timeout | null;
+  endsAtMs: number;
+  tickInterval: NodeJS.Timeout;
+  endTimeout: NodeJS.Timeout;
 };
