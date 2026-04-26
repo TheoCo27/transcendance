@@ -417,7 +417,7 @@ export class AuthService {
       throw new NotFoundException(`User ${userId} not found`);
     }
 
-    return this.sanitizeUser(await this.ensureUserIsOnline(user));
+    return this.sanitizeUser(user);
   }
 
   private async getGoogleOidcConfiguration(): Promise<GoogleOidcConfiguration> {

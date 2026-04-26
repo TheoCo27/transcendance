@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "../components/Avatar";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
+import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
 import { useAuthSession } from "../hooks/useAuthSession";
-import { updateMyAvatar } from "../services/users";
+import { updateMyAvatar, updateMyProfile } from "../services/users";
 
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 const SUPPORTED_AVATAR_TYPES = new Set([
@@ -58,10 +59,26 @@ export default function ProfilePage() {
   const { user, isLoading, refreshSession } = useAuthSession();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isAvatarSubmitting, setIsAvatarSubmitting] = useState(false);
+  const [profileUsername, setProfileUsername] = useState("");
+  const [profileStatus, setProfileStatus] = useState<"online" | "offline">("online");
+  const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
   const [avatarNotice, setAvatarNotice] = useState<{
     kind: "success" | "error";
     message: string;
   } | null>(null);
+  const [profileNotice, setProfileNotice] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    setProfileUsername(user.username);
+    setProfileStatus(user.status);
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -175,6 +192,58 @@ export default function ProfilePage() {
     }
   };
 
+  const handleProfileSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedUsername = profileUsername.trim();
+    setProfileNotice(null);
+
+    if (trimmedUsername.length < AUTH_USERNAME_MIN_LENGTH) {
+      setProfileNotice({
+        kind: "error",
+        message: `Le pseudo doit contenir au moins ${AUTH_USERNAME_MIN_LENGTH} caracteres.`,
+      });
+      return;
+    }
+
+    setIsProfileSubmitting(true);
+
+    try {
+      await updateMyProfile({
+        username: trimmedUsername,
+        status: profileStatus,
+      });
+      await refreshSession();
+      setProfileNotice({
+        kind: "success",
+        message: "Profil mis a jour.",
+      });
+    } catch (error) {
+      setProfileNotice({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Impossible de mettre a jour le profil.",
+      });
+    } finally {
+      setIsProfileSubmitting(false);
+    }
+  };
+
+  const handleProfileReset = () => {
+    if (!user) {
+      return;
+    }
+
+    setProfileUsername(user.username);
+    setProfileStatus(user.status);
+    setProfileNotice(null);
+  };
+
+  const hasProfileChanges =
+    profileUsername.trim() !== user.username || profileStatus !== user.status;
+
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-10 md:px-10">
       <section className="grid w-full gap-6 md:grid-cols-[0.8fr_1.2fr]">
@@ -277,14 +346,6 @@ export default function ProfilePage() {
             </div>
             <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Pseudo
-              </dt>
-              <dd className="mt-2 text-lg font-semibold text-slate-950">
-                {user.username}
-              </dd>
-            </div>
-            <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 {user.isGuest ? "Type de compte" : "Email"}
               </dt>
               <dd className="mt-2 text-lg font-semibold text-slate-950">
@@ -293,10 +354,66 @@ export default function ProfilePage() {
             </div>
             <div className="rounded-[1.5rem] bg-slate-100/80 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Statut
+                Pseudo et statut
               </dt>
-              <dd className="mt-2 text-lg font-semibold text-slate-950">
-                {user.status}
+              <dd className="mt-4">
+                <form className="space-y-4" onSubmit={(event) => void handleProfileSubmit(event)}>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Pseudo</span>
+                    <input
+                      className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
+                      maxLength={40}
+                      minLength={AUTH_USERNAME_MIN_LENGTH}
+                      onChange={(event) => setProfileUsername(event.target.value)}
+                      placeholder="Ton pseudo"
+                      type="text"
+                      value={profileUsername}
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Statut</span>
+                    <select
+                      className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
+                      onChange={(event) =>
+                        setProfileStatus(event.target.value as "online" | "offline")
+                      }
+                      value={profileStatus}
+                    >
+                      <option value="online">online</option>
+                      <option value="offline">offline</option>
+                    </select>
+                  </label>
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <PrimaryButton
+                      disabled={isProfileSubmitting || !hasProfileChanges}
+                      type="submit"
+                    >
+                      {isProfileSubmitting ? "Enregistrement..." : "Enregistrer"}
+                    </PrimaryButton>
+                    <SecondaryButton
+                      disabled={isProfileSubmitting || !hasProfileChanges}
+                      onClick={handleProfileReset}
+                      type="button"
+                    >
+                      Annuler
+                    </SecondaryButton>
+                  </div>
+
+                  {profileNotice ? (
+                    <p
+                      className={`text-sm ${
+                        profileNotice.kind === "success"
+                          ? "text-emerald-700"
+                          : "text-rose-700"
+                      }`}
+                      role="alert"
+                    >
+                      {profileNotice.message}
+                    </p>
+                  ) : null}
+                </form>
               </dd>
             </div>
           </dl>
