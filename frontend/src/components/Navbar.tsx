@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { logout } from "../services/auth";
+import NotificationCenter from "./NotificationCenter";
 import PrimaryButton from "./PrimaryButton";
 import SecondaryButton from "./SecondaryButton";
 
@@ -34,6 +35,7 @@ export default function Navbar() {
               >
                 Amis
               </Link>
+              <NotificationCenter />
               <Link
                 className="inline-flex items-center rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white"
                 to="/profile"
