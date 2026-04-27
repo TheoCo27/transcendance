@@ -168,7 +168,7 @@ export default function LoginPage() {
         </form>
 
         <a
-          className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-slate-900/15 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900/30 hover:bg-slate-50"
+          className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-slate-900/15 bg-black px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900/30 hover:bg-slate-50"
           href={googleAuthUrl}
         >
           Continuer avec Google
