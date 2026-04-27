@@ -1,21 +1,30 @@
 //import words depuis fichier json
+import five_words from "./wordle_5.json"
+
+type settings = {
+  word : string;
+  guesses : string[];
+  currentGuess : number;
+}
+
+const s: settings = {
+  word: '',
+  guesses: [],
+  currentGuess: 0,
+};
 
 export default {
 
-	word:'',
-	guesses: [],
-	currentGuess: 0,
-
 	get won() {
-		return this.guesses[this.currentGuess - 1] === this.word
+		return s.guesses[s.currentGuess - 1] === s.word
 	},
 	get lost() {
-		return this.currentGuess === 6
-	}
+		return s.currentGuess === 6
+	},
 
-	// init() {
-	// 	this.word = words
-	// 	this.guesses = 
-	// 	this.currentGuess = 0
-	// }
+	init() {
+		s.word = five_words[Math.floor(Math.random() * five_words.length)]
+		s.guesses = new Array(6).fill('');
+		s.currentGuess = 0
+	},
 }

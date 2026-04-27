@@ -6,7 +6,7 @@ export default function Guess({ word, guess, isGuessed }: settings) {
 //   if (isGuessed) return <div>ok</div>;
 
   return (
-  <div className="grid grid-cols-5 gap-2 mb-2"> 
+  <div className="grid grid-cols-5 gap-1 mb-1"> 
 	{new Array(5).fill(0).map((_, i) => {
 		const bgColor = !isGuessed
 		? 'bg-black'
@@ -17,7 +17,7 @@ export default function Guess({ word, guess, isGuessed }: settings) {
 		: 'bg-black'
 
 		return (
-		<div className={`h-16 w-16 border border-blue-600 font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`}>
+		<div className={`h-16 w-16 border border-gray-400 font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`}>
 			{guess[i]}
 			</div>
 		)

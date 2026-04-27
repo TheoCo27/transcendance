@@ -1,3 +1,4 @@
+import { observer, useLocalObservable } from "mobx-react-lite";
 import { useEffect } from "react";
 import Guess from "../components/Wordle/Guess";
 import type { settings } from "../components/Wordle/Settings";
@@ -23,8 +24,11 @@ export default function GamesPage() {
 	  ))}
 
       <h1>Win / Loss </h1>
-      {/* si isGuessed === true ne pas prendre d'input */}
-      {/* <Keyboard word={"test"} guess={"test2"} isGuessed={false} /> */}
+      {/* si isGuessed === true utilisateur a appuiye sur entree donc faire comparaison */}
+
+      <h1>Azerty clavier</h1>
+      {/* <h1>Qwerty clavier si mode du site en anglais</h1> */}
+      {/* <Keyboard /> */}
       {/* extraire mot de fichier */}
     </div>
   );
