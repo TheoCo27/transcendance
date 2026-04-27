@@ -21,6 +21,7 @@ import { FriendRequestActionDto } from "./dto/friend-request-action.dto";
 import { SendFriendRequestDto } from "./dto/send-friend-request.dto";
 import { SendPrivateMessageDto } from "./dto/send-private-message.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
+import { UpdateProfileDto } from "./dto/update-profile.dto";
 import {
   PrivateConversationSummary,
   PrivateMessagesService,
@@ -63,6 +64,22 @@ export class UsersController {
     return ok(
       this.sanitizeUser(
         await this.usersService.updateAvatar(auth.sub, dto.avatarDataUrl ?? null),
+      ),
+    );
+  }
+
+  @Patch("me/profile")
+  @UseGuards(AuthGuard)
+  async updateProfile(
+    @CurrentUser() auth: AuthPayload,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<ApiResponse<SafeUser>> {
+    return ok(
+      this.sanitizeUser(
+        await this.usersService.updateProfile(auth.sub, {
+          username: dto.username,
+          status: dto.status,
+        }),
       ),
     );
   }
@@ -151,7 +168,7 @@ export class UsersController {
   }
 
   private sanitizeUser(user: User): SafeUser {
-    const { password, ...safeUser } = user;
+    const { googleId, password, ...safeUser } = user;
     return safeUser;
   }
 }

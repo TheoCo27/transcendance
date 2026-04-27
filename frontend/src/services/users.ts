@@ -44,6 +44,15 @@ export type PrivateMessage = {
   readAt: string | null;
 };
 
+export type UpdateProfilePayload = {
+  username: string;
+  status: "online" | "offline";
+};
+
+function emitAuthChanged() {
+  window.dispatchEvent(new Event("auth-changed"));
+}
+
 export function getUserById(userId: number): Promise<SafeUser> {
   return apiRequest<SafeUser>(`/users/${userId}`);
 }
@@ -91,5 +100,18 @@ export function updateMyAvatar(avatarDataUrl: string | null): Promise<SafeUser> 
   return apiRequest<SafeUser>("/users/me/avatar", {
     method: "PATCH",
     body: JSON.stringify({ avatarDataUrl }),
+  }).then((user) => {
+    emitAuthChanged();
+    return user;
+  });
+}
+
+export function updateMyProfile(payload: UpdateProfilePayload): Promise<SafeUser> {
+  return apiRequest<SafeUser>("/users/me/profile", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  }).then((user) => {
+    emitAuthChanged();
+    return user;
   });
 }

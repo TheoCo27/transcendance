@@ -38,12 +38,29 @@ enum GameStatus {
   finished
 }
 
+enum NotificationAction {
+  created
+  updated
+  deleted
+}
+
+enum NotificationResource {
+  user
+  profile
+  avatar
+  room
+  quiz
+  friend_request
+  private_message
+}
+
 model User {
   id       Int     @id @default(autoincrement())
   email    String  @unique
   username String
   password String
   isGuest  Boolean @default(false)
+  googleId String? @unique
 
   avatar_url String?
   status     UserStatus @default(offline)
@@ -61,6 +78,29 @@ model User {
 
   sentFriendRequests     FriendRequests[] @relation("FriendRequestSender")
   receivedFriendRequests FriendRequests[] @relation("FriendRequestReceiver")
+  notifications          Notification[]
+}
+
+model Notification {
+  id Int @id @default(autoincrement())
+
+  recipient   User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId Int
+
+  actorUserId Int?
+  resource    NotificationResource
+  resourceId  Int?
+  action      NotificationAction
+
+  title    String
+  message  String
+  metadata Json?
+
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([recipientId, createdAt])
+  @@index([recipientId, readAt])
 }
 
 model FriendRequests {
