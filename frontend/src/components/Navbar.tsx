@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { logout } from "../services/auth";
+import NotificationCenter from "./NotificationCenter";
 import PrimaryButton from "./ui/PrimaryButton";
 
 export default function Navbar() {
@@ -59,61 +60,74 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           {currentUser !== null ? (
-            <div className="relative" ref={userMenuRef}>
-              <button
-                aria-expanded={isUserMenuOpen}
-                aria-haspopup="menu"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-bg px-3 py-1.5 text-sm font-semibold transition hover:bg-white/10"
-                type="button"
-                onClick={() => {
-                  setIsUserMenuOpen((current) => !current);
-                }}
-              >
-                {currentUser.username}
-                {isUserMenuOpen ? (
-                  <ChevronDown className="size-4 rotate-180 mt-0.5 transition duration-200 ease-linear" />
-                ) : (
-                  <ChevronDown className="size-4 mt-0.5 transition duration-200 ease-linear" />
-                )}
-              </button>
+            <div className="flex items-center gap-3">
+              <NotificationCenter />
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  aria-expanded={isUserMenuOpen}
+                  aria-haspopup="menu"
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-bg px-3 py-1.5 text-sm font-semibold transition hover:bg-white/10"
+                  type="button"
+                  onClick={() => {
+                    setIsUserMenuOpen((current) => !current);
+                  }}
+                >
+                  {currentUser.username}
+                  {isUserMenuOpen ? (
+                    <ChevronDown className="size-4 rotate-180 mt-0.5 transition duration-200 ease-linear" />
+                  ) : (
+                    <ChevronDown className="size-4 mt-0.5 transition duration-200 ease-linear" />
+                  )}
+                </button>
 
-              {isUserMenuOpen ? (
-                <div className="absolute right-0 z-30 mt-2 w-48 rounded-lg border border-white/10 bg-surface p-2 shadow-[0_14px_40px_rgba(15,23,42,0.28)]">
-                  <Link
-                    className="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-text transition hover:bg-white/10"
-                    role="menuitem"
-                    to="/profile"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                    }}
-                  >
-                    <UserRound className="size-5" />
-                    Profil
-                  </Link>
-                  <Link
-                    className="mt-1 flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-text transition hover:bg-white/10"
-                    role="menuitem"
-                    to="/friends"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                    }}
-                  >
-                    <UsersRound className="size-5" />
-                    Amis
-                  </Link>
-                  <button
-                    className="mt-1 flex items-center gap-2 w-full rounded px-3 py-2 text-left text-sm font-semibold text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
-                    type="button"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      void logout();
-                    }}
-                  >
-                    <LogOut className="size-5 text-rose-300" />
-                    Se déconnecter
-                  </button>
-                </div>
-              ) : null}
+                {isUserMenuOpen ? (
+                  <div className="absolute right-0 z-30 mt-2 w-48 rounded-lg border border-white/10 bg-surface p-2 shadow-[0_14px_40px_rgba(15,23,42,0.28)]">
+                    <Link
+                      className="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-text transition hover:bg-white/10"
+                      role="menuitem"
+                      to="/profile"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                      }}
+                    >
+                      <UserRound className="size-5" />
+                      Profil
+                    </Link>
+                    <Link
+                      className="mt-1 flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-text transition hover:bg-white/10"
+                      role="menuitem"
+                      to="/friends"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                      }}
+                    >
+                      <UsersRound className="size-5" />
+                      Amis
+                    </Link>
+                    <Link
+                      className="mt-1 flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-text transition hover:bg-white/10"
+                      role="menuitem"
+                      to="/admin"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                      }}
+                    >
+                      Nouveau quiz
+                    </Link>
+                    <button
+                      className="mt-1 flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm font-semibold text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        void logout();
+                      }}
+                    >
+                      <LogOut className="size-5 text-rose-300" />
+                      Se déconnecter
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           ) : (
             <>

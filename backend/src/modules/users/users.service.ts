@@ -1,3 +1,4 @@
+import { NotificationsService } from "@/modules/notifications/notifications.service";
 import { PrismaService } from "@/prisma/prisma.service";
 import { FriendshipStatus, Prisma, User } from "@generated/prisma/client";
 import {
@@ -7,6 +8,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { UpdateProfilePayload } from "./dto/update-profile-payload.dto";
 
 export type FriendUserSummary = Pick<
   User,
@@ -40,7 +42,10 @@ const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findUserByEmail(email: string): Promise<User | null> {
     return this.findUser({ email });
@@ -276,13 +281,28 @@ export class UsersService {
         },
       });
 
+      await this.notificationsService.create({
+        recipientId: receiver.id,
+        actorUserId: senderId,
+        resource: "friend_request",
+        resourceId: activeRelation.id,
+        action: "updated",
+        title: "Demande d'ami acceptee",
+        message: `${sender.username} a accepte votre demande d'ami.`,
+        metadata: {
+          friendshipStatus: "accepted",
+          senderId,
+          receiverId: receiver.id,
+        },
+      });
+
       return {
         message: `${receiver.username} is now in your friends list`,
         friendshipStatus: "accepted",
       };
     }
 
-    await this.prisma.client.friendRequests.create({
+    const createdRequest = await this.prisma.client.friendRequests.create({
       data: {
         senderId,
         receiverId: receiver.id,
@@ -339,6 +359,26 @@ export class UsersService {
       },
     });
 
+    await this.notificationsService.create({
+      recipientId: request.senderId,
+      actorUserId: userId,
+      resource: "friend_request",
+      resourceId: requestId,
+      action: "updated",
+      title:
+        action === "accepted"
+          ? "Demande d'ami acceptee"
+          : "Demande d'ami refusee",
+      message:
+        action === "accepted"
+          ? `${currentUser.username} a accepte votre demande d'ami.`
+          : `${currentUser.username} a refuse votre demande d'ami.`,
+      metadata: {
+        requestId,
+        friendshipStatus: action,
+      },
+    });
+
     return {
       message:
         action === "accepted"
@@ -378,6 +418,29 @@ export class UsersService {
     });
   }
 
+  async updateProfile(userId: number, payload: UpdateProfilePayload): Promise<User> {
+    const user = await this.findUser({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    const username = this.normalizeUsername(payload.username);
+    const existingUser = await this.findUserByUsername(username);
+
+    if (existingUser && existingUser.id !== userId) {
+      throw new ConflictException("Username already exists");
+    }
+
+    return this.updateUser({
+      where: { id: userId },
+      data: {
+        username,
+        status: payload.status,
+      },
+    });
+  }
+
   private async getActiveFriendRelation(senderId: number, receiverId: number) {
     return this.prisma.client.friendRequests.findFirst({
       where: {
@@ -405,6 +468,16 @@ export class UsersService {
         "The friend system is not available for guest accounts",
       );
     }
+  }
+
+  private normalizeUsername(rawUsername: string): string {
+    const username = rawUsername.trim();
+
+    if (username.length < 2) {
+      throw new BadRequestException("Username must contain at least 2 characters");
+    }
+
+    return username;
   }
 
   private assertAvatarDataUrlIsValid(avatarDataUrl: string): void {
