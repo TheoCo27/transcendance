@@ -1,4 +1,3 @@
-#LAUNCH WITH python3 <file_name>
 import json
 import unicodedata
 import random
@@ -9,10 +8,13 @@ def normalize(word):
     word = ''.join(c for c in word if c.isalpha())
     return word.lower()
 
-lengths = [5, 6, 7, 8]
+lengths = [5, 6, 7]
 
 wordle = {l: [] for l in lengths}
+wordle_compare = {l: [] for l in lengths}
 anagram = {l: [] for l in lengths}
+
+VOWELS = set("aeiouy")
 
 with open("Lexique4.tsv", "r", encoding="utf-8") as f:
     header = f.readline().strip().split("\t")
@@ -23,6 +25,9 @@ with open("Lexique4.tsv", "r", encoding="utf-8") as f:
 
     for line in f:
         cols = line.strip().split("\t")
+
+        if len(cols) <= max(word_i, freq_i, cgram_i):
+            continue
 
         word = cols[word_i]
         freq = float(cols[freq_i]) if cols[freq_i] else 0
@@ -38,7 +43,7 @@ with open("Lexique4.tsv", "r", encoding="utf-8") as f:
 
         # filtres communs
         basic_ok = (
-            freq > 1 and
+            freq > 0.5 and
             pos != "VER" and
             not w.endswith("s") and
             not w.endswith("ent") and
@@ -46,26 +51,29 @@ with open("Lexique4.tsv", "r", encoding="utf-8") as f:
             len(set(w)) > 2
         )
 
-        if not basic_ok:
-            continue
+        # -------------------------
+        # WORDLE_COMPARE
+        # -------------------------
+        wordle_compare[len(w)].append((w, freq))
 
-        # -----------------------
-        # WORDLE (strict + fréquent)
-        # -----------------------
-        if freq > 3:
+        # -------------------------
+        # WORDLE
+        # -------------------------
+        if basic_ok:
             wordle[len(w)].append((w, freq))
 
-        # -----------------------
-        # ANAGRAMME (plus permissif mais propre)
-        # -----------------------
-        vowels = set("aeiouy")
-        vowel_count = sum(1 for c in w if c in vowels)
+        # -------------------------
+        # ANAGRAMME
+        # -------------------------
+        vowel_count = sum(1 for c in w if c in VOWELS)
+        max_repeat = max(w.count(c) for c in set(w))
 
-        # filtres anagramme spécifiques
         anagram_ok = (
-            vowel_count >= 1 and          # pas de mots injouables
-            len(set(w)) >= 4 and          # diversité lettres
-            freq > 0.5                    # un peu plus large
+            pos != "VER" and
+            vowel_count >= 1 and
+            len(set(w)) >= 4 and
+            max_repeat <= 2 and
+            freq > 0.3
         )
 
         if anagram_ok:
@@ -74,8 +82,9 @@ with open("Lexique4.tsv", "r", encoding="utf-8") as f:
 # -----------------------
 # LIMITES
 # -----------------------
-limits_wordle = {5: 3000, 6: 4000, 7: 5000, 8: 6000}
-limits_anagram = {5: 3000, 6: 4000, 7: 5000, 8: 6000}
+limits_wordle = {5: 4000, 6: 6000, 7: 6000}
+limits_wordle_compare = {5: 15000, 6: 15000, 7: 20000}
+limits_anagram = {5: 4000, 6: 4000, 7: 5000}
 
 def export(data, limits, prefix):
     for l in lengths:
@@ -86,10 +95,8 @@ def export(data, limits, prefix):
                 unique[w] = freq
 
         sorted_words = sorted(unique.items(), key=lambda x: -x[1])
-
         final_words = [w for w, _ in sorted_words[:limits[l]]]
 
-        # shuffle léger pour anagram pool
         random.shuffle(final_words)
 
         with open(f"{prefix}_{l}.json", "w", encoding="utf-8") as f:
@@ -97,8 +104,6 @@ def export(data, limits, prefix):
 
         print(f"{prefix} {l} lettres : {len(final_words)} mots")
 
-# export Wordle
 export(wordle, limits_wordle, "wordle")
-
-# export Anagramme
+export(wordle_compare, limits_wordle_compare, "wordle_compare")
 export(anagram, limits_anagram, "anagram")

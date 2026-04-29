@@ -1,0 +1,41 @@
+# 📝 ToDo - Wordle Project
+
+## 🔧 Refactoring / Structure
+
+* [ ] Ajouter le `key` en paramètre de 'Guess'
+* [ ] Modifier le type de `settings`
+* [ ] Renommer les éléments concernés
+* [ ] Nettoyer les autres fichiers
+
+## 🧠 Logique & Validation
+
+* [X] Comparer avec tous les mots stockés dans `wordle_compare`
+  * [X] Si mot invalide → afficher message d'erreur
+  * [X] Ne pas enregistrer le mot invalide
+
+* [ ] Implémenter la comparaison des mots pour les couleurs correctes
+  * [ ] Corriger le comportement (pas en crescendo)
+
+* [ ] Creer des toast custom (pour ne pas avoir success et error, si possible bouger le positionnement haut-droite, moins long, moins grand)
+* [ ] toast si moins de 5 lettres (5 mais bon nombre en fonction du mode selectionnee)
+
+## 🎮 Gameplay
+
+* [ ] Implémenter un clavier
+* [ ] Ajouter le mode multijoueur
+* [ ] Gérer les modes avec plus de 5 lettres
+* [ ] Gloweffect pour la case selectionner (ou juste un outline gras couleur)
+
+## 🌐 Réseau / Rooms
+
+* [ ] Connecter aux rooms
+* [ ] Implémenter le "hall des game rooms"
+    * [ ] Redirection vers le `gameID`
+
+## ⚡ Optimisation
+
+* [ ] Utiliser `useMemo` pour les lignes déjà complétées
+  * [ ] Éviter les recalculs inutiles
+
+---
+* [ ] PREND DES NOTES DISCORD

@@ -1,5 +1,6 @@
 //import words depuis fichier json
 import five_words from "./wordle_5.json"
+import five_words_all from "./wordle_compare_5.json"
 
 // type settings = {
 //   word : string;
@@ -11,17 +12,43 @@ import five_words from "./wordle_5.json"
 
 // };
 
+
 export default {
 
-  word: "",
-  guesses: [] as string[],
-  currentGuess: 0,
+	word: "",
+	guesses: [] as string[],
+	currentGuess: 0,
+	ToastMessage: "",
+	ToastId: 0,
 
 	get won() {
 		return this.currentGuess > 0 && this.guesses[this.currentGuess - 1] === this.word
 	},
 	get lost() {
 		return this.currentGuess === 6
+	},
+
+	toast_validWord(guess : string) {
+		if (!five_words_all.includes(guess)) {
+			this.ToastMessage = "This word isn't in the list";
+			this.ToastId++;
+			return;
+		}
+			return 1;
+	},
+
+	toast_won() {
+		if (this.currentGuess > 0 && this.guesses[this.currentGuess - 1] === this.word) {
+			this.ToastMessage = "You Finished number (moitiee supeieure)";
+			this.ToastId++;
+		}
+	},
+	
+	toast_lost() {
+		if (this.currentGuess === 6) {
+			this.ToastMessage = "You haven't found the right word";
+			this.ToastId++;
+		}
 	},
 
 	init() {
@@ -31,8 +58,14 @@ export default {
 	},
 
 	submitGuess() {
-		if (this.guesses[this.currentGuess].length == 5) {
-			this.currentGuess++
+		const guess = this.guesses[this.currentGuess];
+		if (guess.length !== 5) return;
+
+		if (this.toast_validWord(guess))
+		{
+			this.currentGuess++;
+			this.toast_won();
+			this.toast_lost();
 		}
 	},
 

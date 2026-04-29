@@ -26,4 +26,3 @@ export default function Guess({ word, guess, isGuessed }: settings) {
   )
 }
 
-//rajoute key en param, modif type settings, change son nom, clean les autres fichiers
