@@ -4,6 +4,7 @@ import Guess from "../components/Wordle/Guess";
 import type { settings } from "../components/Wordle/Settings";
 import PuzzleStore from "../components/Wordle/PuzzleStore";
 import { useToast } from "../components/ui/toast";
+import Keyboard from "../components/Wordle/Keyboard";
 
 
 export default observer(function GamesPage() {
@@ -25,6 +26,8 @@ export default observer(function GamesPage() {
       if (store.ToastId === 0) return;
       
       if (store.ToastMessage === "This word isn't in the list")
+        toast.error(store.ToastMessage);
+      else if (store.ToastMessage === "To submit word you need to input 5 letters")
         toast.error(store.ToastMessage);
       else if (store.ToastMessage === "You Finished number (moitiee supeieure)")
         toast.success(store.ToastMessage);
@@ -56,19 +59,16 @@ export default observer(function GamesPage() {
         />
       ))}
 
-		      {/* <Guess word={"test"} guess={"ttst2"} isGuessed={false} /> */}
-
-
+		  {/* <Guess word={"test"} guess={"ttst2"} isGuessed={false} /> */}
       {/* {store.won && <h1> You Won </h1> || store.lost && <h1> You lost </h1>} */}
       
-      {/* si isGuessed === true utilisateur a appuiye sur entree donc faire comparaison */}
 
-      {/* <h1>Azerty clavier</h1> <Keyboard /> */}
+      {/* <h1>Azerty clavier</h1>  */}
+      <Keyboard store={store} />
 
       <div>word: {store.word}</div>      {/* extraire mot de fichier */}
       <div>currentGuess: {store.currentGuess}</div> 
-      <div>guesses: {JSON.stringify(store.guesses)}</div>
-      {/* <div>guesses: {store.guesses.join(" | ")}</div> */}
+      <div>guesses: {JSON.stringify(store.guesses)}</div> {/* <div>guesses: {store.guesses.join(" | ")}</div> */}
     </div>
   );
 });

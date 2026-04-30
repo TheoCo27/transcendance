@@ -6,6 +6,7 @@
 * [ ] Modifier le type de `settings`
 * [ ] Renommer les éléments concernés
 * [ ] Nettoyer les autres fichiers
+* [ ] Ecourte les msg d'err, met tt en francais
 
 ## 🧠 Logique & Validation
 
@@ -18,13 +19,20 @@
 
 * [ ] Creer des toast custom (pour ne pas avoir success et error, si possible bouger le positionnement haut-droite, moins long, moins grand)
 * [ ] toast si moins de 5 lettres (5 mais bon nombre en fonction du mode selectionnee)
+* [ ] Stocker les msg dans variable (dans puzzleStore) pour reutiliser, au lieu de string "le txt qu'on compare"
 
 ## 🎮 Gameplay
 
 * [ ] Implémenter un clavier
-* [ ] Ajouter le mode multijoueur
-* [ ] Gérer les modes avec plus de 5 lettres
 * [ ] Gloweffect pour la case selectionner (ou juste un outline gras couleur)
+* [ ] Gérer les modes avec plus de 5 lettres
+* [ ] Ajouter le mode multijoueur
+
+## ⚡ Optimisation
+
+* [ ] Utiliser `useMemo` pour les lignes déjà complétées
+  * [ ] Éviter les recalculs inutiles
+
 
 ## 🌐 Réseau / Rooms
 
@@ -32,10 +40,6 @@
 * [ ] Implémenter le "hall des game rooms"
     * [ ] Redirection vers le `gameID`
 
-## ⚡ Optimisation
-
-* [ ] Utiliser `useMemo` pour les lignes déjà complétées
-  * [ ] Éviter les recalculs inutiles
-
 ---
+
 * [ ] PREND DES NOTES DISCORD

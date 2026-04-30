@@ -12,6 +12,26 @@ import five_words_all from "./wordle_compare_5.json"
 
 // };
 
+export type PuzzleStoreType = {
+  word: string;
+  guesses: string[];
+  currentGuess: number;
+
+  ToastMessage: string;
+  ToastId: number;
+
+  won: boolean;
+  lost: boolean;
+
+  toast_validWord(guess: string): 1 | undefined;
+  toast_won(): void;
+  toast_lost(): void;
+
+  init(): void;
+  submitGuess(): void;
+  handleKeyup(e: KeyboardEvent): void;
+  handleKeyboard(key : string) : void;
+};
 
 export default {
 
@@ -59,13 +79,37 @@ export default {
 
 	submitGuess() {
 		const guess = this.guesses[this.currentGuess];
-		if (guess.length !== 5) return;
+		if (guess.length !== 5) {
+			this.ToastMessage = "To submit word you need to input 5 letters";
+			this.ToastId++;
+			return;
+		}
 
-		if (this.toast_validWord(guess))
-		{
+		if (this.toast_validWord(guess)) {
 			this.currentGuess++;
 			this.toast_won();
 			this.toast_lost();
+		}
+	},
+
+
+	handleKeyboard(key : string)
+	{
+		//si bon return fait R
+		if (this.won || this.lost)
+			return
+
+		if (key === 'Enter'){
+			return this.submitGuess()
+		}
+
+		if (key === 'Backspace'){
+			this.guesses[this.currentGuess] = this.guesses[this.currentGuess].slice(0, -1)
+			return
+		}
+
+		if (this.guesses[this.currentGuess].length < 5) {
+			this.guesses[this.currentGuess] += key
 		}
 	},
 
