@@ -1,13 +1,12 @@
 import { Check, Copy } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
+import type { ChatEntry } from "../components/room/room-types";
 import RoomChatSection from "../components/room/RoomChatSection";
 import RoomConfigSection from "../components/room/RoomConfigSection";
-import RoomGameSection from "../components/room/RoomGameSection";
 import RoomLeaderboardSection from "../components/room/RoomLeaderboardSection";
 import RoomPlayersSection from "../components/room/RoomPlayersSection";
-import RoomSectionLabel from "../components/room/room-section-label";
-import type { ChatEntry } from "../components/room/room-types";
+import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useRoomPage } from "../hooks/useRoomPage";
@@ -25,7 +24,7 @@ function formatRemainingTime(
   return `${Math.max(0, Math.ceil(source / 1000))} sec`;
 }
 
-function formatRoomStatus(status: Room["status"]) {
+export function formatRoomStatus(status: Room["status"]) {
   if (status === "waiting") {
     return "En attente";
   }
@@ -243,9 +242,9 @@ export default function RoomPage() {
             </div>
 
             <aside className="rounded-4xl bg-slate-950 p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
-              <RoomSectionLabel className="text-white/55">
+              <SectionLabel className="text-white/55">
                 Contrôle de room
-              </RoomSectionLabel>
+              </SectionLabel>
               <div className="mt-6 space-y-4">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
                   <p className="text-xs uppercase font-medium tracking-wide text-amber-200">
@@ -324,7 +323,7 @@ export default function RoomPage() {
 
                 {user && !isUserInRoom && room.status !== "waiting" ? (
                   <div className="rounded-3xl border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-7 text-amber-100">
-                    Cette room a deja demarre. Les nouveaux joueurs ne peuvent
+                    Cette room a déja démarre. Les nouveaux joueurs ne peuvent
                     plus la rejoindre.
                   </div>
                 ) : null}
@@ -334,6 +333,7 @@ export default function RoomPage() {
 
           {isOwner && room.status === "waiting" ? (
             <RoomConfigSection
+              roomId={roomIdParam}
               form={form}
               setForm={setForm}
               availableQuizzes={availableQuizzes}
@@ -352,19 +352,18 @@ export default function RoomPage() {
             </section>
           ) : null}
 
-          <section className="mt-8 grid gap-6 lg:grid-cols-[0.85fr_1.15fr] xl:grid-cols-[0.8fr_1.2fr] xl:items-stretch">
+          <section className="mt-8 grid gap-6 lg:grid-cols-[0.85fr_1.15fr] xl:grid-cols-[0.8fr_1.2fr] xl:items-stretch min-h-125 xl:min-h-150">
             <div className="flex flex-col gap-6 xl:min-h-full">
               <RoomPlayersSection
                 players={room.players}
                 ownerUserId={room.ownerUserId}
                 playerNames={playerNames}
               />
-
               <RoomLeaderboardSection entries={scoreboard} />
             </div>
 
-            <div className="flex flex-col gap-6 xl:min-h-full">
-              <RoomGameSection
+            <div className="flex flex-col gap-6 h-full">
+              {/* <RoomGameSection
                 roomStatus={room.status}
                 gameState={gameState}
                 currentQuestion={currentQuestion}
@@ -374,7 +373,7 @@ export default function RoomPage() {
                 hasAnsweredCurrentQuestion={hasAnsweredCurrentQuestion}
                 onSelectAnswer={setSelectedAnswer}
                 onSubmitAnswer={submitAnswer}
-              />
+              /> */}
 
               <RoomChatSection
                 entries={chatEntries}
@@ -382,9 +381,8 @@ export default function RoomPage() {
                 chatError={chatError}
                 isUserInRoom={isUserInRoom}
                 onChatInputChange={setChatInput}
-                onSendMessage={() => {
-                  void sendChatMessage();
-                }}
+                onSendMessage={() => sendChatMessage()}
+                className="flex-1 min-h-0"
               />
             </div>
           </section>

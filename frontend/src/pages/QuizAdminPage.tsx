@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import QuestionComposer from "../components/QuizBuilder/QuestionComposer";
 import QuizRulesCard from "../components/QuizBuilder/QuizRulesCard";
 import QuizSetupCard from "../components/QuizBuilder/QuizSetupCard";
+import SectionHeader from "../components/section-header";
+import SectionLabel from "../components/section-label";
+import EmptyCard from "../components/ui/empty-card";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { createQuiz } from "../services/quizzes";
+import { joinRoom } from "../services/rooms";
 
 type DraftQuestion = {
   questionText: string;
@@ -21,6 +25,8 @@ const EMPTY_DRAFT: DraftQuestion = {
 };
 
 export default function QuizAdminPage() {
+  const [searchParams] = useSearchParams();
+  const fromRoomId = searchParams.get("from");
   const navigate = useNavigate();
   const { user, isLoading } = useAuthSession();
   const [title, setTitle] = useState("");
@@ -108,10 +114,17 @@ export default function QuizAdminPage() {
         })),
       });
 
-      navigate(`/quiz/${createdQuiz.id}`);
+      if (fromRoomId && user) {
+        try {
+          await joinRoom(Number(fromRoomId), { userId: user.id });
+        } catch (e) {}
+        navigate(`/rooms/${fromRoomId}`);
+      } else {
+        navigate(`/quiz/${createdQuiz.id}`);
+      }
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : "Impossible de creer le quiz.",
+        error instanceof Error ? error.message : "Impossible de créer le quiz.",
       );
     } finally {
       setIsSubmitting(false);
@@ -156,29 +169,33 @@ export default function QuizAdminPage() {
         <div className="space-y-6">
           <QuizRulesCard value={rule} onChange={setRule} />
 
-          <section className="rounded-[2rem] border border-slate-900/10 bg-slate-950 p-6 text-white shadow-[0_30px_80px_rgba(15,23,42,0.16)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
-              Quiz construit
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold">Questions validees</h2>
-            <p className="mt-2 text-sm text-white/70">
-              {questions.length} question{questions.length > 1 ? "s" : ""} prete
-              {questions.length > 1 ? "s" : ""} a jouer.
-            </p>
+          <div className="rounded-4xl border border-slate-900/10 bg-slate-950 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+            <SectionLabel className="text-text/55">Quiz construit</SectionLabel>
+            <SectionHeader>Questions validées</SectionHeader>
+            {questions.length > 0 ? (
+              <p className="mt-2 text-sm text-white/70">
+                {questions.length} question{questions.length > 1 ? "s" : ""}{" "}
+                prête
+                {questions.length > 1 ? "s" : ""} à jouer.
+              </p>
+            ) : null}
+            {/* <p className="mt-2 text-sm text-white/70">
+              {questions.length} question{questions.length > 1 ? "s" : ""} prête
+              {questions.length > 1 ? "s" : ""} à jouer.
+            </p> */}
 
             <div className="mt-6 space-y-4">
               {questions.length > 0 ? (
                 questions.map((question, index) => (
                   <article
                     key={`${question.questionText}-${index + 1}`}
-                    className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4"
+                    className="rounded-3xl border border-white/10 bg-white/6 p-4"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">
                         Question {index + 1}
                       </span>
                       <SecondaryButton
-                        className="border-white/15 bg-white/10 px-3 py-2 text-xs text-white"
                         onClick={() =>
                           setQuestions((currentQuestions) =>
                             currentQuestions.filter(
@@ -211,9 +228,7 @@ export default function QuizAdminPage() {
                   </article>
                 ))
               ) : (
-                <div className="rounded-[1.5rem] border border-dashed border-white/18 px-4 py-6 text-sm text-white/62">
-                  Aucune question validee pour l'instant.
-                </div>
+                <EmptyCard>Aucune question validée pour l'instant.</EmptyCard>
               )}
             </div>
 
@@ -225,14 +240,12 @@ export default function QuizAdminPage() {
 
             <PrimaryButton
               className="mt-6 w-full justify-center"
-              disabled={isLoading || isSubmitting}
-              onClick={() => {
-                void handleSubmitQuiz();
-              }}
+              disabled={isLoading || isSubmitting || questions.length < 1}
+              onClick={() => handleSubmitQuiz()}
             >
               {isSubmitting ? "Validation..." : "Valider le quiz"}
             </PrimaryButton>
-          </section>
+          </div>
         </div>
       </section>
     </main>

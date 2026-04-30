@@ -6,8 +6,13 @@ import type {
   PrivateConversationSummary,
 } from "../../services/users";
 import Avatar from "../Avatar";
+import Section from "../section";
+import SectionHeader from "../section-header";
+import SectionLabel from "../section-label";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
+import EmptyCard from "../ui/empty-card";
+import Input from "../ui/input";
 
 export type FriendNotice = {
   kind: "success" | "error";
@@ -69,17 +74,17 @@ export default function FriendNetworkPanel({
   usernameMinLength,
 }: FriendNetworkPanelProps) {
   return (
-    <section className="rounded-4xl bg-slate-100/80 p-6">
+    <Section>
       {currentUser.isGuest ? (
         <div className="mt-8 rounded-[1.75rem] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950">
           <p className="text-sm font-semibold">Compte invite detecte</p>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-amber-900/85">
-            Les amis et les messages prives sont reserves aux comptes classiques
-            pour conserver ton reseau d'une session a l'autre.
+            Les amis et les messages privés sont réservés aux comptes classiques
+            pour conserver ton reseau d'une session à l'autre.
           </p>
           <div className="mt-4">
             <Link to="/register">
-              <PrimaryButton>Creer un compte classique</PrimaryButton>
+              <PrimaryButton>Créer un compte classique</PrimaryButton>
             </Link>
           </div>
         </div>
@@ -90,7 +95,7 @@ export default function FriendNetworkPanel({
               <div>
                 <h3 className="text-xl font-semibold">Liste d'amis</h3>
                 <p className="mt-2 text-sm leading-7 text-white/70">
-                  Ouvre une conversation privee ou consulte l'activite recente.
+                  Ouvre une conversation privée ou consulte l'activité récente.
                 </p>
               </div>
               <span className="rounded-full bg-white/10 px-4 py-2 text-sm text-white/80">
@@ -100,7 +105,7 @@ export default function FriendNetworkPanel({
             </div>
 
             {friendsError ? (
-              <div className="mt-5 rounded-3xl bg-rose-500/15 px-5 py-4 text-sm text-rose-100">
+              <div className="mt-5 rounded-3xl border border-rose-400/30 bg-rose-900/70 px-5 py-4 text-sm text-rose-100 shadow-lg">
                 {friendsError}
               </div>
             ) : null}
@@ -114,10 +119,10 @@ export default function FriendNetworkPanel({
             {!friendsError &&
             !isFriendsLoading &&
             (friendOverview?.friends.length ?? 0) === 0 ? (
-              <div className="mt-5 rounded-3xl bg-white/10 px-5 py-5 text-sm leading-7 text-white/75">
-                Aucun ami pour l'instant. Commence par rechercher un joueur avec
-                son pseudo.
-              </div>
+              <EmptyCard>
+                Aucun ami pour l'instant. Tu peux en ajouter un en renseignant
+                son pseudo
+              </EmptyCard>
             ) : null}
 
             <div className="mt-5 space-y-3">
@@ -191,25 +196,23 @@ export default function FriendNetworkPanel({
           </div>
 
           <form
-            className="mt-5 rounded-[1.75rem] bg-white px-5 py-5"
+            className="mt-5 rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]"
             aria-busy={isSendingRequest}
             onSubmit={(event) => void onFriendSubmit(event)}
           >
-            <h3 className="text-xl font-semibold text-slate-950">
-              Ajouter un ami
-            </h3>
-            <p className="mt-2 text-sm leading-7 text-slate-600">
-              Saisis un pseudo exact. Si ce joueur t'a deja envoye une demande,
-              elle sera acceptee automatiquement.
+            <SectionHeader className="mt-0">Ajouter un ami</SectionHeader>
+            <p className="mt-2 text-sm leading-7">
+              Saisis un pseudo exact. Si ce joueur t'a déjà envoyé une demande,
+              elle sera acceptée automatiquement.
             </p>
             <label
-              className="mb-2 mt-5 block text-sm font-medium text-slate-600"
+              className="mb-2 mt-5 block text-sm font-medium"
               htmlFor="friend-username"
             >
               Pseudo du joueur
             </label>
-            <input
-              className="w-full rounded-[1.25rem] border border-slate-900/10 bg-slate-50 px-4 py-3 text-slate-950 outline-none placeholder:text-slate-400"
+            <Input
+              className="w-full"
               id="friend-username"
               type="text"
               placeholder="Exemple: theo42"
@@ -224,15 +227,15 @@ export default function FriendNetworkPanel({
               disabled={isSendingRequest}
               type="submit"
             >
-              {isSendingRequest ? "Envoi..." : "Ajouter par pseudo"}
+              {isSendingRequest ? "Envoi..." : "Ajouter"}
             </PrimaryButton>
 
             {friendNotice ? (
               <p
-                className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm ${
+                className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm font-medium shadow ${
                   friendNotice.kind === "success"
-                    ? "bg-emerald-50 text-emerald-800"
-                    : "bg-rose-50 text-rose-700"
+                    ? "bg-emerald-900/80 text-emerald-200 border border-emerald-400/30"
+                    : "bg-rose-900/80 text-rose-200 border border-rose-400/30"
                 }`}
                 role="alert"
               >
@@ -241,40 +244,40 @@ export default function FriendNetworkPanel({
             ) : null}
           </form>
 
-          <div className="mt-5 rounded-3xl bg-white px-5 py-4">
+          <Section className="mt-5">
             <div className="flex items-center justify-between gap-3">
-              <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <SectionLabel className="text-slate-400">
                 Demandes recues
-              </h4>
+              </SectionLabel>
               {isFriendsLoading ? (
                 <span className="text-xs text-slate-500">Chargement...</span>
               ) : null}
             </div>
 
             {friendsError ? (
-              <p className="mt-4 text-sm text-rose-700">{friendsError}</p>
+              <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-900/70 px-4 py-3 text-sm text-rose-100 shadow">
+                {friendsError}
+              </p>
             ) : null}
 
             {!friendsError &&
             !isFriendsLoading &&
             (friendOverview?.receivedRequests.length ?? 0) === 0 ? (
-              <p className="mt-4 text-sm leading-7 text-slate-600">
-                Aucune demande en attente pour le moment.
-              </p>
+              <EmptyCard>Aucune demande en attente pour le moment.</EmptyCard>
             ) : null}
 
             <div className="mt-4 space-y-3">
               {friendOverview?.receivedRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="rounded-[1.25rem] border border-slate-900/10 bg-slate-50 px-4 py-4"
+                  className="rounded-2xl border border-white/15 bg-white/5 px-4 py-4 shadow transition hover:bg-white/10"
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="text-base font-semibold text-slate-950">
+                      <p className="text-base font-semibold text-white/90">
                         {request.user.username}
                       </p>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-white/60">
                         Recue le {formatDate(request.createdAt)}
                       </p>
                     </div>
@@ -304,38 +307,36 @@ export default function FriendNetworkPanel({
                 </div>
               ))}
             </div>
-          </div>
+          </Section>
 
-          <div className="mt-5 rounded-3xl bg-white px-5 py-4">
-            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <Section className="mt-5">
+            <SectionLabel className="text-slate-400">
               Demandes envoyees
-            </h4>
+            </SectionLabel>
 
             {!isFriendsLoading &&
             (friendOverview?.sentRequests.length ?? 0) === 0 ? (
-              <p className="mt-4 text-sm leading-7 text-slate-600">
-                Aucune demande envoyee en attente.
-              </p>
+              <EmptyCard> Aucune demande envoyee en attente.</EmptyCard>
             ) : null}
 
             <div className="mt-4 space-y-3">
               {friendOverview?.sentRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="rounded-[1.25rem] border border-slate-900/10 bg-slate-50 px-4 py-4"
+                  className="rounded-2xl border border-white/15 bg-white/5 px-4 py-4 shadow"
                 >
-                  <p className="text-base font-semibold text-slate-950">
+                  <p className="text-base font-semibold text-white/90">
                     {request.user.username}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className="mt-1 text-sm text-white/60">
                     En attente depuis le {formatDate(request.createdAt)}
                   </p>
                 </div>
               ))}
             </div>
-          </div>
+          </Section>
         </>
       )}
-    </section>
+    </Section>
   );
 }

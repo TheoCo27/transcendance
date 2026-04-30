@@ -5,7 +5,7 @@ interface RoomSectionLabelProps extends HTMLAttributes<HTMLParagraphElement> {
   children: React.ReactNode;
 }
 
-export default function RoomSectionLabel({
+export default function SectionLabel({
   className = "",
   children,
   ...props

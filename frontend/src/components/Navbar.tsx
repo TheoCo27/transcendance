@@ -78,39 +78,41 @@ export default function Navbar() {
               </button>
 
               {isUserMenuOpen ? (
-                <div className="absolute right-0 z-30 mt-2 w-48 rounded-lg border border-white/10 bg-surface p-2 shadow-[0_14px_40px_rgba(15,23,42,0.28)]">
+                <div className="absolute right-0 z-30 mt-2 w-40 rounded-lg border font-medium text-text border-white/10 bg-surface p-2 shadow-[0_14px_40px_rgba(15,23,42,0.28)]">
                   <Link
-                    className="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-text transition hover:bg-white/10"
+                    className="flex items-center gap-2 rounded px-3 py-2 text-[13px]  transition hover:bg-white/10"
                     role="menuitem"
                     to="/profile"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                     }}
                   >
-                    <UserRound className="size-5" />
+                    <UserRound className="size-4" />
                     Profil
                   </Link>
                   <Link
-                    className="mt-1 flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-text transition hover:bg-white/10"
+                    className="mt-1 flex items-center gap-2 rounded px-3 py-2 text-[13px] transition hover:bg-white/10"
                     role="menuitem"
                     to="/friends"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                     }}
                   >
-                    <UsersRound className="size-5" />
+                    <UsersRound className="size-4" />
                     Amis
                   </Link>
                   <button
-                    className="mt-1 flex items-center gap-2 w-full rounded px-3 py-2 text-left text-sm font-semibold text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
+                    className="mt-1 flex items-center gap-2 w-full rounded px-3 py-2 text-left text-xs text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
                     type="button"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       void logout();
                     }}
                   >
-                    <LogOut className="size-5 text-rose-300" />
-                    Se déconnecter
+                    <LogOut className="size-4 text-rose-300" />
+                    <span className="text-[13px] font-medium">
+                      Se déconnecter
+                    </span>
                   </button>
                 </div>
               ) : null}

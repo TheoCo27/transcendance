@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import Avatar from "../Avatar";
+import Section from "../section";
+import SectionHeader from "../section-header";
+import SectionLabel from "../section-label";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
-import RoomSectionHeader from "./room-section-header";
-import RoomSectionLabel from "./room-section-label";
 import type { ChatEntry } from "./room-types";
-import RoomSection from "./RoomSection";
 
 type RoomChatSectionProps = {
   entries: ChatEntry[];
@@ -36,28 +36,27 @@ export default function RoomChatSection({
   isUserInRoom,
   onChatInputChange,
   onSendMessage,
-}: RoomChatSectionProps) {
+  className = "",
+}: RoomChatSectionProps & { className?: string }) {
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
   const hasInitializedScrollRef = useRef(false);
 
   const isNearBottom = (container: HTMLDivElement) =>
-    container.scrollHeight - container.scrollTop - container.clientHeight <= 48;
+    container.scrollHeight - container.scrollTop - container.clientHeight <=
+    225;
 
   const handleChatScroll = () => {
-    if (!chatContainerRef.current) {
-      return;
-    }
+    if (!chatContainerRef.current) return;
 
     shouldAutoScrollRef.current = isNearBottom(chatContainerRef.current);
   };
 
   useEffect(() => {
     const container = chatContainerRef.current;
-    if (!container) {
-      return;
-    }
+    if (!container) return;
 
+    // Scroll auto si premier affichage
     if (!hasInitializedScrollRef.current) {
       container.scrollTop = container.scrollHeight;
       shouldAutoScrollRef.current = true;
@@ -65,19 +64,32 @@ export default function RoomChatSection({
       return;
     }
 
+    // Scroll auto uniquement si le dernier message est de l'utilisateur
+    if (entries.length > 0 && entries[entries.length - 1].isSelf) {
+      container.scrollTop = container.scrollHeight;
+      shouldAutoScrollRef.current = true;
+      return;
+    }
+
+    // Sinon, scroll auto si on est déjà en bas
     if (shouldAutoScrollRef.current) {
       container.scrollTop = container.scrollHeight;
       shouldAutoScrollRef.current = true;
     }
-  }, [entries.length]);
+  }, [entries.length, entries]);
 
   return (
-    <RoomSection>
-      <RoomSectionLabel className="text-slate-400">Chat room</RoomSectionLabel>
-      <RoomSectionHeader>Discussion en direct</RoomSectionHeader>
+    <Section
+      className={["flex flex-col h-full max-h-150", className].join(" ")}
+    >
+      <SectionLabel className="text-slate-400">Chat room</SectionLabel>
+      <SectionHeader>Discussion en direct</SectionHeader>
 
       <div
-        className="mt-6 max-h-90 overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-bg p-4"
+        className={[
+          "mt-6 flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-bg p-4",
+          entries.length === 0 ? "flex flex-col-reverse" : "",
+        ].join(" ")}
         onScroll={handleChatScroll}
         ref={chatContainerRef}
       >
@@ -201,6 +213,6 @@ export default function RoomChatSection({
           {chatError}
         </p>
       ) : null}
-    </RoomSection>
+    </Section>
   );
 }

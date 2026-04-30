@@ -1,4 +1,4 @@
-import { PenLine } from "lucide-react";
+import { PenLine, PlusCircle } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -6,15 +6,17 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { Link } from "react-router-dom";
 import type { Quiz } from "../../services/quizzes";
+import SectionHeader from "../section-header";
+import SectionLabel from "../section-label";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import type { RoomConfigForm } from "./room-types";
-import RoomSectionHeader from "./room-section-header";
-import RoomSectionLabel from "./room-section-label";
 
 type RoomConfigSectionProps = {
+  roomId: string | undefined;
   form: RoomConfigForm;
   setForm: Dispatch<SetStateAction<RoomConfigForm>>;
   availableQuizzes: Quiz[];
@@ -25,6 +27,7 @@ type RoomConfigSectionProps = {
 };
 
 export default function RoomConfigSection({
+  roomId,
   form,
   setForm,
   availableQuizzes,
@@ -89,10 +92,8 @@ export default function RoomConfigSection({
 
   return (
     <section className="mt-8 rounded-4xl border border-white/10 bg-surface text-text p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-      <RoomSectionLabel className="text-slate-400">Configuration</RoomSectionLabel>
-      <RoomSectionHeader>
-        Réglages de la room
-      </RoomSectionHeader>
+      <SectionLabel className="text-slate-400">Configuration</SectionLabel>
+      <SectionHeader>Réglages de la room</SectionHeader>
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-2">
@@ -129,7 +130,15 @@ export default function RoomConfigSection({
 
         {form.gameType === "quiz" ? (
           <div className="md:col-span-2">
-            <p className="text-sm font-medium">Choix du quiz</p>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">Choix du quiz</span>
+              <Link to={`/admin?from=${roomId}`}>
+                <SecondaryButton className="inline-flex items-center gap-2 text-xs px-0 py-0 font-semibold">
+                  <PlusCircle className="size-4" />
+                  Ajouter un quiz
+                </SecondaryButton>
+              </Link>
+            </div>
 
             {!shouldShowQuizPicker ? (
               <div className="mt-3 rounded-2xl border border-emerald-300/35 bg-emerald-300/10 px-4 py-3">
@@ -195,8 +204,7 @@ export default function RoomConfigSection({
               </p>
             ) : availableQuizzes.length === 0 ? (
               <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                Aucun quiz disponible pour l'instant. Cree un quiz avant de le
-                selectionner ici.
+                Aucun quiz disponible pour l'instant...
               </p>
             ) : (
               <div className="mt-3 grid max-h-46 grid-cols-1 gap-2 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">

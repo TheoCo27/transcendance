@@ -1,23 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import RoomSection from "../components/room/RoomSection";
+import Section from "../components/section";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getQuizById, type Quiz } from "../services/quizzes";
 import { getRoomById, type Room } from "../services/rooms";
+import { formatRoomStatus } from "./RoomPage";
 
-function formatRoomStatus(status: Room["status"]) {
-  if (status === "waiting") {
-    return "En attente";
-  }
-
-  if (status === "playing") {
-    return "En cours";
-  }
-
-  return "Terminee";
-}
 
 export default function RoomAccessPage() {
   const { roomId: roomIdParam } = useParams();
@@ -82,9 +72,9 @@ export default function RoomAccessPage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-10 md:px-10">
       {isLoadingPage ? (
-        <RoomSection className="p-8 text-slate-600">
+        <Section className="p-8 text-slate-600">
           Chargement de l'invitation...
-        </RoomSection>
+        </Section>
       ) : null}
 
       {pageError ? (

@@ -5,7 +5,7 @@ interface RoomSectionHeaderProps extends HTMLAttributes<HTMLHeadingElement> {
   children: React.ReactNode;
 }
 
-export default function RoomSectionHeader({
+export default function SectionHeader({
   className = "",
   children,
   ...props

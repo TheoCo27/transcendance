@@ -1,4 +1,6 @@
+import { formatRoomStatus } from "../../pages/RoomPage";
 import { Room } from "../../services/rooms";
+import EmptyCard from "../ui/empty-card";
 import PrimaryButton from "../ui/PrimaryButton";
 
 type RoomListProps = {
@@ -21,6 +23,14 @@ export default function RoomsList({
         </span>
       </div>
 
+      {rooms.length < 1 ? (
+        <EmptyCard>
+          Aucune room n’existe pour le moment, mais vous pouvez en créer une
+          directement en cliquant sur le bouton "Créer une room" situé juste
+          au-dessus.
+        </EmptyCard>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {rooms.map((room) => (
           <article
@@ -30,10 +40,9 @@ export default function RoomsList({
             <div className="mb-3 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold">{room.name}</h3>
-                {/* <p className="text-sm text-text-muted">{room.gameType}</p> */}
               </div>
               <span className="rounded-full border border-success/60 bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
-                {room.status}
+                {formatRoomStatus(room.status)}
               </span>
             </div>
 

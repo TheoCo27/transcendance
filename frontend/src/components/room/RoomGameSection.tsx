@@ -1,9 +1,9 @@
 import type { GameState } from "../../services/game";
 import type { Room } from "../../services/rooms";
+import Section from "../section";
+import SectionHeader from "../section-header";
+import SectionLabel from "../section-label";
 import PrimaryButton from "../ui/PrimaryButton";
-import RoomSectionHeader from "./room-section-header";
-import RoomSectionLabel from "./room-section-label";
-import RoomSection from "./RoomSection";
 
 type PublicQuestion = {
   id: number;
@@ -110,11 +110,9 @@ export default function RoomGameSection({
           </div>
         </section>
       ) : (
-        <RoomSection>
-          <RoomSectionLabel className="text-slate-400">
-            Zone de jeu
-          </RoomSectionLabel>
-          <RoomSectionHeader>Le plateau s'affiche ici</RoomSectionHeader>
+        <Section>
+          <SectionLabel className="text-slate-400">Zone de jeu</SectionLabel>
+          <SectionHeader>Le plateau s'affiche ici</SectionHeader>
           <p className="mt-4 text-sm leading-7">
             {roomStatus === "waiting"
               ? "Dès que le propriétaire lance la room, la question en cours apparaît ici."
@@ -122,7 +120,7 @@ export default function RoomGameSection({
                 ? "La partie est terminée. Le classement final reste visible à gauche."
                 : "Connexion au flux de jeu en cours..."}
           </p>
-        </RoomSection>
+        </Section>
       )}
 
       {roomStatus === "finished" ? (

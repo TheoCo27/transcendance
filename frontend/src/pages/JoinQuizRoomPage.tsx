@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import EmptyCard from "../components/ui/empty-card";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { getQuizzes, type Quiz } from "../services/quizzes";
@@ -86,9 +87,9 @@ export default function JoinQuizRoomPage() {
         ) : null}
 
         {!isLoading && !error && quizzes.length === 0 ? (
-          <div className="rounded-4xl border border-dashed border-slate-900/15 bg-white/50 p-8 text-slate-600">
+          <EmptyCard>
             Aucun quiz n'a encore ete publie. Cree le premier depuis l'admin.
-          </div>
+          </EmptyCard>
         ) : null}
 
         {!isLoading && !error

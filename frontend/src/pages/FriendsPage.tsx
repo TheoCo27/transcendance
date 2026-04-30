@@ -21,7 +21,7 @@ import {
 } from "../services/users";
 
 const FRIENDS_POLL_INTERVAL_MS = 12000;
-const CONVERSATION_POLL_INTERVAL_MS = 5000;
+const CONVERSATION_POLL_INTERVAL_MS = 15000;
 
 export default function FriendsPage() {
   const { user, isLoading } = useAuthSession();
