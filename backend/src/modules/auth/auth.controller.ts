@@ -7,6 +7,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -45,6 +46,26 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApiResponse<SafeUser>> {
     return ok(await this.authService.loginAsGuest(dto, res));
+  }
+
+  @Get("google/start")
+  startGoogleAuth(
+    @Res() res: Response,
+    @Query("returnTo") returnTo?: string,
+  ): void {
+    try {
+      res.redirect(this.authService.buildGoogleAuthorizationUrl(res, returnTo));
+    } catch {
+      res.redirect(this.authService.buildGoogleFailureRedirect("/", "google_not_configured"));
+    }
+  }
+
+  @Get("google/callback")
+  async handleGoogleCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    res.redirect(await this.authService.handleGoogleCallback(req, res));
   }
 
   @Post("logout")

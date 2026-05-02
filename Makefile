@@ -9,6 +9,7 @@ COMPOSE := $(shell \
 		printf '%s' 'docker-compose'; \
 	fi \
 )
+COMPOSE_DEV := $(COMPOSE) --profile dev
 
 BRANCH := $(shell git branch --show-current 2>/dev/null)
 
@@ -20,11 +21,12 @@ all:
 	@if ! $(MAKE) env-check; then \
 		$(MAKE) env-init; \
 	fi
-	@$(MAKE) up
+	@$(MAKE) up-run
 
 help:
 	@echo "Usage: Docker"
 	@echo "  make up                  -> Build and start all containers in background"
+	@echo "  make dev                 -> Start frontend + backend + db + Prisma Studio in dev"
 	@echo "  make down                -> Stop containers"
 	@echo "  make clean               -> Remove containers and images, keep volumes"
 	@echo "  make fclean              -> Full clean: containers, images and volumes"
@@ -34,6 +36,8 @@ help:
 	@echo "  make logs-back           -> Follow backend logs"
 	@echo "  make logs-front          -> Follow frontend logs"
 	@echo "  make logs-db             -> Follow database logs"
+	@echo "  make logs-studio         -> Follow Prisma Studio logs"
+	@echo "  make studio              -> Open Prisma Studio in the browser"
 	@echo "  make page                -> Open the frontend in Firefox"
 	@echo "  make ps                  -> Show running containers"
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
@@ -77,6 +81,12 @@ compose-check:
 	}
 
 up: env-check compose-check
+	@$(MAKE) up-run
+
+ensure-public-stack: compose-check
+	@$(COMPOSE_DEV) rm -s -f prisma-studio >/dev/null 2>&1 || true
+
+up-run: compose-check ensure-public-stack
 	bash scripts/generate-dev-cert.sh
 	$(COMPOSE) up --build -d
 	@echo "Waiting for containers..."
@@ -87,20 +97,28 @@ up: env-check compose-check
 		done; \
 	done
 
+dev: env-check compose-check
+	bash scripts/generate-dev-cert.sh
+	NODE_ENV=development $(COMPOSE_DEV) up --build -d --wait db backend frontend prisma-studio
+	@echo "Frontend    : https://localhost:$${FRONTEND_PORT:-3000}"
+	@echo "Backend dev : https://localhost:$${BACKEND_PORT:-4000}"
+	@echo "Swagger     : https://localhost:$${BACKEND_PORT:-4000}/docs"
+	@echo "Prisma Studio: http://127.0.0.1:$${PRISMA_STUDIO_PORT:-5555} (local only)"
+
 down: compose-check
-	$(COMPOSE) down
+	$(COMPOSE_DEV) down
 
 clean: compose-check
-	$(COMPOSE) down --rmi all
+	$(COMPOSE_DEV) down --rmi all
 
 fclean: compose-check
-	$(COMPOSE) down -v --rmi all
+	$(COMPOSE_DEV) down -v --rmi all
 
 re: fclean up
 
 restart: env-check compose-check
 	bash scripts/generate-dev-cert.sh
-	$(COMPOSE) down && $(COMPOSE) up --build
+	$(COMPOSE_DEV) down && $(COMPOSE) up --build
 
 logs: compose-check
 	$(COMPOSE) logs -f
@@ -113,6 +131,12 @@ logs-front: compose-check
 
 logs-db: compose-check
 	$(COMPOSE) logs -f db
+
+logs-studio: compose-check
+	$(COMPOSE) logs -f prisma-studio
+
+studio:
+	open "http://127.0.0.1:$${PRISMA_STUDIO_PORT:-5555}"
 
 page:
 	open -a Firefox "https://localhost:$${FRONTEND_PORT:-3000}"

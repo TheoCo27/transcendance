@@ -7,6 +7,7 @@ Base minimale pour avoir rapidement des containers fonctionnels et un point de t
 - `frontend`: React + TypeScript + Webpack Dev Server, accessible sur `https://localhost:3000`
 - `backend`: NestJS + TypeScript + Prisma, accessible sur `https://localhost:4000`
 - `db`: PostgreSQL, accessible sur `localhost:5432`
+- `prisma-studio`: disponible uniquement apres `make dev`, sur `http://127.0.0.1:5555`
 
 Le frontend proxifie `/api` et `/health` vers le backend via Webpack Dev Server. Pour un demarrage local rapide, `nginx` n'est pas necessaire.
 
@@ -29,6 +30,14 @@ make test-stack
 make logs
 ```
 
+Pour le dev applicatif avec Swagger et Prisma Studio en local uniquement :
+
+```bash
+make dev
+```
+
+`Prisma Studio` est publie uniquement sur `127.0.0.1` et n'est pas demarre par `make up`.
+
 ## Secrets et variables
 
 - Le projet charge ses variables depuis `.env`.
@@ -44,9 +53,13 @@ Variables attendues :
 - `DATABASE_URL`
 - `BACKEND_PORT`
 - `FRONTEND_PORT`
+- `PRISMA_STUDIO_PORT` (optionnel, port local fixe pour Prisma Studio)
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
+- `GOOGLE_CLIENT_ID` (optionnel, pour activer la connexion Google)
+- `GOOGLE_CLIENT_SECRET` (optionnel, pour activer la connexion Google)
+- `GOOGLE_REDIRECT_URI` (optionnel, pour activer la connexion Google)
 - `GAME_QUESTION_DURATION_MS`
 
 ## CI
@@ -67,6 +80,7 @@ Le workflow peut fonctionner de deux facons :
 ## URLs utiles
 
 - Ports par defaut : frontend `3000`, backend `4000`, db `5432`
+- `Prisma Studio` : `http://127.0.0.1:5555` apres `make dev`
 - `https://localhost:3000`
 - `https://localhost:3000/api`
 - `https://localhost:3000/health`
@@ -88,6 +102,8 @@ Etat actuel:
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `GET /auth/google/start`
+- `GET /auth/google/callback`
 - `POST /auth/logout`
 - `GET /auth/session`
 - `GET /users/me`

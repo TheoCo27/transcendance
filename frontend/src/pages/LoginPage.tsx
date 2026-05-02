@@ -11,13 +11,28 @@ import {
   loginAsGuest,
 } from "../services/auth";
 
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  google_access_denied: "La connexion Google a ete annulee.",
+  google_callback_failed:
+    "Impossible de finaliser la connexion Google. Verifie la configuration OAuth.",
+  google_not_configured:
+    "La connexion Google n'est pas encore configuree sur le backend.",
+  google_state_mismatch:
+    "La tentative de connexion Google a expire. Reessaie depuis cette page.",
+};
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [searchParams] = useSearchParams();
   const joinRoomParam = searchParams.get("joinRoom");
+  const oauthErrorParam = searchParams.get("oauthError");
   const joinRoomId = Number(joinRoomParam);
   const shouldJoinRoomAfterAuth = Number.isFinite(joinRoomId) && joinRoomId > 0;
+  const oauthError =
+    oauthErrorParam && OAUTH_ERROR_MESSAGES[oauthErrorParam]
+      ? OAUTH_ERROR_MESSAGES[oauthErrorParam]
+      : null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [guestUsername, setGuestUsername] = useState("");
@@ -28,6 +43,10 @@ export default function LoginPage() {
   const navigateAfterAuth = () => {
     navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
   };
+
+  const googleAuthUrl = shouldJoinRoomAfterAuth
+    ? `/auth/google/start?returnTo=${encodeURIComponent(`/rooms/${joinRoomId}?join=1`)}`
+    : "/auth/google/start?returnTo=%2F";
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -85,6 +104,11 @@ export default function LoginPage() {
             ? `Connecte-toi ou continue en invite pour rejoindre directement la room #${joinRoomId}.`
             : "Connecte-toi avec ton compte ou entre rapidement en invite avec un pseudo unique."}
         </p>
+        {oauthError ? (
+          <p className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {oauthError}
+          </p>
+        ) : null}
         <form
           aria-busy={isSubmitting}
           onSubmit={(event) => void handleSubmit(event)}
@@ -142,6 +166,13 @@ export default function LoginPage() {
                 : "Se connecter"}
           </PrimaryButton>
         </form>
+
+        <a
+          className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-slate-900/15 bg-black px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900/30 hover:bg-slate-50"
+          href={googleAuthUrl}
+        >
+          Continuer avec Google
+        </a>
 
         <div className="my-6 flex items-center gap-4">
           <div className="h-px flex-1 bg-white/10" />
