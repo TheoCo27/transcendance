@@ -23,7 +23,9 @@
 
 ## 🎮 Gameplay
 
-* [ ] Implémenter un clavier
+* [X] Implémenter un clavier
+  * [ ] Colors 
+  * [X] images or vect for return arrow and enter ({$enter}, {$return})
 * [ ] Gloweffect pour la case selectionner (ou juste un outline gras couleur)
 * [ ] Gérer les modes avec plus de 5 lettres
 * [ ] Ajouter le mode multijoueur
@@ -32,7 +34,7 @@
 
 * [ ] Utiliser `useMemo` pour les lignes déjà complétées
   * [ ] Éviter les recalculs inutiles
-
+* [ ] rendre flex pour mobile et toutes tailles
 
 ## 🌐 Réseau / Rooms
 
