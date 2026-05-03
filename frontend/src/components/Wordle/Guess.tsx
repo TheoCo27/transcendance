@@ -17,6 +17,7 @@ export default function Guess({ word, guess, isGuessed }: settings) {
 		: 'bg-black'
 
 		return (
+			// test output, si guess[i] est vide pareil, sinon couleur change
 		<div className={`h-16 w-16 border border-gray-400 font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`}>
 			{guess[i]}
 			</div>
