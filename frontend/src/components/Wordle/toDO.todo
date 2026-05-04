@@ -19,14 +19,19 @@
 
 * [/] Creer des toast custom (pour ne pas avoir success et error, si possible bouger le positionnement haut-droite, moins long, moins grand)
   * [/] toast si moins de 5 lettres (5 mais bon nombre en fonction du mode selectionnee)
-* [ ] Stocker les msg dans variable (dans puzzleStore) pour reutiliser, au lieu de string "le txt qu'on compare"
+  * [X] creer variables clean pour les test d'etat dans puzzleStore
+  * [ ] creer variables pour touts les toast
+  * [X] Stocker les msg dans variable (dans puzzleStore) pour reutiliser, au lieu de string "le txt qu'on compare"
 
 ## 🎮 Gameplay
 
 * [X] Implémenter un clavier
-  * [ ] Colors 
+  * [X] Colors 
   * [X] images or vect for return arrow and enter ({$enter}, {$return})
-* [ ] Gloweffect pour la case selectionner (ou juste un outline gras couleur, ou juste couleur plus claire)
+  * [X] Gloweffect pour la case selectionner (ou juste un outline gras couleur, ou juste couleur plus claire)
+  * [X] Retirer outline si mot envoyee
+  * [X] Placement du clavier
+
 * [ ] Gérer les modes avec plus de 5 lettres
 * [ ] Ajouter le mode multijoueur
 

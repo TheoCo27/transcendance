@@ -23,7 +23,12 @@ export type PuzzleStoreType = {
   won: boolean;
   lost: boolean;
 
-  toast_validWord(guess: string): 1 | undefined;
+  keyGuessed : string[];
+  keyInexact : string[];
+  AllGuessesMashed : string[]; // que utilisee ici
+
+  toast_validWord(guess: string): 1 | 0;
+  toast_five_letters(): void;
   toast_won(): void;
   toast_lost(): void;
 
@@ -32,6 +37,7 @@ export type PuzzleStoreType = {
   handleKeyup(e: KeyboardEvent): void;
   handleKeyboard(key : string) : void;
 };
+
 
 export default {
 
@@ -48,27 +54,42 @@ export default {
 		return this.currentGuess === 6
 	},
 
+	get AllGuessesMashed(){
+		return this.guesses.slice(0, this.currentGuess).join('').split('')
+	},
+
+	get keyGuessed(){
+		return this.word.split('').filter((letter, i) => {
+			return this.guesses.slice(0, this.currentGuess).map(word => word[i]).includes(letter)
+		})
+	},
+
+	get keyInexact(){
+		return this.word.split('').filter((letter) => this.AllGuessesMashed.includes(letter))
+	},
+
 	toast_validWord(guess : string) {
 		if (!five_words_all.includes(guess)) {
 			this.ToastMessage = "This word isn't in the list";
 			this.ToastId++;
-			return;
+			return 0;
 		}
 			return 1;
 	},
 
+	toast_five_letters() {
+		this.ToastMessage = "To submit word you need to input 5 letters";
+		this.ToastId++;
+	},
+	
 	toast_won() {
-		if (this.currentGuess > 0 && this.guesses[this.currentGuess - 1] === this.word) {
-			this.ToastMessage = "You Finished number (moitiee supeieure)";
-			this.ToastId++;
-		}
+		this.ToastMessage = "You Finished number (moitiee supeieure)";
+		this.ToastId++;
 	},
 	
 	toast_lost() {
-		if (this.currentGuess === 6) {
-			this.ToastMessage = "You haven't found the right word";
-			this.ToastId++;
-		}
+		this.ToastMessage = "You haven't found the right word";
+		this.ToastId++;
 	},
 
 	init() {
@@ -80,15 +101,16 @@ export default {
 	submitGuess() {
 		const guess = this.guesses[this.currentGuess];
 		if (guess.length !== 5) {
-			this.ToastMessage = "To submit word you need to input 5 letters";
-			this.ToastId++;
+			this.toast_five_letters();
 			return;
 		}
 
 		if (this.toast_validWord(guess)) {
 			this.currentGuess++;
-			this.toast_won();
-			this.toast_lost();
+			if (this.guesses[this.currentGuess - 1] === this.word)
+				this.toast_won();
+			if (this.currentGuess === 6 && this.guesses[this.currentGuess - 1] != this.word)
+				this.toast_lost();
 		}
 	},
 
@@ -115,7 +137,8 @@ export default {
 
 	handleKeyup(e : KeyboardEvent)
 	{
-		//si bon return fait R
+		//si bon mot, return donc fait R
+		// marche pas won si dernier mot
 		if (this.won || this.lost)
 			return
 

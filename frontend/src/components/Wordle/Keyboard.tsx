@@ -13,18 +13,28 @@ export default function Keyboard({ store }: { store: PuzzleStoreType }){
 	];
 	const wideKeys = new Set(["Backspace", "Enter"]);
 	let isWide : boolean
+	let bgColor : string
+	// bgColor = 'bg-gray-400'
 
-	//pour les map ajt potenciellemnt les index (apart pr les couleurs inutile)
 	return (
 	<div>
 		{qwerty.map((row) => (
-		<div className="flex justify-center">
+		<div className="flex h-15 justify-center">
 			{(Array.isArray(row) ? row : row.split('')).map((key) => (
 			isWide = wideKeys.has(key),
 
+			//appl fonction dans puzzleStore, avec en param la key
+			//ptetre opti en faisant ca
+
+			bgColor = store.keyGuessed.includes(key)
+			? 'bg-green-500'
+			: store.keyInexact.includes(key)
+			? 'bg-yellow-400'
+			: 'bg-gray-400',
+
 			<div
 			className={[
-				"m-px flex h-12 rounded-md bg-gray-400 font-bold text-2xl items-center justify-center",
+				`m-px flex h-13 rounded-md ${bgColor} font-bold text-2xl items-center justify-center`,
 				isWide ? "w-15" : "w-9.5",
 			].join(" ")}
 			>

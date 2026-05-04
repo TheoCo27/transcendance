@@ -48,30 +48,36 @@ export default observer(function GamesPage() {
       <h1>GamePage</h1>
       <h1>Wordle</h1>
 
-      {/* <Guess {...s} /> */}
       {/* key pour via clavier visuel jcrois */}
+      {/* key a l'air inutile */}
+      
       {store.guesses.map((_, i) => (
         <Guess
-          key={i}
+          // key={i}
           word={store.word}
           guess={store.guesses[i] ?? ""}
           isGuessed={i < store.currentGuess}
         />
       ))}
 
-		  {/* <Guess word={"test"} guess={"ttst2"} isGuessed={false} /> */}
-      {/* {store.won && <h1> You Won </h1> || store.lost && <h1> You lost </h1>} */}
-      
-
-      {/* <h1>Azerty clavier</h1>  */}
+    <div className="mt-3">
       <Keyboard store={store} />
-
+    </div>
+      
+      {/* creer debug flag */}
       <div>word: {store.word}</div>      {/* extraire mot de fichier */}
       <div>currentGuess: {store.currentGuess}</div> 
       <div>guesses: {JSON.stringify(store.guesses)}</div> {/* <div>guesses: {store.guesses.join(" | ")}</div> */}
     </div>
   );
 });
+
+      {/* <Guess {...s} /> */}
+  // {/* <Guess word={"test"} guess={"ttst2"} isGuessed={false} /> */}
+  // {/* {store.won && <h1> You Won </h1> || store.lost && <h1> You lost </h1>} */}
+  
+
+  // {/* <h1>Azerty clavier</h1>  */}
 
   // error_list: "This word isn't in the list",
 		
