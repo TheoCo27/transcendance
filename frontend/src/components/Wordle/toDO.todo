@@ -2,11 +2,11 @@
 
 ## 🔧 Refactoring / Structure
 
-* [ ] Ajouter le `key` en paramètre de 'Guess'
 * [ ] Modifier le type de `settings`
 * [ ] Renommer les éléments concernés
 * [ ] Nettoyer les autres fichiers
 * [ ] Ecourte les msg d'err, met tt en francais
+
 
 ## 🧠 Logique & Validation
 
@@ -20,8 +20,11 @@
 * [/] Creer des toast custom (pour ne pas avoir success et error, si possible bouger le positionnement haut-droite, moins long, moins grand)
   * [/] toast si moins de 5 lettres (5 mais bon nombre en fonction du mode selectionnee)
   * [X] creer variables clean pour les test d'etat dans puzzleStore
-  * [ ] creer variables pour touts les toast
+  * [X] creer variables pour touts les toast
   * [X] Stocker les msg dans variable (dans puzzleStore) pour reutiliser, au lieu de string "le txt qu'on compare"
+  * [X] AUTO SUBMIT MOT si timeup, non valide = affiche 'toast_validWord'
+  * [ ] TESTER OU PLUS DE TOAST STACKEE si possible d'accumuler les toast revoit certains cas
+
 
 ## 🎮 Gameplay
 
@@ -32,14 +35,22 @@
   * [X] Retirer outline si mot envoyee
   * [X] Placement du clavier
 
-* [ ] Gérer les modes avec plus de 5 lettres
+* [X] Ajout timer (LIMITE DE 35-45 SEC PAR MOTS)
+  * [ ] Barre qui se remplie en fonction du temps restant
+  * [ ] OPTIONNEL - retire outline si envoi mais mot pas complet
+
 * [ ] Ajouter le mode multijoueur
+  * [ ] Ajout window regles / validation pret de TOUT les joueurs
+
+* [ ] Gérer les modes avec plus de 5 lettres
+
 
 ## ⚡ Optimisation
 
 * [ ] Utiliser `useMemo` pour les lignes déjà complétées
   * [ ] Éviter les recalculs inutiles
 * [ ] rendre flex pour mobile et toutes tailles
+
 
 ## 🌐 Réseau / Rooms
 

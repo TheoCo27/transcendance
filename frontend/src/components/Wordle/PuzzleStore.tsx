@@ -19,6 +19,10 @@ export type PuzzleStoreType = {
 
   ToastMessage: string;
   ToastId: number;
+  start_time: number;
+  timeStatus: boolean;
+  validWord: boolean,
+	submittedGuesses: string[];
 
   won: boolean;
   lost: boolean;
@@ -29,8 +33,12 @@ export type PuzzleStoreType = {
 
   toast_validWord(guess: string): 1 | 0;
   toast_five_letters(): void;
-  toast_won(): void;
+  toast_superior_half(): void;
+  toast_inferior_half(): void;
+  toast_timeup(): void;
+  toast_timeup_final(): void;
   toast_lost(): void;
+  checkTimeUp(): void;
 
   init(): void;
   submitGuess(): void;
@@ -46,6 +54,8 @@ export default {
 	currentGuess: 0,
 	ToastMessage: "",
 	ToastId: 0,
+	start_time: Math.floor(Date.now() / 1000),
+	validWord: true,
 
 	get won() {
 		return this.currentGuess > 0 && this.guesses[this.currentGuess - 1] === this.word
@@ -54,18 +64,28 @@ export default {
 		return this.currentGuess === 6
 	},
 
-	get AllGuessesMashed(){
-		return this.guesses.slice(0, this.currentGuess).join('').split('')
+
+	get submittedGuesses() {
+	return this.guesses
+		.slice(0, this.currentGuess)               // seulement envoyés
+		.filter((g) => typeof g === 'string' && g.length === 5 && five_words_all.includes(g))
 	},
 
-	get keyGuessed(){
-		return this.word.split('').filter((letter, i) => {
-			return this.guesses.slice(0, this.currentGuess).map(word => word[i]).includes(letter)
-		})
+	get AllGuessesMashed() {
+		return this.submittedGuesses.join('').split('')
+	},
+
+	get keyGuessed() {
+		return this.word.split('').filter((letter, i) => this.submittedGuesses.map((w) => w[i]).includes(letter))
 	},
 
 	get keyInexact(){
 		return this.word.split('').filter((letter) => this.AllGuessesMashed.includes(letter))
+	},
+
+	//TEMPS
+	get timeStatus(){
+		return ((Math.floor(Date.now() / 1000) - this.start_time) >= 30);
 	},
 
 	toast_validWord(guess : string) {
@@ -82,11 +102,26 @@ export default {
 		this.ToastId++;
 	},
 	
-	toast_won() {
+	toast_superior_half() {
 		this.ToastMessage = "You Finished number (moitiee supeieure)";
 		this.ToastId++;
 	},
 	
+	toast_inferior_half() {
+		this.ToastMessage = "You Finished number (moitiee inferieure)";
+		this.ToastId++;
+	},
+
+	toast_timeup() {
+		this.ToastMessage = "Time limit has passed, careful for the next try";
+		this.ToastId++;
+	},
+
+	toast_timeup_final() {
+		this.ToastMessage = "Time limit has passed, you haven't found the right word";
+		this.ToastId++;
+	},
+
 	toast_lost() {
 		this.ToastMessage = "You haven't found the right word";
 		this.ToastId++;
@@ -106,18 +141,34 @@ export default {
 		}
 
 		if (this.toast_validWord(guess)) {
+			//autres test a ajouter, des multiplayer pour (toast_inferior_half, toast_timeup, toast_timeup_final)
 			this.currentGuess++;
 			if (this.guesses[this.currentGuess - 1] === this.word)
-				this.toast_won();
-			if (this.currentGuess === 6 && this.guesses[this.currentGuess - 1] != this.word)
+				this.toast_superior_half();
+			if (!this.timeStatus && this.currentGuess === 6 && this.guesses[this.currentGuess - 1] != this.word)
 				this.toast_lost();
+			//RESET TIMER
+			this.start_time = Date.now() / 1000;
 		}
 	},
 
 
+	checkTimeUp() {
+		if (this.timeStatus) {
+			this.toast_timeup();
+			if (this.guesses[this.currentGuess].length === 5)
+				this.toast_validWord(this.guesses[this.currentGuess]);
+			else
+				this.toast_five_letters();
+
+			this.currentGuess++;
+			this.start_time = Math.floor(Date.now() / 1000);//RESET TIMER
+		}
+	},
+
 	handleKeyboard(key : string)
 	{
-		//si bon return fait R
+		//si bon le return fait R
 		if (this.won || this.lost)
 			return
 
@@ -139,8 +190,10 @@ export default {
 	{
 		//si bon mot, return donc fait R
 		// marche pas won si dernier mot
+
 		if (this.won || this.lost)
 			return
+
 
 		if (e.key === 'Enter'){
 			return this.submitGuess()

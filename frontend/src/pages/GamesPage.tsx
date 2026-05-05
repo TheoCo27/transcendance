@@ -12,13 +12,22 @@ export default observer(function GamesPage() {
   const store = useLocalObservable(() => PuzzleStore)
   const toast = useToast();
 
-  useEffect( () => {
+   useEffect(() => {
     store.init()
-
     window.addEventListener('keyup', store.handleKeyup)
 
+    // L'interval est créé ici, donc UNE fois :
+    const intervalId = setInterval(() => {
+      store.checkTimeUp();
+      if (store.currentGuess === 6 || store.won) {
+        clearInterval(intervalId);
+      }
+    }, 200);
+
+    // Cleanup (toujours supprimer interval + l'event listener)
     return () => {
       window.removeEventListener('keyup', store.handleKeyup)
+      clearInterval(intervalId);
     }
   }, [])
 
@@ -33,13 +42,14 @@ export default observer(function GamesPage() {
         toast.success(store.ToastMessage);
       else if (store.ToastMessage === "You Finished number (moitiee inferieure)")
         toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "You haven't finished within time")
+      else if (store.ToastMessage === "Time limit has passed, careful for the next try")
+        toast.error(store.ToastMessage);
+      else if (store.ToastMessage === "Time limit has passed, you haven't found the right word")
         toast.error(store.ToastMessage);
       else if (store.ToastMessage === "You haven't found the right word")
         toast.error(store.ToastMessage);
 
   }, [store.ToastId, store.ToastMessage, toast])
-
 
   // if {store.cur_error} === 1 print error, and {store.cur_error} = 0, else skip
   
@@ -54,6 +64,7 @@ export default observer(function GamesPage() {
       {store.guesses.map((_, i) => (
         <Guess
           // key={i}
+          flag={store.validWord}
           word={store.word}
           guess={store.guesses[i] ?? ""}
           isGuessed={i < store.currentGuess}
@@ -68,6 +79,7 @@ export default observer(function GamesPage() {
       <div>word: {store.word}</div>      {/* extraire mot de fichier */}
       <div>currentGuess: {store.currentGuess}</div> 
       <div>guesses: {JSON.stringify(store.guesses)}</div> {/* <div>guesses: {store.guesses.join(" | ")}</div> */}
+      <div>Secondes passees: {Math.floor(Date.now() / 1000) - store.start_time}</div>
     </div>
   );
 });

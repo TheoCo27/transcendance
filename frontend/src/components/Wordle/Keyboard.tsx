@@ -14,7 +14,6 @@ export default function Keyboard({ store }: { store: PuzzleStoreType }){
 	const wideKeys = new Set(["Backspace", "Enter"]);
 	let isWide : boolean
 	let bgColor : string
-	// bgColor = 'bg-gray-400'
 
 	return (
 	<div>
@@ -22,9 +21,6 @@ export default function Keyboard({ store }: { store: PuzzleStoreType }){
 		<div className="flex h-15 justify-center">
 			{(Array.isArray(row) ? row : row.split('')).map((key) => (
 			isWide = wideKeys.has(key),
-
-			//appl fonction dans puzzleStore, avec en param la key
-			//ptetre opti en faisant ca
 
 			bgColor = store.keyGuessed.includes(key)
 			? 'bg-green-500'
