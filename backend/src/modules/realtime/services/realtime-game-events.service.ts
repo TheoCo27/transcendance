@@ -23,6 +23,7 @@ export class RealtimeGameEventsService {
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
 
+  // Gere la soumission d'une reponse pendant la partie.
   async handleGameAnswer(
     rawPayload: unknown,
     client: Socket,
@@ -68,6 +69,7 @@ export class RealtimeGameEventsService {
     }
   }
 
+  // Genere le nom de canal Socket.IO d'une room.
   private roomChannel(roomId: number): string {
     return `room:${roomId}`;
   }
