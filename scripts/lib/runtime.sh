@@ -15,6 +15,24 @@ detect_container_engine() {
 	return 1
 }
 
+ensure_local_brew_shellenv() {
+	local brew_bin
+
+	brew_bin="${HOME}/.linuxbrew/bin/brew"
+
+	if [ -x "$brew_bin" ]; then
+		eval "$("$brew_bin" shellenv)"
+		return 0
+	fi
+
+	if command -v brew >/dev/null 2>&1; then
+		eval "$(brew shellenv)"
+		return 0
+	fi
+
+	return 1
+}
+
 run_container_engine() {
 	local engine
 
