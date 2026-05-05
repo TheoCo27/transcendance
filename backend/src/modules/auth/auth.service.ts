@@ -84,6 +84,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  // Verifie les identifiants classiques d'un utilisateur.
   async validateUser(dto: LoginDto): Promise<User> {
     const user = await this.usersService.findUserByEmail(dto.email);
 
@@ -100,11 +101,13 @@ export class AuthService {
     return user;
   }
 
+  // Retire les champs sensibles avant retour au client.
   private sanitizeUser(user: User): SafeUser {
     const { googleId, password, ...safeUser } = user;
     return safeUser;
   }
 
+  // Definit les options du cookie de session.
   private getAuthCookieOptions(): CookieOptions {
     const isSecureCookie = process.env.FRONTEND_ORIGIN?.startsWith("https://");
 
@@ -116,6 +119,7 @@ export class AuthService {
     };
   }
 
+  // Definit les options du cookie temporaire OAuth Google.
   private getGoogleStateCookieOptions(): CookieOptions {
     return {
       ...this.getAuthCookieOptions(),
@@ -125,10 +129,12 @@ export class AuthService {
     };
   }
 
+  // Retourne l'origine frontend utilisee pour les redirections.
   private getFrontendOrigin(): string {
     return process.env.FRONTEND_ORIGIN || "https://localhost:3000";
   }
 
+  // Charge et valide la configuration Google OAuth.
   private getGoogleConfig(): GoogleConfig {
     const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -145,6 +151,7 @@ export class AuthService {
     };
   }
 
+  // Nettoie le chemin de retour apres une authentification.
   private sanitizeReturnTo(rawReturnTo?: string): string {
     if (!rawReturnTo || !rawReturnTo.startsWith("/") || rawReturnTo.startsWith("//")) {
       return "/";
@@ -158,6 +165,7 @@ export class AuthService {
     }
   }
 
+  // Stocke l'etat OAuth Google dans un cookie signe.
   private storeGoogleState(res: Response, payload: GoogleStateCookiePayload): void {
     res.cookie(
       GOOGLE_STATE_COOKIE_NAME,
@@ -166,10 +174,12 @@ export class AuthService {
     );
   }
 
+  // Supprime le cookie de suivi d'etat Google.
   private clearGoogleState(res: Response): void {
     res.clearCookie(GOOGLE_STATE_COOKIE_NAME, this.getGoogleStateCookieOptions());
   }
 
+  // Lit et valide l'etat OAuth Google depuis les cookies.
   private readGoogleState(req: Request): GoogleStateCookiePayload | null {
     const rawCookie = req.cookies?.[GOOGLE_STATE_COOKIE_NAME];
 
@@ -196,6 +206,7 @@ export class AuthService {
     }
   }
 
+  // Bascule l'utilisateur en ligne si necessaire.
   private async ensureUserIsOnline(user: User): Promise<User> {
     if (user.status === "online") {
       return user;
@@ -207,6 +218,7 @@ export class AuthService {
     });
   }
 
+  // Cree la session JWT et retourne le profil public.
   async login(user: User, res: Response): Promise<SafeUser> {
     const updatedUser = await this.ensureUserIsOnline(user);
     const payload = {
@@ -221,6 +233,7 @@ export class AuthService {
     return this.sanitizeUser(updatedUser);
   }
 
+  // Cree un compte classique puis ouvre sa session.
   async register(dto: RegisterDto, res: Response): Promise<SafeUser> {
     const email = dto.email.trim();
     const username = dto.username.trim();
@@ -273,6 +286,7 @@ export class AuthService {
     }
   }
 
+  // Cree une session invite avec un compte temporaire.
   async loginAsGuest(dto: GuestLoginDto, res: Response): Promise<SafeUser> {
     const username = dto.username.trim();
     const existingUser = await this.usersService.findUserByUsername(username);
@@ -299,6 +313,7 @@ export class AuthService {
     return this.login(guestUser, res);
   }
 
+  // Construit l'URL de retour frontend en cas d'echec Google.
   buildGoogleFailureRedirect(returnTo: string, errorCode: string): string {
     const loginUrl = new URL("/login", this.getFrontendOrigin());
     const joinRoomMatch =
@@ -313,6 +328,7 @@ export class AuthService {
     return loginUrl.toString();
   }
 
+  // Construit l'URL d'autorisation Google et memorise l'etat.
   buildGoogleAuthorizationUrl(res: Response, rawReturnTo?: string): string {
     const googleConfig = this.getGoogleConfig();
     const returnTo = this.sanitizeReturnTo(rawReturnTo);
@@ -336,6 +352,7 @@ export class AuthService {
     return authorizationUrl.toString();
   }
 
+  // Finalise la connexion Google puis redirige vers le frontend.
   async handleGoogleCallback(req: Request, res: Response): Promise<string> {
     const stateCookie = this.readGoogleState(req);
     const requestedState =
@@ -384,6 +401,7 @@ export class AuthService {
     }
   }
 
+  // Ferme la session courante et met a jour le statut utilisateur.
   async logout(req: Request, res: Response): Promise<void> {
     const token = req.cookies?.access_token;
 
@@ -410,6 +428,7 @@ export class AuthService {
     res.clearCookie("access_token", this.getAuthCookieOptions());
   }
 
+  // Retourne l'utilisateur associe a la session courante.
   async getSessionUser(userId: number): Promise<SafeUser> {
     const user = await this.usersService.findUser({ id: userId });
 
@@ -420,6 +439,7 @@ export class AuthService {
     return this.sanitizeUser(user);
   }
 
+  // Charge et met en cache la configuration OpenID de Google.
   private async getGoogleOidcConfiguration(): Promise<GoogleOidcConfiguration> {
     if (this.googleOidcConfiguration) {
       return this.googleOidcConfiguration;
@@ -449,6 +469,7 @@ export class AuthService {
     return this.googleOidcConfiguration;
   }
 
+  // Charge et met en cache les cles publiques Google.
   private async getGoogleJwks(): Promise<GoogleJwk[]> {
     if (this.googleJwksCache && Date.now() < this.googleJwksCache.expiresAt) {
       return this.googleJwksCache.keys;
@@ -478,18 +499,22 @@ export class AuthService {
     return payload.keys;
   }
 
+  // Decode une chaine Base64URL en buffer.
   private decodeBase64Url(value: string): Buffer {
     return Buffer.from(value, "base64url");
   }
 
+  // Parse un segment JWT Google dans le type attendu.
   private parseGoogleJwtSegment<T>(segment: string): T {
     return JSON.parse(this.decodeBase64Url(segment).toString("utf-8")) as T;
   }
 
+  // Normalise la verification du mail renvoyee par Google.
   private isGoogleEmailVerified(value: boolean | string | undefined): boolean {
     return value === true || value === "true";
   }
 
+  // Echange le code OAuth Google contre des tokens.
   private async exchangeGoogleCodeForTokens(
     authorizationCode: string,
   ): Promise<GoogleTokenResponse> {
@@ -517,6 +542,7 @@ export class AuthService {
     return (await response.json()) as GoogleTokenResponse;
   }
 
+  // Verifie l'integrite et le contenu d'un ID token Google.
   private async verifyGoogleIdToken(
     idToken: string,
   ): Promise<VerifiedGoogleIdTokenPayload> {
@@ -576,6 +602,7 @@ export class AuthService {
     };
   }
 
+  // Transforme une valeur libre en base de pseudo exploitable.
   private normalizeUsernameCandidate(value: string): string {
     const asciiValue = value
       .normalize("NFKD")
@@ -592,6 +619,7 @@ export class AuthService {
     return "player";
   }
 
+  // Genere un pseudo disponible pour un compte Google.
   private async generateAvailableUsername(
     displayName: string | undefined,
     email: string,
@@ -612,6 +640,7 @@ export class AuthService {
     return `${baseUsername}-${randomBytes(3).toString("hex")}`;
   }
 
+  // Retrouve ou cree l'utilisateur lie a un compte Google.
   private async findOrCreateGoogleUser(
     googleUser: VerifiedGoogleIdTokenPayload,
   ): Promise<User> {
@@ -672,6 +701,7 @@ export class AuthService {
     });
   }
 
+  // Archive l'identite d'un compte invite deconnecte.
   private async archiveGuestIdentity(userId: number): Promise<void> {
     const archivedSuffix = randomBytes(6).toString("hex");
 

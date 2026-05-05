@@ -4,6 +4,7 @@ set -eu
 
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT_DIR"
+. "${ROOT_DIR}/scripts/lib/runtime.sh"
 
 SCOPE="${1:---scope=all}"
 
@@ -31,7 +32,7 @@ SMOKE_QUIZ_QUESTION_IDS_QUERY="SELECT id FROM \\\"QuizQuestion\\\" WHERE \\\"qui
 run_database_query() {
 	query="$1"
 
-	docker exec -i quiz_db sh -lc \
+	run_container_engine exec -i quiz_db sh -lc \
 		"PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1 -t -A -c \"$query\""
 }
 
@@ -45,7 +46,7 @@ cleanup_room_store() {
 	smoke_user_ids="$1"
 	smoke_quiz_ids="$2"
 
-	docker exec -i quiz_backend sh -lc \
+	run_container_engine exec -i quiz_backend sh -lc \
 		"SMOKE_USER_IDS='${smoke_user_ids}' SMOKE_QUIZ_IDS='${smoke_quiz_ids}' SMOKE_ROOM_PREFIXES='${SMOKE_ROOM_PREFIXES}' node <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');

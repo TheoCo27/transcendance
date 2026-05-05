@@ -76,6 +76,7 @@ export class GameService {
     private readonly quizzesService: QuizzesService,
   ) {}
 
+  // Retourne l'etat courant de la partie pour une room.
   async getRoomState(roomId: number): Promise<GameState> {
     const room = await this.roomsService.getById(roomId);
     await this.ensureRoomQuestions(roomId, room.quizId);
@@ -142,6 +143,7 @@ export class GameService {
     return state;
   }
 
+  // Initialise l'etat runtime d'une nouvelle partie.
   async startGame(
     roomId: number,
     totalQuestions: number,
@@ -178,6 +180,7 @@ export class GameService {
     return state;
   }
 
+  // Ouvre une question et met a jour l'etat visible.
   async startQuestion(params: {
     roomId: number;
     questionId: number;
@@ -202,16 +205,19 @@ export class GameService {
     return state;
   }
 
+  // Termine la question courante sans changer le score.
   async completeCurrentQuestion(roomId: number): Promise<GameState> {
     const state = await this.getRoomState(roomId);
     state.updatedAt = new Date().toISOString();
     return state;
   }
 
+  // Marque la question courante comme terminee par timeout.
   async markQuestionTimedOut(roomId: number): Promise<GameState> {
     return this.completeCurrentQuestion(roomId);
   }
 
+  // Enregistre la reponse d'un joueur sur la question active.
   async submitAnswer(dto: SubmitAnswerDto): Promise<SubmitAnswerResult> {
     const room = await this.roomsService.getById(dto.roomId);
     if (room.status !== "playing") {
@@ -269,6 +275,7 @@ export class GameService {
     };
   }
 
+  // Finalise la partie et fixe le classement final.
   async finishGame(roomId: number): Promise<GameState> {
     const room = await this.roomsService.getById(roomId);
     const state = await this.getRoomState(roomId);
@@ -282,6 +289,7 @@ export class GameService {
     return state;
   }
 
+  // Associe un numero de tour a l'id de question correspondant.
   getQuestionIdForTurn(_roomId: number, turnNumber: number): number {
     const questionOrder = this.getRoomQuestionBank(_roomId).map(
       (question) => question.id,
@@ -294,6 +302,7 @@ export class GameService {
     return questionOrder[(turnNumber - 1) % questionOrder.length];
   }
 
+  // Retourne la version publique d'une question.
   getPublicQuestion(_roomId: number, questionId: number): PublicQuestion {
     const question = this.getQuestionEntry(_roomId, questionId);
 
@@ -304,17 +313,20 @@ export class GameService {
     };
   }
 
+  // Retourne le classement courant de la room.
   async getRoomLeaderboard(roomId: number): Promise<GameLeaderboardEntry[]> {
     await this.getRoomState(roomId);
     return this.buildLeaderboard(this.getRoomRuntime(roomId));
   }
 
+  // Retourne le nombre de questions disponibles pour la room.
   async getQuestionCount(roomId: number): Promise<number> {
     const room = await this.roomsService.getById(roomId);
     await this.ensureRoomQuestions(roomId, room.quizId);
     return this.getRoomQuestionBank(roomId).length;
   }
 
+  // Verifie si tous les joueurs ont repondu a la question active.
   async hasEveryPlayerAnsweredCurrentQuestion(
     roomId: number,
   ): Promise<boolean> {
@@ -332,12 +344,14 @@ export class GameService {
     return answeredUsers.size >= room.players.length;
   }
 
+  // Vide tous les caches runtime d'une room.
   clearRoomState(roomId: number): void {
     this.roomStates.delete(roomId);
     this.roomRuntime.delete(roomId);
     this.roomQuestions.delete(roomId);
   }
 
+  // Retourne ou initialise le runtime interne d'une room.
   private getRoomRuntime(roomId: number): RoomRuntime {
     const existing = this.roomRuntime.get(roomId);
     if (existing) {
@@ -355,6 +369,7 @@ export class GameService {
     return runtime;
   }
 
+  // Construit le classement reel a partir des scores actuels.
   private buildLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
     return [...runtime.scoresByUser.entries()]
       .map(([userId, score]) => ({ userId, score }))
@@ -363,12 +378,14 @@ export class GameService {
       );
   }
 
+  // Construit un classement masque sans reveler les scores.
   private buildMaskedLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
     return [...runtime.scoresByUser.keys()]
       .sort((left, right) => left - right)
       .map((userId) => ({ userId, score: 0 }));
   }
 
+  // Fige le classement visible sur les scores du debut de partie.
   private buildFrozenLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
     const source =
       runtime.scoresAtGameStart.size > 0
@@ -382,6 +399,7 @@ export class GameService {
       );
   }
 
+  // Synchronise la map des scores avec les joueurs presents.
   private syncScoresWithPlayers(
     playerIds: number[],
     runtime: RoomRuntime,
@@ -401,6 +419,7 @@ export class GameService {
     }
   }
 
+  // Charge et met en cache les questions liees a la room.
   private async ensureRoomQuestions(
     roomId: number,
     quizId: number | null,
@@ -451,10 +470,12 @@ export class GameService {
     });
   }
 
+  // Retourne la banque de questions actuellement chargee.
   private getRoomQuestionBank(roomId: number): QuestionEntry[] {
     return this.roomQuestions.get(roomId)?.questions ?? [];
   }
 
+  // Retourne une question precise ou leve une erreur.
   private getQuestionEntry(roomId: number, questionId: number): QuestionEntry {
     const question = this.getRoomQuestionBank(roomId).find(
       (entry) => entry.id === questionId,

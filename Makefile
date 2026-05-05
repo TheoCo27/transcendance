@@ -2,13 +2,8 @@
 #                                    CONFIG                                    #
 # **************************************************************************** #
 
-COMPOSE := $(shell \
-	if docker compose version >/dev/null 2>&1; then \
-		printf '%s' 'docker compose'; \
-	else \
-		printf '%s' 'docker-compose'; \
-	fi \
-)
+COMPOSE := bash scripts/compose.sh
+ENGINE := bash scripts/container-engine.sh
 COMPOSE_DEV := $(COMPOSE) --profile dev
 
 BRANCH := $(shell git branch --show-current 2>/dev/null)
@@ -24,7 +19,7 @@ all:
 	@$(MAKE) up-run
 
 help:
-	@echo "Usage: Docker"
+	@echo "Usage: Containers"
 	@echo "  make up                  -> Build and start all containers in background"
 	@echo "  make dev                 -> Start frontend + backend + db + Prisma Studio in dev"
 	@echo "  make down                -> Stop containers"
@@ -32,7 +27,7 @@ help:
 	@echo "  make fclean              -> Full clean: containers, images and volumes"
 	@echo "  make re                  -> Full clean then rebuild and start"
 	@echo "  make restart             -> Restart all containers with rebuild"
-	@echo "  make logs                -> Follow all docker logs"
+	@echo "  make logs                -> Follow all container logs"
 	@echo "  make logs-back           -> Follow backend logs"
 	@echo "  make logs-front          -> Follow frontend logs"
 	@echo "  make logs-db             -> Follow database logs"
@@ -43,6 +38,7 @@ help:
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
 	@echo "  make smoke-test          -> Run the general smoke test (dev op, db, websocket api, authentifcation, front end)"
 	@echo "  make smoke-test-ws       -> Run only the backend WebSocket smoke test"
+	@echo "  make setup-host          -> Verify and auto-prepare the machine for Docker/Podman + mkcert"
 	@echo "  make env-init            -> Create .env from .env.example if missing"
 	@echo "  make env-check           -> Check required variables in .env"
 	@echo "  make tls-cert            -> Generate the shared local TLS certificate"
@@ -76,23 +72,28 @@ help:
 
 compose-check:
 	@$(COMPOSE) version >/dev/null 2>&1 || { \
-		echo "❌ Ni 'docker compose' ni 'docker-compose' n'est disponible sur cette machine."; \
+		echo "❌ Aucun runtime compose compatible n'est disponible sur cette machine."; \
 		exit 1; \
 	}
 
-up: env-check compose-check
+setup-host:
+	bash scripts/setup-host.sh
+
+up: env-check setup-host compose-check
 	@$(MAKE) up-run
 
 ensure-public-stack: compose-check
 	@$(COMPOSE_DEV) rm -s -f prisma-studio >/dev/null 2>&1 || true
 
-up-run: compose-check ensure-public-stack
+up-run: setup-host compose-check ensure-public-stack
 	bash scripts/generate-dev-cert.sh
-	$(COMPOSE) up --build -d --wait
+	$(COMPOSE) up --build -d
+	bash scripts/wait-for-containers.sh
 
-dev: env-check compose-check
+dev: env-check setup-host compose-check
 	bash scripts/generate-dev-cert.sh
-	NODE_ENV=development $(COMPOSE_DEV) up --build -d --wait db backend frontend prisma-studio
+	NODE_ENV=development $(COMPOSE_DEV) up --build -d db backend frontend prisma-studio
+	bash scripts/wait-for-containers.sh db backend frontend prisma-studio
 	@echo "Frontend    : https://localhost:$${FRONTEND_PORT:-3000}"
 	@echo "Backend dev : https://localhost:$${BACKEND_PORT:-4000}"
 	@echo "Swagger     : https://localhost:$${BACKEND_PORT:-4000}/docs"
@@ -109,9 +110,11 @@ fclean: compose-check
 
 re: fclean up
 
-restart: env-check compose-check
+restart: env-check setup-host compose-check
 	bash scripts/generate-dev-cert.sh
-	$(COMPOSE_DEV) down && $(COMPOSE) up --build
+	$(COMPOSE_DEV) down
+	$(COMPOSE) up --build -d
+	bash scripts/wait-for-containers.sh
 
 logs: compose-check
 	$(COMPOSE) logs -f
@@ -167,13 +170,13 @@ tls-trust:
 	mkcert -install
 
 shell-back:
-	docker exec -it quiz_backend sh
+	$(ENGINE) exec -it quiz_backend sh
 
 shell-front:
-	docker exec -it quiz_frontend sh
+	$(ENGINE) exec -it quiz_frontend sh
 
 shell-db:
-	docker exec -it quiz_db sh -lc 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
+	$(ENGINE) exec -it quiz_db sh -lc 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
 # **************************************************************************** #
 #                                    GIT                                       #

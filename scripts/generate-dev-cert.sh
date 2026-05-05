@@ -14,7 +14,7 @@ if [ -s "$CERT_FILE" ] && [ -s "$KEY_FILE" ] && [ -s "$CA_FILE" ]; then
 fi
 
 command -v mkcert >/dev/null 2>&1 || {
-	printf '[KO] mkcert est requis. Installe-le avec: brew install mkcert\n' >&2
+	printf '[KO] mkcert est requis. Lance make setup-host ou installe-le avec: brew install mkcert\n' >&2
 	exit 1
 }
 
