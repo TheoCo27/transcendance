@@ -25,6 +25,7 @@ help:
 	@echo "  make down                -> Stop containers"
 	@echo "  make clean               -> Remove containers and images, keep volumes"
 	@echo "  make fclean              -> Full clean: containers, images and volumes"
+	@echo "  make fclean_all          -> Full clean + engine prune on Docker or Podman"
 	@echo "  make re                  -> Full clean then rebuild and start"
 	@echo "  make restart             -> Restart all containers with rebuild"
 	@echo "  make logs                -> Follow all container logs"
@@ -107,6 +108,10 @@ clean: compose-check
 
 fclean: compose-check
 	$(COMPOSE_DEV) down -v --rmi all
+
+fclean_all: compose-check
+	$(COMPOSE_DEV) down -v --rmi all
+	$(ENGINE) system prune -af --volumes
 
 re: fclean up
 
