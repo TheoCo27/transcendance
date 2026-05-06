@@ -22,7 +22,8 @@ export type PuzzleStoreType = {
   start_time: number;
   timeStatus: boolean;
   validWord: boolean,
-	submittedGuesses: string[];
+  submittedGuesses: string[];
+  time_per_word: number;
 
   won: boolean;
   lost: boolean;
@@ -33,10 +34,8 @@ export type PuzzleStoreType = {
 
   toast_validWord(guess: string): 1 | 0;
   toast_five_letters(): void;
-  toast_superior_half(): void;
-  toast_inferior_half(): void;
+  toast_won(): void;
   toast_timeup(): void;
-  toast_timeup_final(): void;
   toast_lost(): void;
   checkTimeUp(): void;
 
@@ -56,6 +55,8 @@ export default {
 	ToastId: 0,
 	start_time: Math.floor(Date.now() / 1000),
 	validWord: true,
+	time_per_word: 5,
+	
 
 	get won() {
 		return this.currentGuess > 0 && this.guesses[this.currentGuess - 1] === this.word
@@ -85,12 +86,12 @@ export default {
 
 	//TEMPS
 	get timeStatus(){
-		return ((Math.floor(Date.now() / 1000) - this.start_time) >= 30);
+		return ((Math.floor(Date.now() / 1000) - this.start_time) >= this.time_per_word);
 	},
 
 	toast_validWord(guess : string) {
 		if (!five_words_all.includes(guess)) {
-			this.ToastMessage = "This word isn't in the list";
+			this.ToastMessage = "Ce mot n'est pas dans la liste";
 			this.ToastId++;
 			return 0;
 		}
@@ -98,32 +99,22 @@ export default {
 	},
 
 	toast_five_letters() {
-		this.ToastMessage = "To submit word you need to input 5 letters";
+		this.ToastMessage = "Pour valider un mot, vous devez entrer 5 lettres";
 		this.ToastId++;
 	},
 	
-	toast_superior_half() {
-		this.ToastMessage = "You Finished number (moitiee supeieure)";
-		this.ToastId++;
-	},
-	
-	toast_inferior_half() {
-		this.ToastMessage = "You Finished number (moitiee inferieure)";
+	toast_won() {
+		this.ToastMessage = "Vous avez terminé n* (NUM PULL DU BACK)";
 		this.ToastId++;
 	},
 
 	toast_timeup() {
-		this.ToastMessage = "Time limit has passed, careful for the next try";
-		this.ToastId++;
-	},
-
-	toast_timeup_final() {
-		this.ToastMessage = "Time limit has passed, you haven't found the right word";
+		this.ToastMessage = "Le temps est écoulé, vous n'avez pas trouvé le bon mot";
 		this.ToastId++;
 	},
 
 	toast_lost() {
-		this.ToastMessage = "You haven't found the right word";
+		this.ToastMessage = "Vous n'avez pas trouvé le bon mot";
 		this.ToastId++;
 	},
 
@@ -144,7 +135,7 @@ export default {
 			//autres test a ajouter, des multiplayer pour (toast_inferior_half, toast_timeup, toast_timeup_final)
 			this.currentGuess++;
 			if (this.guesses[this.currentGuess - 1] === this.word)
-				this.toast_superior_half();
+				this.toast_won();
 			if (!this.timeStatus && this.currentGuess === 6 && this.guesses[this.currentGuess - 1] != this.word)
 				this.toast_lost();
 			//RESET TIMER
@@ -155,7 +146,6 @@ export default {
 
 	checkTimeUp() {
 		if (this.timeStatus) {
-			this.toast_timeup();
 			if (this.guesses[this.currentGuess].length === 5)
 				this.toast_validWord(this.guesses[this.currentGuess]);
 			else
@@ -163,6 +153,8 @@ export default {
 
 			this.currentGuess++;
 			this.start_time = Math.floor(Date.now() / 1000);//RESET TIMER
+			if (this.currentGuess === 6)
+				this.won ? this.toast_won() : this.toast_timeup()
 		}
 	},
 

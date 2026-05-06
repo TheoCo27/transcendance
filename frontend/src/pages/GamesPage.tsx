@@ -1,11 +1,11 @@
 import { observer, useLocalObservable } from "mobx-react-lite";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Guess from "../components/Wordle/Guess";
 import type { settings } from "../components/Wordle/Settings";
 import PuzzleStore from "../components/Wordle/PuzzleStore";
 import { useToast } from "../components/ui/toast";
 import Keyboard from "../components/Wordle/Keyboard";
-
+import ProgressBar from "../components/Wordle/ProgressBar";
 
 export default observer(function GamesPage() {
 
@@ -22,9 +22,8 @@ export default observer(function GamesPage() {
       if (store.currentGuess === 6 || store.won) {
         clearInterval(intervalId);
       }
-    }, 200);
+    }, 1200); // update every 1.2s for progress
 
-    // Cleanup (toujours supprimer interval + l'event listener)
     return () => {
       window.removeEventListener('keyup', store.handleKeyup)
       clearInterval(intervalId);
@@ -34,22 +33,18 @@ export default observer(function GamesPage() {
   useEffect( () => {
       if (store.ToastId === 0) return;
       
-      if (store.ToastMessage === "This word isn't in the list")
+      if (store.ToastMessage === "Ce mot n'est pas dans la liste")
         toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "To submit word you need to input 5 letters")
+      else if (store.ToastMessage === "Pour valider un mot, vous devez entrer 5 lettres")
         toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "You Finished number (moitiee supeieure)")
+      else if (store.ToastMessage === "Vous avez terminé n* (NUM PULL DU BACK)")
         toast.success(store.ToastMessage);
-      else if (store.ToastMessage === "You Finished number (moitiee inferieure)")
+      else if (store.ToastMessage === "Le temps est écoulé, vous n'avez pas trouvé le bon mot")
         toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "Time limit has passed, careful for the next try")
-        toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "Time limit has passed, you haven't found the right word")
-        toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "You haven't found the right word")
+      else if (store.ToastMessage === "Vous n'avez pas trouvé le bon mot")
         toast.error(store.ToastMessage);
 
-  }, [store.ToastId, store.ToastMessage, toast])
+  }, [store.ToastId])
 
   // if {store.cur_error} === 1 print error, and {store.cur_error} = 0, else skip
   
@@ -61,6 +56,8 @@ export default observer(function GamesPage() {
       {/* key pour via clavier visuel jcrois */}
       {/* key a l'air inutile */}
       
+      <ProgressBar start_time={store.start_time} store={store}/>
+
       {store.guesses.map((_, i) => (
         <Guess
           // key={i}
@@ -70,6 +67,7 @@ export default observer(function GamesPage() {
           isGuessed={i < store.currentGuess}
         />
       ))}
+
 
     <div className="mt-3">
       <Keyboard store={store} />

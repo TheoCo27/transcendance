@@ -56,3 +56,10 @@ select:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+.my-progress::-webkit-progress-value {
+  background-color: #ffffff; /* vert, ou remplace par la couleur voulue */
+}
+.my-progress::-moz-progress-bar {
+  background-color: #ffffff;
+}

@@ -17,14 +17,15 @@
 * [ ] Implémenter la comparaison des mots pour les couleurs correctes
   * [ ] Corriger le comportement (pas en crescendo)
 
-* [/] Creer des toast custom (pour ne pas avoir success et error, si possible bouger le positionnement haut-droite, moins long, moins grand)
+* [\] Creer des toast custom (pour ne pas avoir success et error, si possible bouger le positionnement haut-droite, moins long, moins grand)
   * [/] toast si moins de 5 lettres (5 mais bon nombre en fonction du mode selectionnee)
   * [X] creer variables clean pour les test d'etat dans puzzleStore
   * [X] creer variables pour touts les toast
   * [X] Stocker les msg dans variable (dans puzzleStore) pour reutiliser, au lieu de string "le txt qu'on compare"
   * [X] AUTO SUBMIT MOT si timeup, non valide = affiche 'toast_validWord'
-  * [ ] TESTER OU PLUS DE TOAST STACKEE si possible d'accumuler les toast revoit certains cas
-
+    * [\] OPTIONNEL - retire outline si envoi mais mot pas complet
+  * [X] TESTER OU PLUS DE TOAST STACKEE si possible d'accumuler les toast revoit certains cas
+  * [ ] toast custom orange pour temps ecroule et termine moitiee inferieure
 
 ## 🎮 Gameplay
 
@@ -36,21 +37,25 @@
   * [X] Placement du clavier
 
 * [X] Ajout timer (LIMITE DE 35-45 SEC PAR MOTS)
-  * [ ] Barre qui se remplie en fonction du temps restant
-  * [ ] OPTIONNEL - retire outline si envoi mais mot pas complet
+  * [X] Barre qui se remplie en fonction du temps restant
+
+* [ ] fenetre au dessus de game page
+  * [ ] Regle du jeu en question
+  * [ ] Boutton pour etre pret
+    * [ ] LANCE SEULEMENT SI TOUT LES JOUEURS SONT PRETS (qd implementation multijoueurs)
+      * [ ] affiche pseudo de tt les joueurs non pret en rouge
 
 * [ ] Ajouter le mode multijoueur
   * [ ] Ajout window regles / validation pret de TOUT les joueurs
 
 * [ ] Gérer les modes avec plus de 5 lettres
 
-
 ## ⚡ Optimisation
 
 * [ ] Utiliser `useMemo` pour les lignes déjà complétées
   * [ ] Éviter les recalculs inutiles
-* [ ] rendre flex pour mobile et toutes tailles
 
+* [ ] rendre flex pour mobile et toutes tailles
 
 ## 🌐 Réseau / Rooms
 
