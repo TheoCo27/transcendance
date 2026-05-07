@@ -1,7 +1,6 @@
 import { observer, useLocalObservable } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 import Guess from "../components/Wordle/Guess";
-import type { settings } from "../components/Wordle/Settings";
 import PuzzleStore from "../components/Wordle/PuzzleStore";
 import { useToast } from "../components/ui/toast";
 import Keyboard from "../components/Wordle/Keyboard";
@@ -35,7 +34,7 @@ export default observer(function GamesPage() {
       
       if (store.ToastMessage === "Ce mot n'est pas dans la liste")
         toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "Pour valider un mot, vous devez entrer 5 lettres")
+      else if (store.ToastMessage === `Pour valider un mot, vous devez entrer ${store.nbr_letters} lettres`)
         toast.error(store.ToastMessage);
       else if (store.ToastMessage === "Vous avez terminé n* (NUM PULL DU BACK)")
         toast.success(store.ToastMessage);
@@ -46,21 +45,18 @@ export default observer(function GamesPage() {
 
   }, [store.ToastId])
 
-  // if {store.cur_error} === 1 print error, and {store.cur_error} = 0, else skip
   
 	return (
     <div className="flex h-screen w-screen flex-col items-center justify-center">
       <h1>GamePage</h1>
       <h1>Wordle</h1>
 
-      {/* key pour via clavier visuel jcrois */}
-      {/* key a l'air inutile */}
-      
       <ProgressBar start_time={store.start_time} store={store}/>
 
       {store.guesses.map((_, i) => (
         <Guess
-          // key={i}
+          checkerValidWord={store.all_words_array_json}
+          lettersCount={store.nbr_letters}
           flag={store.validWord}
           word={store.word}
           guess={store.guesses[i] ?? ""}
@@ -74,7 +70,7 @@ export default observer(function GamesPage() {
     </div>
       
       {/* creer debug flag */}
-      <div>word: {store.word}</div>      {/* extraire mot de fichier */}
+      <div>word: {store.word}</div>
       <div>currentGuess: {store.currentGuess}</div> 
       <div>guesses: {JSON.stringify(store.guesses)}</div> {/* <div>guesses: {store.guesses.join(" | ")}</div> */}
       <div>Secondes passees: {Math.floor(Date.now() / 1000) - store.start_time}</div>
@@ -82,7 +78,7 @@ export default observer(function GamesPage() {
   );
 });
 
-      {/* <Guess {...s} /> */}
+    {/* <Guess {...s} /> */}
   // {/* <Guess word={"test"} guess={"ttst2"} isGuessed={false} /> */}
   // {/* {store.won && <h1> You Won </h1> || store.lost && <h1> You lost </h1>} */}
   

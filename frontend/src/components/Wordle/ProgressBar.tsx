@@ -28,8 +28,8 @@ export default observer(function ProgressBar({ store, start_time }: { store: Puz
 	  dir='rtl'
 	  value={Math.min(elapsed, max)}
 	  max={max}
-	  style={{ width: '35%', height: 26}}
-	  className="mb-3 bg-blue-400 my-progress"
+	  style={{ width: '36%', height: 26}}
+	  className=" flex w-[min(92vw,26rem)] mb-3 bg-blue-400 my-progress"
 	/>
   );
 });

@@ -63,3 +63,34 @@ select:disabled {
 .my-progress::-moz-progress-bar {
   background-color: #ffffff;
 }
+
+/*
+Source - https://stackoverflow.com/a/34798353
+Posted by Mike Donkers, modified by community. See post 'Timeline' for change history
+Retrieved 2026-05-07, License - CC BY-SA 4.0
+*/
+
+/*arrondis barre les deux navigateurs*/
+.my-progress {
+    border: 0;
+    height: 40px;
+    border-radius: 20px;
+}
+/*arrondis barre chromium*/
+.my-progress::-webkit-progress-bar {
+    border-radius: 20px;
+    background-color:lightskyblue;
+}
+
+/*arrondis dans barre chromium*/
+.my-progress::-webkit-progress-value {
+    border-radius: 20px;
+    background-color:white;
+}
+
+/*arrondis dans barre firefox*/
+.my-progress::-moz-progress-bar {
+    border: 0;
+    height: 26px;
+    border-radius: 20px;
+}
