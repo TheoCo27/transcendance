@@ -5,6 +5,7 @@
 * [ ] Modifier le type de `settings`
 * [ ] Renommer les éléments concernés
 * [ ] Nettoyer les autres fichiers
+
 * [X] Ecourte les msg d'err, met tt en francais
   * [X] clavier azerty
 
@@ -15,7 +16,7 @@
   * [X] Ne pas enregistrer le mot invalide
 
 * [X] Implémenter la comparaison des mots pour les couleurs correctes
-  * [ ] Corriger le comportement (pas en crescendo)
+  * [ ] IMPORTANT - Corriger le comportement (pas en crescendo)
 
 * [X] Creer des toast custom (pour ne pas avoir success et error, si possible bouger le positionnement haut-droite, moins long, moins grand)
   * [X] toast si moins de 5 lettres (5 mais bon nombre en fonction du mode selectionnee)
@@ -26,7 +27,7 @@
   * [X] AUTO SUBMIT MOT si timeup, non valide = affiche 'toast_validWord'
     * [\] OPTIONNEL - retire outline si envoi mais mot pas complet
   * [X] TESTER OU PLUS DE TOAST STACKEE si possible d'accumuler les toast revoit certains cas
-  * [\] toast custom orange pour temps ecroule et termine moitiee inferieure
+  * [\] OPTIONNEL -toast custom orange pour temps ecroule et termine moitiee inferieure
 
   * [ ] le toast de victoire ajouter le placement pr l'affichage
 
@@ -66,3 +67,28 @@
 ---
 
 * [ ] PREND DES NOTES DISCORD
+
+
+## Restant
+* [ ] Modifier le type de `settings`
+* [ ] Renommer les éléments concernés
+* [ ] Nettoyer les autres fichiers
+
+  * [ ] IMPORTANT - Corriger le comportement (pas en crescendo)
+
+  * [ ] le toast de victoire ajouter le placement pr l'affichage
+
+  * [ ] fenetre au dessus de game page
+  * [ ] Regle du jeu en question
+    * [ ] OPTIONNEL - img
+  * [ ] Boutton pour etre pret
+    * [ ] LANCE SEULEMENT SI TOUT LES JOUEURS SONT PRETS (qd implementation multijoueurs)
+      * [ ] affiche pseudo de tt les joueurs non pret en rouge
+
+
+* [ ] Utiliser `useMemo` pour les lignes déjà complétées
+  * [ ] Éviter les recalculs inutiles
+
+* [ ] Connecter aux rooms
+* [ ] Implémenter le "hall des game rooms"
+    * [ ] Redirection vers le `gameID`

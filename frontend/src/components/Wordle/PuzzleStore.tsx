@@ -58,7 +58,7 @@ export default {
 	ToastMessage: "",
 	ToastId: 0,
 
-	start_time: Math.floor(Date.now() / 1000),
+	start_time: -1,
 	time_per_word: 30,
 
 	nbr_letters: 6,
