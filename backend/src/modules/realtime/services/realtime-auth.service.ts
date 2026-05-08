@@ -7,6 +7,7 @@ import { Socket } from "socket.io";
 export class RealtimeAuthService {
   constructor(private readonly jwtService: JwtService) {}
 
+  // Authentifie un socket et retourne l'id utilisateur.
   async authenticateSocket(client: Socket): Promise<number> {
     const token = this.extractAccessToken(client);
     if (!token) {
@@ -21,6 +22,7 @@ export class RealtimeAuthService {
     return payload.sub;
   }
 
+  // Extrait le token JWT depuis les cookies du socket.
   private extractAccessToken(client: Socket): string | null {
     const cookieHeader = client.handshake.headers.cookie;
     if (!cookieHeader) {
@@ -41,4 +43,3 @@ export class RealtimeAuthService {
     return value.length > 0 ? decodeURIComponent(value) : null;
   }
 }
-

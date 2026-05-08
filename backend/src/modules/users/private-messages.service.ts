@@ -47,6 +47,7 @@ export class PrivateMessagesService {
     this.loadStore();
   }
 
+  // Resume chaque conversation privee d'un utilisateur.
   async listConversationSummaries(
     userId: number,
   ): Promise<PrivateConversationSummary[]> {
@@ -127,6 +128,7 @@ export class PrivateMessagesService {
       });
   }
 
+  // Retourne l'historique d'une conversation et marque les lus.
   async listConversation(userId: number, friendId: number): Promise<PrivateMessage[]> {
     await this.assertMessagingAllowed(userId, friendId);
 
@@ -178,6 +180,7 @@ export class PrivateMessagesService {
     return conversation;
   }
 
+  // Envoie un message prive puis cree la notification associee.
   async sendMessage(
     senderId: number,
     friendId: number,
@@ -217,6 +220,7 @@ export class PrivateMessagesService {
     return message;
   }
 
+  // Verifie que deux utilisateurs peuvent s'ecrire en prive.
   private async assertMessagingAllowed(
     userId: number,
     friendId: number,
@@ -248,6 +252,7 @@ export class PrivateMessagesService {
     return this.usersService.buildFriendUserSummary(friend);
   }
 
+  // Tronque un message pour l'affichage dans les apercus.
   private buildMessagePreview(content: string): string {
     const normalized = content.trim().replace(/\s+/g, " ");
 
@@ -258,6 +263,7 @@ export class PrivateMessagesService {
     return `${normalized.slice(0, 69)}...`;
   }
 
+  // Indique si un message appartient a cette conversation.
   private isConversationMessage(
     message: PrivateMessage,
     userId: number,
@@ -269,6 +275,7 @@ export class PrivateMessagesService {
     );
   }
 
+  // Recharge le stockage local des messages prives.
   private loadStore(): void {
     if (!existsSync(this.storeFilePath)) {
       return;
@@ -310,6 +317,7 @@ export class PrivateMessagesService {
     }
   }
 
+  // Sauvegarde les messages prives sur disque.
   private persistStore(): void {
     const directory = path.dirname(this.storeFilePath);
     mkdirSync(directory, { recursive: true });

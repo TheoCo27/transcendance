@@ -17,6 +17,7 @@ type HealthStatus = {
 export class AppService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  // Retourne l'etat de sante du backend et de la base.
   async getHealth(): Promise<HealthStatus> {
     const status: HealthStatus = {
       service: "backend",
@@ -45,6 +46,7 @@ export class AppService {
     }
   }
 
+  // Expose un resume statique des capacites de l'API.
   getApi() {
     return {
       name: "ft_transcendance starter",

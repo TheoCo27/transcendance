@@ -26,12 +26,14 @@ export class RealtimeGameRuntimeService {
     private readonly response: RealtimeResponseService,
   ) {}
 
+  // Arrete tous les timers de partie encore actifs.
   stopAllTimers(): void {
     for (const roomId of this.activeTimers.keys()) {
       this.stopRoomTimer(roomId);
     }
   }
 
+  // Verifie qu'une question est bien active pour la room.
   ensureActiveQuestion(roomId: number, questionId: number): void {
     const runtime = this.activeTimers.get(roomId);
     if (!runtime) {
@@ -42,6 +44,7 @@ export class RealtimeGameRuntimeService {
     }
   }
 
+  // Lance la boucle complete d'une partie pour une room.
   async startGameLoop(roomId: number, server: Server): Promise<void> {
     const room = await this.roomsService.getById(roomId);
     const totalQuestions =
@@ -73,6 +76,7 @@ export class RealtimeGameRuntimeService {
     );
   }
 
+  // Termine la question en cours puis enchaine la suite du jeu.
   async completeActiveQuestion(
     roomId: number,
     reason: "timeout" | "all_answered",
@@ -122,6 +126,7 @@ export class RealtimeGameRuntimeService {
     );
   }
 
+  // Ferme une room et diffuse la raison de fermeture.
   async closeRoom(
     roomId: number,
     reason: string,
@@ -143,6 +148,7 @@ export class RealtimeGameRuntimeService {
     return payload;
   }
 
+  // Demarre le timer et l'etat d'une nouvelle question.
   private async startQuestionTimer(
     roomId: number,
     questionNumber: number,
@@ -217,6 +223,7 @@ export class RealtimeGameRuntimeService {
     );
   }
 
+  // Diffuse le temps restant pour la question active.
   private emitTimerTick(
     roomId: number,
     questionId: number,
@@ -243,6 +250,7 @@ export class RealtimeGameRuntimeService {
     );
   }
 
+  // Termine la partie, calcule le gagnant et publie le resultat.
   private async endGame(
     roomId: number,
     reason: string,
@@ -274,6 +282,7 @@ export class RealtimeGameRuntimeService {
     await broadcastRoomList(server, this.roomsService, this.response);
   }
 
+  // Nettoie le timer associe a une room.
   private stopRoomTimer(roomId: number): void {
     const runtime = this.activeTimers.get(roomId);
     if (!runtime) {
