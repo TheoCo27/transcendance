@@ -1,5 +1,5 @@
 import { observer, useLocalObservable } from "mobx-react-lite";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Guess from "../components/Wordle/Guess";
 import PuzzleStore from "../components/Wordle/PuzzleStore";
 import { useToast } from "../components/ui/toast";
@@ -12,7 +12,12 @@ export default observer(function GamesPage() {
   const store = useLocalObservable(() => PuzzleStore)
   const toast = useToast();
   const [isRulesOpen, setRulesOpen] = useState(true);
-  const [currentTime, setcurrentTime] = useState(-1);
+  const [isPlayerReady, setPlayerReady] = useState(false);
+
+  const isRulesOpenRef = useRef(isRulesOpen); //car useEffect garde sinon la tt premiere valeure
+  useEffect(() => {
+    isRulesOpenRef.current = isRulesOpen;
+  }, [isRulesOpen]);
 
    useEffect(() => {
     store.init()
@@ -20,8 +25,8 @@ export default observer(function GamesPage() {
 
     // L'interval est créé ici, donc UNE fois :
     const intervalId = setInterval(() => {
-      //PAS SUR UTILE
-      if (!isRulesOpen)
+      // si tout les joueurs prets
+      if (isRulesOpenRef.current === false)
         store.checkTimeUp();
       if (store.currentGuess === 6 || store.won) {
         clearInterval(intervalId);
@@ -57,13 +62,12 @@ export default observer(function GamesPage() {
     {
       isRulesOpen ? (
         <div className="flex items-center justify-end">
-          <RulesPanel onClose={() => setRulesOpen(false)} />
+          <RulesPanel onClose={() => setRulesOpen(false)} store={store} setReady={() => {setPlayerReady(true); }} readyFlag={isPlayerReady}/>
         </div>
 		    //qd tous pret et que regles sont fermees
         // peux pas mettre dans autre scope car doit se lancer une seule fois pour le temps
         //oubien un flag qui passe a 1 pour exec une seule fois
         // start_time vaux -1 de base donc pas besoin si exec ici, sinon le test ok
-
           // if (!isRulesOpen && playersReady === numberOfPlayers)
             // store.start_time = Math.floor(Date.now() / 1000)
       ) : (

@@ -34,8 +34,10 @@ export type PuzzleStoreType = {
   keyInexact : string[];
   AllGuessesMashed : string[]; // que utilisee ici
 
+  players_ready : number;
+
   toast_validWord(guess: string): 1 | 0;
-  toast_five_letters(): void;
+  toast_x_letters(): void;
   toast_won(): void;
   toast_timeup(): void;
   toast_lost(): void;
@@ -59,12 +61,14 @@ export default {
 	ToastId: 0,
 
 	start_time: -1,
-	time_per_word: 30,
+	time_per_word: 5,
 
 	nbr_letters: 6,
 	words_array_json: [] as string[],
 	letters_array_json: [] as string[],
 	all_words_array_json: [] as string[],
+
+	players_ready: 1, //PULL VALEUR DU BACK
 
 	get won() {
 		return this.currentGuess > 0 && this.guesses[this.currentGuess - 1] === this.word
@@ -106,7 +110,7 @@ export default {
 			return 1;
 	},
 
-	toast_five_letters() {
+	toast_x_letters() {
 		this.ToastMessage = `Pour valider un mot, vous devez entrer ${this.nbr_letters} lettres`;
 		this.ToastId++;
 	},
@@ -143,7 +147,7 @@ export default {
 	submitGuess() {
 		const guess = this.guesses[this.currentGuess];
 		if (guess.length !== this.nbr_letters) {
-			this.toast_five_letters();
+			this.toast_x_letters();
 			return;
 		}
 
@@ -165,7 +169,7 @@ export default {
 			if (this.guesses[this.currentGuess].length === this.nbr_letters)
 				this.toast_validWord(this.guesses[this.currentGuess]);
 			else
-				this.toast_five_letters();
+				this.toast_x_letters();
 
 			this.currentGuess++;
 			this.start_time = Math.floor(Date.now() / 1000);//RESET TIMER

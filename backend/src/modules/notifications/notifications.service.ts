@@ -41,6 +41,7 @@ type ListNotificationsOptions = {
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Cree une notification pour un utilisateur.
   async create(input: CreateNotificationInput): Promise<NotificationItem> {
     const notification = await this.prisma.client.notification.create({
       data: {
@@ -59,6 +60,7 @@ export class NotificationsService {
     return this.toNotificationItem(notification);
   }
 
+  // Cree une notification identique pour plusieurs destinataires.
   async createMany(
     recipientIds: number[],
     input: Omit<CreateNotificationInput, "recipientId">,
@@ -77,6 +79,7 @@ export class NotificationsService {
     );
   }
 
+  // Liste les notifications d'un utilisateur avec filtres simples.
   async listForUser(
     userId: number,
     options: ListNotificationsOptions = {},
@@ -95,6 +98,7 @@ export class NotificationsService {
     return notifications.map((notification) => this.toNotificationItem(notification));
   }
 
+  // Compte les notifications non lues d'un utilisateur.
   async countUnreadForUser(userId: number): Promise<number> {
     return this.prisma.client.notification.count({
       where: {
@@ -104,6 +108,7 @@ export class NotificationsService {
     });
   }
 
+  // Marque une notification precise comme lue.
   async markAsRead(
     userId: number,
     notificationId: number,
@@ -132,6 +137,7 @@ export class NotificationsService {
     return this.toNotificationItem(updatedNotification);
   }
 
+  // Marque toutes les notifications non lues comme lues.
   async markAllAsRead(userId: number): Promise<{ updatedCount: number }> {
     const result = await this.prisma.client.notification.updateMany({
       where: {
@@ -148,6 +154,7 @@ export class NotificationsService {
     };
   }
 
+  // Encadre la limite de resultats dans une plage sure.
   private normalizeLimit(limit?: number): number {
     if (typeof limit !== "number" || Number.isNaN(limit)) {
       return 50;
@@ -156,6 +163,7 @@ export class NotificationsService {
     return Math.min(Math.max(Math.trunc(limit), 1), 100);
   }
 
+  // Formate une notification Prisma pour l'API.
   private toNotificationItem(notification: {
     id: number;
     recipientId: number;

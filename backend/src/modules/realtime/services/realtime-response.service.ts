@@ -7,6 +7,7 @@ import { WsResponse } from "../realtime.types";
 export class RealtimeResponseService {
   private readonly logger = new Logger(RealtimeResponseService.name);
 
+  // Construit une reponse WebSocket reussie.
   ok<T>(data: T): WsResponse<T> {
     return {
       success: true,
@@ -15,6 +16,7 @@ export class RealtimeResponseService {
     };
   }
 
+  // Construit une reponse WebSocket en erreur.
   fail(code: string, message: string): WsResponse<never> {
     return {
       success: false,
@@ -23,6 +25,7 @@ export class RealtimeResponseService {
     };
   }
 
+  // Journalise puis emet une erreur WebSocket standardisee.
   emitError(client: Socket, event: string, exception: unknown): void {
     if (!(exception instanceof HttpException)) {
       this.logger.error(
