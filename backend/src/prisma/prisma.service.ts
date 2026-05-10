@@ -1,3 +1,5 @@
+// Ce fichier encapsule le client Prisma et gere son cycle de vie
+// dans l'application NestJS.
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client";

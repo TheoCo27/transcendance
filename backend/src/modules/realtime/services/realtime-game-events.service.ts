@@ -1,3 +1,4 @@
+// Ce fichier gere les evenements WebSocket lies aux reponses de jeu.
 import { SubmitAnswerDto } from "@/modules/game/dto/submit-answer.dto";
 import { GameService } from "@/modules/game/game.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";

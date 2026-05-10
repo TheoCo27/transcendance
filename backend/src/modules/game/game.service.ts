@@ -1,3 +1,5 @@
+// Ce fichier contient le moteur metier du jeu quiz:
+// etat runtime, questions actives, reponses et leaderboard.
 import { QuizzesService } from "@/modules/quizzes/quizzes.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
 import {

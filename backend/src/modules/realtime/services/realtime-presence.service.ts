@@ -1,3 +1,5 @@
+// Ce fichier suit la presence temps reel en liant les sockets connectes
+// aux utilisateurs authentifies.
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 
 @Injectable()

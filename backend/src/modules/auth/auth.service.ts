@@ -1,3 +1,5 @@
+// Ce fichier contient toute la logique metier d'authentification:
+// login classique, guest login, session JWT et OAuth Google.
 import { LoginDto } from "@/modules/users/dto/login.dto";
 import { RegisterDto } from "@/modules/users/dto/register.dto";
 import { GuestLoginDto } from "@/modules/users/dto/guest-login.dto";
