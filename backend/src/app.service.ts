@@ -1,6 +1,9 @@
+// Ce fichier contient les informations globales du backend:
+// healthcheck applicatif et resume des capacites exposees par l'API.
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "./prisma/prisma.service";
 
+// Structure retournee par l'endpoint de sante du backend.
 type HealthStatus = {
   service: "backend";
   framework: "nestjs";

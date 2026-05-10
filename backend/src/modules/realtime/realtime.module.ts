@@ -1,3 +1,5 @@
+// Ce fichier assemble toute la couche temps reel du projet:
+// gateway WS, auth WS, presence, rooms, runtime de jeu et validation.
 import { GameModule } from "@/modules/game/game.module";
 import { RoomsModule } from "@/modules/rooms/rooms.module";
 import { ScoresModule } from "@/modules/scores/scores.module";

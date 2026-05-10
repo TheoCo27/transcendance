@@ -1,3 +1,4 @@
+// Ce fichier valide les payloads WebSocket entrants contre les DTOs du projet.
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { ClassConstructor, plainToInstance } from "class-transformer";
 import { ValidationError, validateSync } from "class-validator";
