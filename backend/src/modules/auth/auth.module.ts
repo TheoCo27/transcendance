@@ -1,3 +1,5 @@
+// Ce fichier assemble toute la couche d'authentification:
+// controller, service, guard et configuration JWT.
 import { UsersModule } from "@/modules/users/users.module";
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";

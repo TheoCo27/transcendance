@@ -1,3 +1,5 @@
+// Ce fichier expose les endpoints HTTP lies au profil utilisateur,
+// au systeme d'amis et aux messages prives.
 import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import { CurrentUser } from "@/modules/auth/decorators/current-user.decorator";
@@ -41,6 +43,7 @@ export class UsersController {
     private readonly privateMessagesService: PrivateMessagesService,
   ) {}
 
+  // Retourne le profil public de l'utilisateur authentifie.
   @Get("me")
   @UseGuards(AuthGuard)
   async getMe(
@@ -55,6 +58,7 @@ export class UsersController {
     return ok(this.sanitizeUser(user));
   }
 
+  // Met a jour ou supprime l'avatar du compte courant.
   @Patch("me/avatar")
   @UseGuards(AuthGuard)
   async updateAvatar(
@@ -68,6 +72,7 @@ export class UsersController {
     );
   }
 
+  // Met a jour le pseudo et le statut du compte courant.
   @Patch("me/profile")
   @UseGuards(AuthGuard)
   async updateProfile(
@@ -84,6 +89,7 @@ export class UsersController {
     );
   }
 
+  // Retourne la vue consolidee du reseau d'amis du compte courant.
   @Get("me/friends")
   @UseGuards(AuthGuard)
   async getFriendOverview(
@@ -92,6 +98,7 @@ export class UsersController {
     return ok(await this.usersService.getFriendOverview(auth.sub));
   }
 
+  // Envoie une demande d'ami au pseudo cible.
   @Post("me/friends")
   @UseGuards(AuthGuard)
   async sendFriendRequest(
@@ -101,6 +108,7 @@ export class UsersController {
     return ok(await this.usersService.sendFriendRequest(auth.sub, dto.username));
   }
 
+  // Accepte ou refuse une demande d'ami recue.
   @Patch("me/friends/requests/:requestId")
   @UseGuards(AuthGuard)
   async respondToFriendRequest(
@@ -117,6 +125,7 @@ export class UsersController {
     );
   }
 
+  // Retourne la synthese des conversations privees du compte courant.
   @Get("me/friends/conversations")
   @UseGuards(AuthGuard)
   async getConversationSummaries(
@@ -127,6 +136,7 @@ export class UsersController {
     );
   }
 
+  // Retourne le detail des messages prives avec un ami donne.
   @Get("me/friends/messages/:friendId")
   @UseGuards(AuthGuard)
   async getPrivateConversation(
@@ -138,6 +148,7 @@ export class UsersController {
     );
   }
 
+  // Envoie un message prive a un ami.
   @Post("me/friends/messages/:friendId")
   @UseGuards(AuthGuard)
   async sendPrivateMessage(
@@ -154,6 +165,7 @@ export class UsersController {
     );
   }
 
+  // Retourne le profil public d'un utilisateur par son identifiant.
   @Get(":id")
   async getById(
     @Param("id", ParseIntPipe) id: number,
@@ -167,6 +179,7 @@ export class UsersController {
     return ok(this.sanitizeUser(user));
   }
 
+  // Supprime les champs sensibles avant d'exposer un utilisateur au frontend.
   private sanitizeUser(user: User): SafeUser {
     const { googleId, password, ...safeUser } = user;
     return safeUser;

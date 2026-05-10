@@ -1,3 +1,5 @@
+// Ce fichier centralise la construction des payloads de succes/erreur
+// envoyes sur le canal WebSocket.
 import { HttpException, Injectable, Logger } from "@nestjs/common";
 import { Socket } from "socket.io";
 import { buildErrorPayload } from "@/common/http/error-response.util";

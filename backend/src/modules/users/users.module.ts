@@ -1,3 +1,5 @@
+// Ce fichier declare le module utilisateur:
+// profil, amis et messages prives.
 import { PrismaModule } from "@/prisma/prisma.module";
 import { Module } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";

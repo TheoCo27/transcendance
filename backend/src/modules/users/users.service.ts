@@ -1,3 +1,4 @@
+// Ce fichier contient la logique metier du profil utilisateur et du systeme d'amis.
 import { PrismaService } from "@/prisma/prisma.service";
 import { FriendshipStatus, Prisma, User } from "@generated/prisma/client";
 import {

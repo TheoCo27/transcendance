@@ -1,3 +1,5 @@
+// Ce fichier declare le module racine NestJS et assemble tous les modules
+// fonctionnels du projet.
 import { Module } from "@nestjs/common";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";

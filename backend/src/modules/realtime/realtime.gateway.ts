@@ -1,3 +1,5 @@
+// Ce fichier declare la gateway Socket.IO principale du projet.
+// Elle recoit les evenements temps reel et les delegue aux services metier.
 import { Logger, OnModuleDestroy } from "@nestjs/common";
 import {
   ConnectedSocket,
@@ -27,8 +29,10 @@ import { RealtimeRoomEventsService } from "./services/realtime-room-events.servi
 export class RealtimeGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy
 {
+  // Logger de la gateway pour tracer les connexions/deconnexions.
   private readonly logger = new Logger(RealtimeGateway.name);
 
+  // Instance Socket.IO serveur fournie par NestJS.
   @WebSocketServer()
   server!: Server;
 
@@ -41,6 +45,7 @@ export class RealtimeGateway
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
 
+  // Gere l'ouverture d'un socket: auth, liaison user/socket et synchro des rooms.
   async handleConnection(client: Socket): Promise<void> {
     try {
       const userId = await this.auth.authenticateSocket(client);
@@ -64,17 +69,20 @@ export class RealtimeGateway
     }
   }
 
+  // Gere la deconnexion d'un socket et le nettoyage associe.
   async handleDisconnect(client: Socket): Promise<void> {
     await this.roomEvents.handleDisconnect(client.id, this.server);
     this.logger.log(`Socket disconnected: ${client.id}`);
   }
 
+  // Nettoie les timers et l'etat de presence quand le module est detruit.
   onModuleDestroy(): void {
     this.gameRuntime.stopAllTimers();
     this.roomEvents.clearDisconnectCleanupTimers();
     this.presence.clear();
   }
 
+  // Retourne la liste des rooms au client demandeur.
   @SubscribeMessage("room:list")
   async handleRoomList(@ConnectedSocket() client: Socket): Promise<void> {
     await this.runSafely(client, "room:list:error", async () => {
@@ -82,6 +90,7 @@ export class RealtimeGateway
     });
   }
 
+  // Traite la creation temps reel d'une room.
   @SubscribeMessage("room:create")
   async handleRoomCreate(
     @MessageBody() payload: unknown,
@@ -92,6 +101,7 @@ export class RealtimeGateway
     });
   }
 
+  // Traite la demande de rejoindre une room.
   @SubscribeMessage("room:join")
   async handleRoomJoin(
     @MessageBody() payload: unknown,
@@ -102,6 +112,7 @@ export class RealtimeGateway
     });
   }
 
+  // Traite la sortie volontaire d'un joueur hors de la room.
   @SubscribeMessage("room:leave")
   async handleRoomLeave(
     @MessageBody() payload: unknown,
@@ -112,6 +123,7 @@ export class RealtimeGateway
     });
   }
 
+  // Traite le lancement d'une partie depuis la room.
   @SubscribeMessage("room:start")
   async handleRoomStart(
     @MessageBody() payload: unknown,
@@ -122,6 +134,7 @@ export class RealtimeGateway
     });
   }
 
+  // Traite l'envoi d'une reponse pour la question active.
   @SubscribeMessage("game:answer")
   async handleGameAnswer(
     @MessageBody() payload: unknown,
@@ -132,6 +145,7 @@ export class RealtimeGateway
     });
   }
 
+  // Traite l'envoi d'un message de chat temps reel.
   @SubscribeMessage("chat:message")
   async handleChatMessage(
     @MessageBody() payload: unknown,
@@ -142,6 +156,7 @@ export class RealtimeGateway
     });
   }
 
+  // Encapsule les handlers WS pour renvoyer un event d'erreur coherent en cas d'exception.
   private async runSafely(
     client: Socket,
     errorEvent: string,

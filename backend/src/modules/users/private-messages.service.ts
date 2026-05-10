@@ -1,3 +1,4 @@
+// Ce fichier gere la messagerie privee entre amis et sa persistence locale sur disque.
 import { UsersService, type FriendUserSummary } from "@/modules/users/users.service";
 import {
   ForbiddenException,

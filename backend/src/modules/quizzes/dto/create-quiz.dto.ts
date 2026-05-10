@@ -1,3 +1,5 @@
+// Ce fichier definit les DTOs utilises pour creer un quiz
+// et chacune de ses questions.
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
@@ -16,6 +18,7 @@ import {
 } from "class-validator";
 
 export class CreateQuizQuestionDto {
+  // Intitule de la question tel qu'il sera affiche aux joueurs.
   @ApiProperty({
     example: "Quelle est la capitale du Japon ?",
     minLength: 1,
@@ -26,6 +29,7 @@ export class CreateQuizQuestionDto {
   @MaxLength(500)
   questionText: string;
 
+  // Liste des propositions de reponse pour la question.
   @ApiProperty({
     example: ["Seoul", "Tokyo", "Kyoto", "Osaka"],
     type: [String],
@@ -40,12 +44,14 @@ export class CreateQuizQuestionDto {
   @MaxLength(200, { each: true })
   answers: string[];
 
+  // Position de la bonne reponse dans le tableau `answers`.
   @ApiProperty({ example: 1, minimum: 0, maximum: 3 })
   @IsInt()
   @Min(0)
   @Max(3)
   correctAnswerIndex: number;
 
+  // Nombre de points accordes si la question est reussie.
   @ApiPropertyOptional({ example: 100, minimum: 1, maximum: 1000 })
   @IsOptional()
   @IsInt()
@@ -55,17 +61,20 @@ export class CreateQuizQuestionDto {
 }
 
 export class CreateQuizDto {
+  // Titre global du quiz visible dans les listes et les pages de quiz.
   @ApiProperty({ example: "Culture generale", minLength: 2, maxLength: 120 })
   @IsString()
   @MinLength(2)
   @MaxLength(120)
   title: string;
 
+  // Duree standard d'une question pour ce quiz, ou `null` pour un mode libre.
   @ApiPropertyOptional({ enum: [10, 30], example: 30, nullable: true })
   @IsOptional()
   @IsIn([10, 30, null])
   questionDurationSec?: 10 | 30 | null;
 
+  // Ensemble ordonne des questions qui composent le quiz.
   @ApiProperty({
     type: () => CreateQuizQuestionDto,
     isArray: true,

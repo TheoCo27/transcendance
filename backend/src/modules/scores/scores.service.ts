@@ -1,3 +1,4 @@
+// Ce fichier agrege et expose les scores globaux et par quiz.
 import { PrismaService } from "@/prisma/prisma.service";
 import { UsersService } from "@/modules/users/users.service";
 import { Injectable, NotFoundException } from "@nestjs/common";

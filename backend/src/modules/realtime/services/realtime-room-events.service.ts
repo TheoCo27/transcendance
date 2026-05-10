@@ -1,3 +1,5 @@
+// Ce fichier gere les evenements WebSocket lies au cycle de vie des rooms
+// et au chat temps reel.
 import { ChatMessageDto } from "@/modules/realtime/dto/chat-message.dto";
 import { RoomCreateEventDto } from "@/modules/realtime/dto/room-create-event.dto";
 import { RoomJoinEventDto } from "@/modules/realtime/dto/room-join-event.dto";
