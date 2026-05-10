@@ -1,3 +1,5 @@
+// Ce fichier contient toute la logique metier des rooms:
+// creation, join, configuration, chat et transitions d'etat.
 import { PrismaService } from "@/prisma/prisma.service";
 import { Prisma } from "@generated/prisma/client";
 import {

@@ -1,3 +1,5 @@
+// Ce fichier expose les endpoints HTTP permettant de lister, creer,
+// rejoindre et configurer les rooms.
 import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import { CurrentUser } from "@/modules/auth/decorators/current-user.decorator";
@@ -24,11 +26,13 @@ import { Room, RoomsService } from "./rooms.service";
 export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
+  // Retourne toutes les rooms visibles sans exposer les mots de passe.
   @Get()
   async list(): Promise<ApiResponse<Array<Omit<Room, "password">>>> {
     return ok(await this.roomsService.list());
   }
 
+  // Retourne les rooms rattachees a un quiz donne.
   @Get("quizzes/:quizId")
   async listByQuizId(
     @Param("quizId", ParseIntPipe) quizId: number,
@@ -36,6 +40,7 @@ export class RoomsController {
     return ok(await this.roomsService.listByQuizId(quizId));
   }
 
+  // Retourne le detail public d'une room.
   @Get(":roomId")
   async getById(
     @Param("roomId", ParseIntPipe) roomId: number,
@@ -43,6 +48,7 @@ export class RoomsController {
     return ok(await this.roomsService.getById(roomId));
   }
 
+  // Cree une nouvelle room au nom de l'utilisateur authentifie.
   @Post()
   @UseGuards(AuthGuard)
   async create(
@@ -52,6 +58,7 @@ export class RoomsController {
     return ok(await this.roomsService.create({ ...dto, ownerUserId: auth.sub }));
   }
 
+  // Fait rejoindre une room a un utilisateur.
   @Post(":roomId/join")
   async join(
     @Param("roomId", ParseIntPipe) roomId: number,
@@ -60,6 +67,7 @@ export class RoomsController {
     return ok(await this.roomsService.join(roomId, dto));
   }
 
+  // Met a jour la configuration editable d'une room.
   @Patch(":roomId")
   @UseGuards(AuthGuard)
   async update(

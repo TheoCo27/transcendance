@@ -1,3 +1,5 @@
+// Ce fichier gere l'authentification des sockets WebSocket
+// a partir du cookie JWT present au handshake.
 import { AuthPayload } from "@/modules/auth/types/auth-payload.type";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";

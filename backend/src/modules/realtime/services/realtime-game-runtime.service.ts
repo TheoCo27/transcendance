@@ -1,3 +1,5 @@
+// Ce fichier pilote le runtime temps reel d'une partie:
+// timers, enchainement des questions et fin de partie.
 import { GameService } from "@/modules/game/game.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
 import { ScoresService } from "@/modules/scores/scores.service";

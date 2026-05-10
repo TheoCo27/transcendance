@@ -1,3 +1,5 @@
+// Ce fichier declare le module de jeu et ses dependances sur
+// les rooms et les quiz.
 import { QuizzesModule } from "@/modules/quizzes/quizzes.module";
 import { RoomsModule } from "@/modules/rooms/rooms.module";
 import { Module } from "@nestjs/common";

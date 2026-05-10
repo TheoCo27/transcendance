@@ -1,4 +1,4 @@
-import { NotificationsService } from "@/modules/notifications/notifications.service";
+// Ce fichier contient la logique metier du profil utilisateur et du systeme d'amis.
 import { PrismaService } from "@/prisma/prisma.service";
 import { FriendshipStatus, Prisma, User } from "@generated/prisma/client";
 import {
@@ -42,10 +42,7 @@ const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly notificationsService: NotificationsService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   // Recherche un utilisateur par email exact.
   async findUserByEmail(email: string): Promise<User | null> {
@@ -293,21 +290,6 @@ export class UsersService {
         },
       });
 
-      await this.notificationsService.create({
-        recipientId: receiver.id,
-        actorUserId: senderId,
-        resource: "friend_request",
-        resourceId: activeRelation.id,
-        action: "updated",
-        title: "Demande d'ami acceptee",
-        message: `${sender.username} a accepte votre demande d'ami.`,
-        metadata: {
-          friendshipStatus: "accepted",
-          senderId,
-          receiverId: receiver.id,
-        },
-      });
-
       return {
         message: `${receiver.username} is now in your friends list`,
         friendshipStatus: "accepted",
@@ -369,26 +351,6 @@ export class UsersService {
       where: { id: requestId },
       data: {
         status: action,
-      },
-    });
-
-    await this.notificationsService.create({
-      recipientId: request.senderId,
-      actorUserId: userId,
-      resource: "friend_request",
-      resourceId: requestId,
-      action: "updated",
-      title:
-        action === "accepted"
-          ? "Demande d'ami acceptee"
-          : "Demande d'ami refusee",
-      message:
-        action === "accepted"
-          ? `${currentUser.username} a accepte votre demande d'ami.`
-          : `${currentUser.username} a refuse votre demande d'ami.`,
-      metadata: {
-        requestId,
-        friendshipStatus: action,
       },
     });
 

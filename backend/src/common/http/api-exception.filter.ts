@@ -1,3 +1,5 @@
+// Ce fichier definit le filtre global qui transforme les exceptions NestJS
+// en reponses API homogenes du projet.
 import {
   ArgumentsHost,
   Catch,
@@ -13,8 +15,10 @@ import {
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
+  // Logger dedie au filtre pour tracer les erreurs non gerees explicitement.
   private readonly logger = new Logger(ApiExceptionFilter.name);
 
+  // Intercepte une exception HTTP ou non-HTTP et renvoie le format API standard.
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();

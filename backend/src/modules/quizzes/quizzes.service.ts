@@ -1,3 +1,4 @@
+// Ce fichier contient la logique metier de creation et lecture des quiz.
 import { PrismaService } from "@/prisma/prisma.service";
 import { Prisma } from "@generated/prisma/client";
 import {

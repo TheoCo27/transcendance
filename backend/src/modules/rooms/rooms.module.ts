@@ -1,3 +1,5 @@
+// Ce fichier declare le module des rooms et branche Prisma
+// pour leur persistence.
 import { PrismaModule } from "@/prisma/prisma.module";
 import { Module } from "@nestjs/common";
 import { RoomsController } from "./rooms.controller";

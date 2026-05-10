@@ -1,9 +1,10 @@
+// Ce fichier declare le module racine NestJS et assemble tous les modules
+// fonctionnels du projet.
 import { Module } from "@nestjs/common";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./modules/auth/auth.module";
 import { GameModule } from "./modules/game/game.module";
-import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { QuizzesModule } from "./modules/quizzes/quizzes.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { RoomsModule } from "./modules/rooms/rooms.module";
@@ -16,7 +17,6 @@ import { PrismaModule } from "./prisma/prisma.module";
     AuthModule,
     UsersModule,
     PrismaModule,
-    NotificationsModule,
     RoomsModule,
     GameModule,
     QuizzesModule,

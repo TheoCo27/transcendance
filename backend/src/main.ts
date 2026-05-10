@@ -1,3 +1,5 @@
+// Ce fichier est le point d'entree du backend: il cree l'application NestJS,
+// active les middlewares globaux et configure HTTPS/CORS/Swagger.
 import "dotenv/config";
 import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ValidationPipe } from "@nestjs/common";
@@ -8,6 +10,7 @@ import { existsSync, readFileSync } from "fs";
 import "reflect-metadata";
 import { AppModule } from "./app.module";
 
+// Demarre l'application backend avec sa configuration globale.
 async function bootstrap() {
   const isDevelopment = process.env.NODE_ENV === "development";
   const port = Number(process.env.BACKEND_PORT || 4000);
