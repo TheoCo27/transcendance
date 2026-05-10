@@ -1,4 +1,3 @@
-import { NotificationsService } from "@/modules/notifications/notifications.service";
 import { UsersService, type FriendUserSummary } from "@/modules/users/users.service";
 import {
   ForbiddenException,
@@ -42,7 +41,6 @@ export class PrivateMessagesService {
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly notificationsService: NotificationsService,
   ) {
     this.loadStore();
   }
@@ -180,7 +178,7 @@ export class PrivateMessagesService {
     return conversation;
   }
 
-  // Envoie un message prive puis cree la notification associee.
+  // Envoie un message prive.
   async sendMessage(
     senderId: number,
     friendId: number,
@@ -202,20 +200,6 @@ export class PrivateMessagesService {
     this.nextMessageId += 1;
     this.messages.push(message);
     this.persistStore();
-
-    await this.notificationsService.create({
-      recipientId: friendId,
-      actorUserId: senderId,
-      resource: "private_message",
-      resourceId: message.id,
-      action: "created",
-      title: "Nouveau message prive",
-      message: "Vous avez recu un nouveau message prive.",
-      metadata: {
-        friendId: senderId,
-        messageId: message.id,
-      },
-    });
 
     return message;
   }

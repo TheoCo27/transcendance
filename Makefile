@@ -13,9 +13,6 @@ BRANCH := $(shell git branch --show-current 2>/dev/null)
 # **************************************************************************** #
 
 all:
-	@if ! $(MAKE) env-check; then \
-		$(MAKE) env-init; \
-	fi
 	@$(MAKE) up-run
 
 help:
@@ -86,7 +83,7 @@ up: env-check setup-host compose-check
 ensure-public-stack: compose-check
 	@$(COMPOSE_DEV) rm -s -f prisma-studio >/dev/null 2>&1 || true
 
-up-run: setup-host compose-check ensure-public-stack
+up-run: env-check setup-host compose-check ensure-public-stack
 	bash scripts/generate-dev-cert.sh
 	$(COMPOSE) up --build -d
 	bash scripts/wait-for-containers.sh

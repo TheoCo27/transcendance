@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { logout } from "../services/auth";
-import NotificationCenter from "./NotificationCenter";
 import PrimaryButton from "./ui/PrimaryButton";
 
 export default function Navbar() {
@@ -61,7 +60,6 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {currentUser !== null ? (
             <div className="flex items-center gap-3">
-              <NotificationCenter />
               <div className="relative" ref={userMenuRef}>
                 <button
                   aria-expanded={isUserMenuOpen}
