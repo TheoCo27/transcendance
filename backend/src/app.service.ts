@@ -1,6 +1,9 @@
+// Ce fichier contient les informations globales du backend:
+// healthcheck applicatif et resume des capacites exposees par l'API.
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "./prisma/prisma.service";
 
+// Structure retournee par l'endpoint de sante du backend.
 type HealthStatus = {
   service: "backend";
   framework: "nestjs";
@@ -17,6 +20,7 @@ type HealthStatus = {
 export class AppService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  // Retourne l'etat de sante du backend et de la base.
   async getHealth(): Promise<HealthStatus> {
     const status: HealthStatus = {
       service: "backend",
@@ -45,6 +49,7 @@ export class AppService {
     }
   }
 
+  // Expose un resume statique des capacites de l'API.
   getApi() {
     return {
       name: "ft_transcendance starter",
@@ -65,7 +70,7 @@ export class AppService {
         "/rooms/:roomId",
         "/rooms/:roomId/join",
         "/game/:roomId/state",
-        "/game/answer",
+        "/game/answer", 
         "/scores/leaderboard",
         "/scores/users/:userId",
       ],

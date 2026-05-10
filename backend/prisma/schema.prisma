@@ -1,7 +1,8 @@
 generator client {
-  provider     = "prisma-client"
-  output       = "../generated/prisma"
-  moduleFormat = "cjs"
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
 }
 
 datasource db {
@@ -25,6 +26,12 @@ enum RoomStatus {
   finished
 }
 
+enum RoomGameType {
+  wordle
+  memory
+  quiz
+}
+
 enum GameStatus {
   waiting
   in_progress
@@ -32,11 +39,12 @@ enum GameStatus {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
   username String
   password String
   isGuest  Boolean @default(false)
+  googleId String? @unique
 
   avatar_url String?
   status     UserStatus @default(offline)
@@ -47,10 +55,10 @@ model User {
 
   messages Messages[] @relation("UserMessages")
 
-  answers            PlayerAnswer[] @relation("UserPlayerAnswers")
-  leaderboardEntries Leaderboard[]  @relation("UserLeaderboardEntries")
+  answers                PlayerAnswer[]    @relation("UserPlayerAnswers")
+  leaderboardEntries     Leaderboard[]     @relation("UserLeaderboardEntries")
   quizLeaderboardEntries QuizLeaderboard[] @relation("UserQuizLeaderboardEntries")
-  wonGames           Game[]         @relation("GameWinner")
+  wonGames               Game[]            @relation("GameWinner")
 
   sentFriendRequests     FriendRequests[] @relation("FriendRequestSender")
   receivedFriendRequests FriendRequests[] @relation("FriendRequestReceiver")
@@ -76,7 +84,11 @@ model Room {
   owner   User @relation("RoomOwner", fields: [ownerId], references: [id])
   ownerId Int
 
-  status RoomStatus @default(waiting)
+  status     RoomStatus    @default(waiting)
+  gameType   RoomGameType?
+  gameConfig Json?
+  isPrivate  Boolean       @default(false)
+  password   String?
 
   players  RoomPlayer[] @relation("RoomPlayers")
   messages Messages[]   @relation("RoomMessages")
@@ -88,13 +100,13 @@ model Room {
 }
 
 model Quiz {
-  id        Int      @id @default(autoincrement())
-  title     String
+  id                  Int      @id @default(autoincrement())
+  title               String
   questionDurationSec Int?
-  createdAt DateTime @default(now())
+  createdAt           DateTime @default(now())
 
-  questions QuizQuestion[] @relation("QuizQuestions")
-  games     Game[]         @relation("QuizGames")
+  questions          QuizQuestion[]    @relation("QuizQuestions")
+  games              Game[]            @relation("QuizGames")
   leaderboardEntries QuizLeaderboard[] @relation("QuizLeaderboardEntries")
 }
 
@@ -108,7 +120,7 @@ model QuizQuestion {
   correctAnswer String
 
   position  Int
-  points    Int      @default(1)
+  points    Int      @default(100)
   createdAt DateTime @default(now())
 
   gameQuestions GameQuestion[] @relation("QuestionGameQuestions")
@@ -201,11 +213,11 @@ model QuizLeaderboard {
   user   User @relation("UserQuizLeaderboardEntries", fields: [userId], references: [id])
   userId Int
 
-  totalScore Int      @default(0)
-  wins       Int      @default(0)
-  gamesPlayed Int     @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  totalScore  Int      @default(0)
+  wins        Int      @default(0)
+  gamesPlayed Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([quizId, userId])
   @@index([quizId, totalScore, wins])

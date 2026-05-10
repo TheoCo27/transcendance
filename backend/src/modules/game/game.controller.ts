@@ -1,3 +1,5 @@
+// Ce fichier expose les endpoints HTTP lies a l'etat du jeu quiz
+// et a l'envoi d'une reponse.
 import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import {
@@ -17,15 +19,19 @@ import { GameService, GameState, SubmitAnswerResult } from "./game.service";
 export class GameController {
   constructor(private readonly gameService: GameService) {}
 
+  // Retourne l'etat agrege de la partie pour une room donnee.
   @Get(":roomId/state")
-  getState(
+  async getState(
     @Param("roomId", ParseIntPipe) roomId: number,
-  ): ApiResponse<GameState> {
-    return ok(this.gameService.getRoomState(roomId));
+  ): Promise<ApiResponse<GameState>> {
+    return ok(await this.gameService.getRoomState(roomId));
   }
 
+  // Enregistre une reponse de joueur via HTTP.
   @Post("answer")
-  submitAnswer(@Body() dto: SubmitAnswerDto): ApiResponse<SubmitAnswerResult> {
-    return ok(this.gameService.submitAnswer(dto));
+  async submitAnswer(
+    @Body() dto: SubmitAnswerDto,
+  ): Promise<ApiResponse<SubmitAnswerResult>> {
+    return ok(await this.gameService.submitAnswer(dto));
   }
 }

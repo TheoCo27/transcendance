@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import PrimaryButton from "../components/PrimaryButton";
-import SecondaryButton from "../components/SecondaryButton";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getQuizById, type Quiz } from "../services/quizzes";
 import { getRoomsByQuizId, type Room } from "../services/rooms";
-import { getQuizLeaderboard, type QuizLeaderboardEntry } from "../services/scores";
+import {
+  getQuizLeaderboard,
+  type QuizLeaderboardEntry,
+} from "../services/scores";
 import {
   connectWs,
   disconnectWs,
@@ -45,7 +48,9 @@ export default function QuizRoomPage() {
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [quizLeaderboard, setQuizLeaderboard] = useState<QuizLeaderboardEntry[]>([]);
+  const [quizLeaderboard, setQuizLeaderboard] = useState<
+    QuizLeaderboardEntry[]
+  >([]);
   const [pageError, setPageError] = useState<string | null>(null);
   const [roomActionError, setRoomActionError] = useState<string | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
@@ -70,18 +75,22 @@ export default function QuizRoomPage() {
     setPageError(null);
 
     try {
-      const [fetchedQuiz, fetchedRooms, fetchedLeaderboard] = await Promise.all([
-        getQuizById(quizId),
-        getRoomsByQuizId(quizId),
-        getQuizLeaderboard(quizId, 10),
-      ]);
+      const [fetchedQuiz, fetchedRooms, fetchedLeaderboard] = await Promise.all(
+        [
+          getQuizById(quizId),
+          getRoomsByQuizId(quizId),
+          getQuizLeaderboard(quizId, 10),
+        ],
+      );
 
       setQuiz(fetchedQuiz);
       setRooms(fetchedRooms);
       setQuizLeaderboard(fetchedLeaderboard);
     } catch (error) {
       setPageError(
-        error instanceof Error ? error.message : "Impossible de charger cette page quiz.",
+        error instanceof Error
+          ? error.message
+          : "Impossible de charger cette page quiz.",
       );
     } finally {
       setIsLoadingPage(false);
@@ -206,8 +215,9 @@ export default function QuizRoomPage() {
                 {quiz.title}
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-                Cette page centralise toutes les rooms de ce quiz. Cree une nouvelle
-                session ou ouvre une room existante pour partager son URL directe.
+                Cette page centralise toutes les rooms de ce quiz. Cree une
+                nouvelle session ou ouvre une room existante pour partager son
+                URL directe.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -224,7 +234,10 @@ export default function QuizRoomPage() {
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 {user ? (
-                  <PrimaryButton className="justify-center" onClick={createRoom}>
+                  <PrimaryButton
+                    className="justify-center"
+                    onClick={createRoom}
+                  >
                     Creer une room partageable
                   </PrimaryButton>
                 ) : (
@@ -234,7 +247,10 @@ export default function QuizRoomPage() {
                     </PrimaryButton>
                   </Link>
                 )}
-                <SecondaryButton className="justify-center" onClick={() => void refreshRooms()}>
+                <SecondaryButton
+                  className="justify-center"
+                  onClick={() => void refreshRooms()}
+                >
                   Rafraichir les rooms
                 </SecondaryButton>
               </div>
@@ -270,10 +286,12 @@ export default function QuizRoomPage() {
 
           {!user && !isSessionLoading ? (
             <section className="mt-8 rounded-[2rem] border border-amber-200 bg-amber-50 p-6 text-amber-950">
-              <h2 className="text-2xl font-semibold">Connexion requise pour jouer</h2>
+              <h2 className="text-2xl font-semibold">
+                Connexion requise pour jouer
+              </h2>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-amber-900/80">
-                Connecte-toi pour creer une room, partager son URL et rejoindre la
-                partie en direct.
+                Connecte-toi pour creer une room, partager son URL et rejoindre
+                la partie en direct.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Link to="/login">
@@ -315,7 +333,8 @@ export default function QuizRoomPage() {
                             Room #{room.id}
                           </p>
                           <p className="mt-2 text-sm text-slate-600">
-                            {room.players.length} joueur{room.players.length > 1 ? "s" : ""} ·{" "}
+                            {room.players.length} joueur
+                            {room.players.length > 1 ? "s" : ""} ·{" "}
                             {formatRoomStatus(room.status)}
                           </p>
                           <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">

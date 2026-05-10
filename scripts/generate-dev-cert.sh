@@ -3,6 +3,7 @@
 set -eu
 
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+. "${ROOT_DIR}/scripts/lib/runtime.sh"
 CERT_DIR="${ROOT_DIR}/certs"
 CERT_FILE="${CERT_DIR}/dev-localhost.crt"
 KEY_FILE="${CERT_DIR}/dev-localhost.key"
@@ -13,8 +14,10 @@ if [ -s "$CERT_FILE" ] && [ -s "$KEY_FILE" ] && [ -s "$CA_FILE" ]; then
 	exit 0
 fi
 
+ensure_local_brew_shellenv >/dev/null 2>&1 || true
+
 command -v mkcert >/dev/null 2>&1 || {
-	printf '[KO] mkcert est requis. Installe-le avec: brew install mkcert\n' >&2
+	printf '[KO] mkcert est requis. Lance make setup-host ou installe-le avec: brew install mkcert\n' >&2
 	exit 1
 }
 

@@ -1,3 +1,5 @@
+// Ce fichier contient le moteur metier du jeu quiz:
+// etat runtime, questions actives, reponses et leaderboard.
 import { QuizzesService } from "@/modules/quizzes/quizzes.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
 import {
@@ -48,84 +50,92 @@ export type PublicQuestion = {
   options: string[];
 };
 
-type QuestionEntry = PublicQuestion & {
-  correctAnswerIndex: number;
-};
-
 type RoomRuntime = {
   answeredByQuestion: Map<number, Set<number>>;
   scoresByUser: Map<number, number>;
+  scoresAtGameStart: Map<number, number>;
   totalAnswers: number;
-  questionOrder: number[];
-  questionsById: Map<number, QuestionEntry>;
 };
 
-const DEFAULT_QUESTION_BANK: QuestionEntry[] = [
-  {
-    id: 101,
-    text: "Quel est le language principal utilise pour ce backend ?",
-    options: ["Python", "TypeScript", "Go", "Rust"],
-    correctAnswerIndex: 1,
-  },
-  {
-    id: 102,
-    text: "Quel endpoint est utilise pour rejoindre une room ?",
-    options: ["/room/join", "/rooms/join", "/rooms/:roomId/join", "/join-room"],
-    correctAnswerIndex: 2,
-  },
-  {
-    id: 103,
-    text: "Quel event WebSocket diffuse le compte a rebours ?",
-    options: ["game:start", "game:timer", "question:tick", "room:timer"],
-    correctAnswerIndex: 1,
-  },
-];
+type QuestionEntry = PublicQuestion & {
+  correctAnswerIndex: number;
+  points: number;
+};
+
+type RoomQuestionBank = {
+  sourceQuizId: number | null;
+  questions: QuestionEntry[];
+};
 
 @Injectable()
 export class GameService {
   private readonly roomStates = new Map<number, GameState>();
   private readonly roomRuntime = new Map<number, RoomRuntime>();
+  private readonly roomQuestions = new Map<number, RoomQuestionBank>();
 
   constructor(
     private readonly roomsService: RoomsService,
     private readonly quizzesService: QuizzesService,
   ) {}
 
-  getRoomState(roomId: number): GameState {
-    const room = this.roomsService.getById(roomId);
+  // Retourne l'etat courant de la partie pour une room.
+  async getRoomState(roomId: number): Promise<GameState> {
+    const room = await this.roomsService.getById(roomId);
+    await this.ensureRoomQuestions(roomId, room.quizId);
     const runtime = this.getRoomRuntime(roomId);
-    this.syncScoresWithPlayers(room.players.map((player) => player.userId), runtime);
+    this.syncScoresWithPlayers(
+      room.players.map((player) => player.userId),
+      runtime,
+    );
 
     const existing = this.roomStates.get(roomId);
     if (existing) {
+      // Keep last finished game result visible even if the room has been reset
+      // to waiting, until a new game actually starts.
+      if (existing.status === "finished" && room.status === "waiting") {
+        existing.totalQuestions = Math.max(existing.totalQuestions, 1);
+        existing.startedAt = existing.startedAt ?? room.startedAt;
+        existing.endedAt = existing.endedAt ?? room.finishedAt;
+        existing.leaderboard = this.buildLeaderboard(runtime);
+        existing.winnerUserId = existing.leaderboard[0]?.userId ?? null;
+        return existing;
+      }
+
       existing.status = room.status;
-      existing.totalQuestions = Math.max(
-        existing.totalQuestions,
-        runtime.questionOrder.length || room.rounds,
-      );
+      existing.totalQuestions = Math.max(existing.totalQuestions, 1);
       existing.startedAt = room.startedAt ?? existing.startedAt;
       existing.endedAt = room.finishedAt ?? existing.endedAt;
-      existing.leaderboard = this.buildLeaderboard(runtime);
+      existing.leaderboard =
+        existing.status === "finished"
+          ? this.buildLeaderboard(runtime)
+          : this.buildFrozenLeaderboard(runtime);
       if (existing.status === "finished" && existing.winnerUserId === null) {
         existing.winnerUserId = existing.leaderboard[0]?.userId ?? null;
+      }
+      if (existing.status !== "finished") {
+        existing.winnerUserId = null;
       }
       return existing;
     }
 
-    const leaderboard = this.buildLeaderboard(runtime);
+    const leaderboard =
+      room.status === "finished"
+        ? this.buildLeaderboard(runtime)
+        : this.buildFrozenLeaderboard(runtime);
     const state: GameState = {
       roomId,
       status: room.status,
       currentQuestionId: null,
       currentQuestionNumber: 0,
-      totalQuestions: runtime.questionOrder.length || room.rounds,
-      questionDurationMs: room.questionDurationMs,
+      totalQuestions: 1,
+      questionDurationMs: null,
       questionStartedAt: null,
       questionEndsAt: null,
       answersForCurrentQuestion: 0,
       totalAnswers: runtime.totalAnswers,
       leaderboard,
-      winnerUserId: room.status === "finished" ? leaderboard[0]?.userId ?? null : null,
+      winnerUserId:
+        room.status === "finished" ? (leaderboard[0]?.userId ?? null) : null,
       startedAt: room.startedAt,
       endedAt: room.finishedAt,
       updatedAt: new Date().toISOString(),
@@ -135,36 +145,35 @@ export class GameService {
     return state;
   }
 
-  async startGame(roomId: number, questionDurationMs: number | null): Promise<GameState> {
-    const room = this.roomsService.getById(roomId);
+  // Initialise l'etat runtime d'une nouvelle partie.
+  async startGame(
+    roomId: number,
+    totalQuestions: number,
+    questionDurationMs: number,
+  ): Promise<GameState> {
+    const room = await this.roomsService.getById(roomId);
     const runtime = this.getRoomRuntime(roomId);
-    const questions = await this.getQuestionsForRoom(room.quizId);
-    const selectedQuestions = questions.slice(
-      0,
-      Math.max(1, Math.min(room.rounds, questions.length)),
-    );
-    const state = this.getRoomState(roomId);
+    const state = await this.getRoomState(roomId);
     const now = new Date().toISOString();
 
     runtime.answeredByQuestion.clear();
-    runtime.scoresByUser.clear();
     runtime.totalAnswers = 0;
-    runtime.questionsById = new Map(
-      selectedQuestions.map((question) => [question.id, question]),
+    this.syncScoresWithPlayers(
+      room.players.map((player) => player.userId),
+      runtime,
     );
-    runtime.questionOrder = selectedQuestions.map((question) => question.id);
-    this.syncScoresWithPlayers(room.players.map((player) => player.userId), runtime);
 
     state.status = "playing";
     state.currentQuestionId = null;
     state.currentQuestionNumber = 0;
-    state.totalQuestions = runtime.questionOrder.length;
+    state.totalQuestions = Math.max(1, totalQuestions);
     state.questionDurationMs = questionDurationMs;
     state.questionStartedAt = null;
     state.questionEndsAt = null;
     state.answersForCurrentQuestion = 0;
     state.totalAnswers = 0;
-    state.leaderboard = this.buildLeaderboard(runtime);
+    runtime.scoresAtGameStart = new Map(runtime.scoresByUser);
+    state.leaderboard = this.buildFrozenLeaderboard(runtime);
     state.winnerUserId = null;
     state.startedAt = room.startedAt ?? now;
     state.endedAt = null;
@@ -173,16 +182,17 @@ export class GameService {
     return state;
   }
 
-  startQuestion(params: {
+  // Ouvre une question et met a jour l'etat visible.
+  async startQuestion(params: {
     roomId: number;
     questionId: number;
     questionNumber: number;
     totalQuestions: number;
-    questionDurationMs: number | null;
+    questionDurationMs: number;
     startsAt: string;
-    endsAt: string | null;
-  }): GameState {
-    const state = this.getRoomState(params.roomId);
+    endsAt: string;
+  }): Promise<GameState> {
+    const state = await this.getRoomState(params.roomId);
 
     state.status = "playing";
     state.currentQuestionId = params.questionId;
@@ -197,18 +207,21 @@ export class GameService {
     return state;
   }
 
-  completeCurrentQuestion(roomId: number): GameState {
-    const state = this.getRoomState(roomId);
+  // Termine la question courante sans changer le score.
+  async completeCurrentQuestion(roomId: number): Promise<GameState> {
+    const state = await this.getRoomState(roomId);
     state.updatedAt = new Date().toISOString();
     return state;
   }
 
-  markQuestionTimedOut(roomId: number): GameState {
+  // Marque la question courante comme terminee par timeout.
+  async markQuestionTimedOut(roomId: number): Promise<GameState> {
     return this.completeCurrentQuestion(roomId);
   }
 
-  submitAnswer(dto: SubmitAnswerDto): SubmitAnswerResult {
-    const room = this.roomsService.getById(dto.roomId);
+  // Enregistre la reponse d'un joueur sur la question active.
+  async submitAnswer(dto: SubmitAnswerDto): Promise<SubmitAnswerResult> {
+    const room = await this.roomsService.getById(dto.roomId);
     if (room.status !== "playing") {
       throw new ConflictException("Game is not running for this room");
     }
@@ -217,8 +230,11 @@ export class GameService {
       throw new UnauthorizedException("User is not in this room");
     }
 
-    const state = this.getRoomState(dto.roomId);
-    if (state.currentQuestionId === null || state.currentQuestionId !== dto.questionId) {
+    const state = await this.getRoomState(dto.roomId);
+    if (
+      state.currentQuestionId === null ||
+      state.currentQuestionId !== dto.questionId
+    ) {
       throw new ConflictException("Question is not active");
     }
 
@@ -229,7 +245,7 @@ export class GameService {
     }
 
     const answeredUsers =
-      runtime.answeredByQuestion.get(dto.questionId) || new Set<number>();
+      runtime.answeredByQuestion.get(dto.questionId) ?? new Set<number>();
     if (answeredUsers.has(dto.userId)) {
       throw new ConflictException("User already answered this question");
     }
@@ -239,14 +255,14 @@ export class GameService {
     runtime.totalAnswers += 1;
 
     const isCorrect = question.correctAnswerIndex === dto.answerIndex;
-    const scoreDelta = isCorrect ? 100 : 0;
-    const previousScore = runtime.scoresByUser.get(dto.userId) || 0;
+    const scoreDelta = isCorrect ? question.points : 0;
+    const previousScore = runtime.scoresByUser.get(dto.userId) ?? 0;
     const userTotalScore = previousScore + scoreDelta;
     runtime.scoresByUser.set(dto.userId, userTotalScore);
 
     state.answersForCurrentQuestion = answeredUsers.size;
     state.totalAnswers = runtime.totalAnswers;
-    state.leaderboard = this.buildLeaderboard(runtime);
+    state.leaderboard = this.buildFrozenLeaderboard(runtime);
     state.updatedAt = new Date().toISOString();
 
     return {
@@ -261,9 +277,10 @@ export class GameService {
     };
   }
 
-  finishGame(roomId: number): GameState {
-    const room = this.roomsService.getById(roomId);
-    const state = this.getRoomState(roomId);
+  // Finalise la partie et fixe le classement final.
+  async finishGame(roomId: number): Promise<GameState> {
+    const room = await this.roomsService.getById(roomId);
+    const state = await this.getRoomState(roomId);
 
     state.status = "finished";
     state.leaderboard = this.buildLeaderboard(this.getRoomRuntime(roomId));
@@ -274,12 +291,11 @@ export class GameService {
     return state;
   }
 
-  getQuestionIdForTurn(roomId: number, turnNumber: number): number {
-    const runtime = this.getRoomRuntime(roomId);
-    const questionOrder =
-      runtime.questionOrder.length > 0
-        ? runtime.questionOrder
-        : DEFAULT_QUESTION_BANK.map((question) => question.id);
+  // Associe un numero de tour a l'id de question correspondant.
+  getQuestionIdForTurn(_roomId: number, turnNumber: number): number {
+    const questionOrder = this.getRoomQuestionBank(_roomId).map(
+      (question) => question.id,
+    );
 
     if (questionOrder.length === 0) {
       throw new ConflictException("No questions configured");
@@ -288,8 +304,9 @@ export class GameService {
     return questionOrder[(turnNumber - 1) % questionOrder.length];
   }
 
-  getPublicQuestion(roomId: number, questionId: number): PublicQuestion {
-    const question = this.getQuestionEntry(roomId, questionId);
+  // Retourne la version publique d'une question.
+  getPublicQuestion(_roomId: number, questionId: number): PublicQuestion {
+    const question = this.getQuestionEntry(_roomId, questionId);
 
     return {
       id: question.id,
@@ -298,30 +315,45 @@ export class GameService {
     };
   }
 
-  getRoomLeaderboard(roomId: number): GameLeaderboardEntry[] {
-    this.getRoomState(roomId);
+  // Retourne le classement courant de la room.
+  async getRoomLeaderboard(roomId: number): Promise<GameLeaderboardEntry[]> {
+    await this.getRoomState(roomId);
     return this.buildLeaderboard(this.getRoomRuntime(roomId));
   }
 
-  hasEveryPlayerAnsweredCurrentQuestion(roomId: number): boolean {
-    const room = this.roomsService.getById(roomId);
-    const state = this.getRoomState(roomId);
+  // Retourne le nombre de questions disponibles pour la room.
+  async getQuestionCount(roomId: number): Promise<number> {
+    const room = await this.roomsService.getById(roomId);
+    await this.ensureRoomQuestions(roomId, room.quizId);
+    return this.getRoomQuestionBank(roomId).length;
+  }
+
+  // Verifie si tous les joueurs ont repondu a la question active.
+  async hasEveryPlayerAnsweredCurrentQuestion(
+    roomId: number,
+  ): Promise<boolean> {
+    const room = await this.roomsService.getById(roomId);
+    const state = await this.getRoomState(roomId);
     if (state.currentQuestionId === null || room.players.length === 0) {
       return false;
     }
 
     const answeredUsers =
-      this.getRoomRuntime(roomId).answeredByQuestion.get(state.currentQuestionId) ??
-      new Set<number>();
+      this.getRoomRuntime(roomId).answeredByQuestion.get(
+        state.currentQuestionId,
+      ) ?? new Set<number>();
 
     return answeredUsers.size >= room.players.length;
   }
 
+  // Vide tous les caches runtime d'une room.
   clearRoomState(roomId: number): void {
     this.roomStates.delete(roomId);
     this.roomRuntime.delete(roomId);
+    this.roomQuestions.delete(roomId);
   }
 
+  // Retourne ou initialise le runtime interne d'une room.
   private getRoomRuntime(roomId: number): RoomRuntime {
     const existing = this.roomRuntime.get(roomId);
     if (existing) {
@@ -331,22 +363,49 @@ export class GameService {
     const runtime: RoomRuntime = {
       answeredByQuestion: new Map<number, Set<number>>(),
       scoresByUser: new Map<number, number>(),
+      scoresAtGameStart: new Map<number, number>(),
       totalAnswers: 0,
-      questionOrder: [],
-      questionsById: new Map<number, QuestionEntry>(),
     };
 
     this.roomRuntime.set(roomId, runtime);
     return runtime;
   }
 
+  // Construit le classement reel a partir des scores actuels.
   private buildLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
     return [...runtime.scoresByUser.entries()]
       .map(([userId, score]) => ({ userId, score }))
-      .sort((left, right) => right.score - left.score || left.userId - right.userId);
+      .sort(
+        (left, right) => right.score - left.score || left.userId - right.userId,
+      );
   }
 
-  private syncScoresWithPlayers(playerIds: number[], runtime: RoomRuntime): void {
+  // Construit un classement masque sans reveler les scores.
+  private buildMaskedLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
+    return [...runtime.scoresByUser.keys()]
+      .sort((left, right) => left - right)
+      .map((userId) => ({ userId, score: 0 }));
+  }
+
+  // Fige le classement visible sur les scores du debut de partie.
+  private buildFrozenLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
+    const source =
+      runtime.scoresAtGameStart.size > 0
+        ? runtime.scoresAtGameStart
+        : runtime.scoresByUser;
+
+    return [...source.entries()]
+      .map(([userId, score]) => ({ userId, score }))
+      .sort(
+        (left, right) => right.score - left.score || left.userId - right.userId,
+      );
+  }
+
+  // Synchronise la map des scores avec les joueurs presents.
+  private syncScoresWithPlayers(
+    playerIds: number[],
+    runtime: RoomRuntime,
+  ): void {
     const playerIdSet = new Set(playerIds);
 
     for (const playerId of playerIds) {
@@ -362,47 +421,71 @@ export class GameService {
     }
   }
 
-  private getQuestionEntry(roomId: number, questionId: number): QuestionEntry {
-    const runtime = this.getRoomRuntime(roomId);
-    const runtimeQuestion = runtime.questionsById.get(questionId);
-    if (runtimeQuestion) {
-      return runtimeQuestion;
+  // Charge et met en cache les questions liees a la room.
+  private async ensureRoomQuestions(
+    roomId: number,
+    quizId: number | null,
+  ): Promise<void> {
+    const cached = this.roomQuestions.get(roomId);
+    if (
+      cached &&
+      cached.sourceQuizId === quizId &&
+      cached.questions.length > 0
+    ) {
+      return;
     }
 
-    const fallbackQuestion = DEFAULT_QUESTION_BANK.find((question) => question.id === questionId);
-    if (fallbackQuestion) {
-      return fallbackQuestion;
+    if (typeof quizId === "number") {
+      const quiz = await this.quizzesService.getQuizById(quizId);
+      const quizQuestions = quiz.questions.map((question) => {
+        const correctAnswerIndex = question.answers.findIndex(
+          (answer) => answer === question.correctAnswer,
+        );
+
+        if (correctAnswerIndex < 0) {
+          throw new ConflictException(
+            `Question ${question.id} has an invalid correct answer`,
+          );
+        }
+
+        return {
+          id: question.id,
+          text: question.questionText,
+          options: [...question.answers],
+          correctAnswerIndex,
+          points: question.points,
+        } satisfies QuestionEntry;
+      });
+
+      if (quizQuestions.length > 0) {
+        this.roomQuestions.set(roomId, {
+          sourceQuizId: quizId,
+          questions: quizQuestions,
+        });
+        return;
+      }
     }
 
-    throw new ConflictException(`Question ${questionId} not configured`);
+    this.roomQuestions.set(roomId, {
+      sourceQuizId: quizId,
+      questions: [],
+    });
   }
 
-  private async getQuestionsForRoom(quizId: number | null): Promise<QuestionEntry[]> {
-    if (typeof quizId !== "number") {
-      return DEFAULT_QUESTION_BANK.map((question) => ({
-        ...question,
-        options: [...question.options],
-      }));
+  // Retourne la banque de questions actuellement chargee.
+  private getRoomQuestionBank(roomId: number): QuestionEntry[] {
+    return this.roomQuestions.get(roomId)?.questions ?? [];
+  }
+
+  // Retourne une question precise ou leve une erreur.
+  private getQuestionEntry(roomId: number, questionId: number): QuestionEntry {
+    const question = this.getRoomQuestionBank(roomId).find(
+      (entry) => entry.id === questionId,
+    );
+    if (!question) {
+      throw new ConflictException(`Question ${questionId} not configured`);
     }
 
-    const quiz = await this.quizzesService.getQuizById(quizId);
-    return quiz.questions.map((question) => {
-      const correctAnswerIndex = question.answers.findIndex(
-        (answer) => answer === question.correctAnswer,
-      );
-
-      if (correctAnswerIndex === -1) {
-        throw new ConflictException(
-          `Question ${question.id} has no matching correct answer`,
-        );
-      }
-
-      return {
-        id: question.id,
-        text: question.questionText,
-        options: [...question.answers],
-        correctAnswerIndex,
-      };
-    });
+    return question;
   }
 }

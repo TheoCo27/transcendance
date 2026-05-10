@@ -4,6 +4,7 @@ set -eu
 
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT_DIR"
+. "${ROOT_DIR}/scripts/lib/runtime.sh"
 
 SCOPE="${1:---scope=all}"
 
@@ -22,11 +23,16 @@ esac
 
 SMOKE_QUIZ_WHERE="title LIKE 'WS Smoke Quiz %'"
 SMOKE_ROOM_PREFIXES="WS Smoke "
+SMOKE_USER_IDS_QUERY="SELECT id FROM \\\"User\\\" WHERE ${SMOKE_USER_WHERE}"
+SMOKE_QUIZ_IDS_QUERY="SELECT id FROM \\\"Quiz\\\" WHERE ${SMOKE_QUIZ_WHERE}"
+SMOKE_ROOM_IDS_QUERY="SELECT id FROM \\\"Room\\\" WHERE name LIKE 'WS Smoke %' OR \\\"ownerId\\\" IN (${SMOKE_USER_IDS_QUERY}) OR id IN (SELECT \\\"roomId\\\" FROM \\\"RoomPlayer\\\" WHERE \\\"userId\\\" IN (${SMOKE_USER_IDS_QUERY})) OR id IN (SELECT \\\"roomId\\\" FROM \\\"Game\\\" WHERE \\\"quizId\\\" IN (${SMOKE_QUIZ_IDS_QUERY}))"
+SMOKE_GAME_IDS_QUERY="SELECT id FROM \\\"Game\\\" WHERE \\\"roomId\\\" IN (${SMOKE_ROOM_IDS_QUERY}) OR \\\"quizId\\\" IN (${SMOKE_QUIZ_IDS_QUERY}) OR \\\"winnerUserId\\\" IN (${SMOKE_USER_IDS_QUERY})"
+SMOKE_QUIZ_QUESTION_IDS_QUERY="SELECT id FROM \\\"QuizQuestion\\\" WHERE \\\"quizId\\\" IN (${SMOKE_QUIZ_IDS_QUERY})"
 
 run_database_query() {
 	query="$1"
 
-	docker exec -i quiz_db sh -lc \
+	run_container_engine exec -i quiz_db sh -lc \
 		"PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1 -t -A -c \"$query\""
 }
 
@@ -40,7 +46,7 @@ cleanup_room_store() {
 	smoke_user_ids="$1"
 	smoke_quiz_ids="$2"
 
-	docker exec -i quiz_backend sh -lc \
+	run_container_engine exec -i quiz_backend sh -lc \
 		"SMOKE_USER_IDS='${smoke_user_ids}' SMOKE_QUIZ_IDS='${smoke_quiz_ids}' SMOKE_ROOM_PREFIXES='${SMOKE_ROOM_PREFIXES}' node <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
@@ -123,13 +129,29 @@ NODE" \
 }
 
 cleanup_database_artifacts() {
-	run_database_query "DELETE FROM \\\"QuizLeaderboard\\\" WHERE \\\"quizId\\\" IN (SELECT id FROM \\\"Quiz\\\" WHERE ${SMOKE_QUIZ_WHERE}) OR \\\"userId\\\" IN (SELECT id FROM \\\"User\\\" WHERE ${SMOKE_USER_WHERE});" \
+	run_database_query "DELETE FROM \\\"FriendRequests\\\" WHERE \\\"senderId\\\" IN (${SMOKE_USER_IDS_QUERY}) OR \\\"receiverId\\\" IN (${SMOKE_USER_IDS_QUERY});" \
 		>/dev/null 2>&1 || true
-	run_database_query "DELETE FROM \\\"QuizQuestion\\\" WHERE \\\"quizId\\\" IN (SELECT id FROM \\\"Quiz\\\" WHERE ${SMOKE_QUIZ_WHERE});" \
+	run_database_query "DELETE FROM \\\"PlayerAnswer\\\" WHERE \\\"userId\\\" IN (${SMOKE_USER_IDS_QUERY}) OR \\\"gameId\\\" IN (${SMOKE_GAME_IDS_QUERY}) OR \\\"gameQuestionId\\\" IN (SELECT id FROM \\\"GameQuestion\\\" WHERE \\\"gameId\\\" IN (${SMOKE_GAME_IDS_QUERY}) OR \\\"questionId\\\" IN (${SMOKE_QUIZ_QUESTION_IDS_QUERY}));" \
 		>/dev/null 2>&1 || true
-	run_database_query "DELETE FROM \\\"Quiz\\\" WHERE ${SMOKE_QUIZ_WHERE};" \
+	run_database_query "DELETE FROM \\\"Leaderboard\\\" WHERE \\\"userId\\\" IN (${SMOKE_USER_IDS_QUERY}) OR \\\"gameId\\\" IN (${SMOKE_GAME_IDS_QUERY});" \
 		>/dev/null 2>&1 || true
-	run_database_query "DELETE FROM \\\"User\\\" WHERE ${SMOKE_USER_WHERE};" \
+	run_database_query "DELETE FROM \\\"Messages\\\" WHERE \\\"senderId\\\" IN (${SMOKE_USER_IDS_QUERY}) OR \\\"roomId\\\" IN (${SMOKE_ROOM_IDS_QUERY});" \
+		>/dev/null 2>&1 || true
+	run_database_query "DELETE FROM \\\"GameQuestion\\\" WHERE \\\"gameId\\\" IN (${SMOKE_GAME_IDS_QUERY}) OR \\\"questionId\\\" IN (${SMOKE_QUIZ_QUESTION_IDS_QUERY});" \
+		>/dev/null 2>&1 || true
+	run_database_query "DELETE FROM \\\"QuizLeaderboard\\\" WHERE \\\"quizId\\\" IN (${SMOKE_QUIZ_IDS_QUERY}) OR \\\"userId\\\" IN (${SMOKE_USER_IDS_QUERY});" \
+		>/dev/null 2>&1 || true
+	run_database_query "DELETE FROM \\\"Game\\\" WHERE \\\"roomId\\\" IN (${SMOKE_ROOM_IDS_QUERY}) OR \\\"quizId\\\" IN (${SMOKE_QUIZ_IDS_QUERY}) OR \\\"winnerUserId\\\" IN (${SMOKE_USER_IDS_QUERY});" \
+		>/dev/null 2>&1 || true
+	run_database_query "DELETE FROM \\\"RoomPlayer\\\" WHERE \\\"userId\\\" IN (${SMOKE_USER_IDS_QUERY}) OR \\\"roomId\\\" IN (${SMOKE_ROOM_IDS_QUERY});" \
+		>/dev/null 2>&1 || true
+	run_database_query "DELETE FROM \\\"Room\\\" WHERE id IN (${SMOKE_ROOM_IDS_QUERY});" \
+		>/dev/null 2>&1 || true
+	run_database_query "DELETE FROM \\\"QuizQuestion\\\" WHERE \\\"quizId\\\" IN (${SMOKE_QUIZ_IDS_QUERY});" \
+		>/dev/null 2>&1 || true
+	run_database_query "DELETE FROM \\\"Quiz\\\" WHERE id IN (${SMOKE_QUIZ_IDS_QUERY});" \
+		>/dev/null 2>&1 || true
+	run_database_query "DELETE FROM \\\"User\\\" WHERE id IN (${SMOKE_USER_IDS_QUERY});" \
 		>/dev/null 2>&1 || true
 }
 

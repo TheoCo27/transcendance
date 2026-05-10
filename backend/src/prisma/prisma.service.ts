@@ -1,3 +1,5 @@
+// Ce fichier encapsule le client Prisma et gere son cycle de vie
+// dans l'application NestJS.
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client";
@@ -20,6 +22,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
       : null;
   }
 
+  // Donne acces au client Prisma en verifiant la configuration.
   get client(): PrismaClient {
     if (!this.prismaClient) {
       throw new Error("DATABASE_URL is not configured");
@@ -28,16 +31,19 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prismaClient;
   }
 
+  // Verifie que la base repond a une requete simple.
   async ping() {
     await this.client.$queryRaw`SELECT 1`;
   }
 
+  // Ouvre la connexion Prisma au demarrage du module.
   async onModuleInit() {
     if (this.prismaClient) {
       await this.prismaClient.$connect();
     }
   }
 
+  // Ferme proprement la connexion Prisma a l'arret.
   async onModuleDestroy() {
     if (this.prismaClient) {
       await this.prismaClient.$disconnect();

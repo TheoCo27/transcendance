@@ -1,3 +1,4 @@
+// Ce fichier agrege et expose les scores globaux et par quiz.
 import { PrismaService } from "@/prisma/prisma.service";
 import { UsersService } from "@/modules/users/users.service";
 import { Injectable, NotFoundException } from "@nestjs/common";
@@ -27,6 +28,7 @@ export class ScoresService {
     private readonly prisma: PrismaService,
   ) {}
 
+  // Enregistre le resultat d'une partie en memoire et par quiz.
   async recordGameResult(
     entries: Array<{ userId: number; score: number }>,
     winnerUserId: number | null,
@@ -76,6 +78,7 @@ export class ScoresService {
     );
   }
 
+  // Retourne le classement global en memoire.
   async getLeaderboard(limit = 10): Promise<UserScore[]> {
     const leaderboard: UserScore[] = [];
 
@@ -94,6 +97,7 @@ export class ScoresService {
     return leaderboard;
   }
 
+  // Retourne le score global d'un utilisateur.
   async getUserScore(userId: number): Promise<UserScore> {
     const snapshot = this.leaderboard.get(userId);
     if (!snapshot) {
@@ -108,6 +112,7 @@ export class ScoresService {
     return userScore;
   }
 
+  // Retourne le classement cumule pour un quiz donne.
   async getQuizLeaderboard(quizId: number, limit = 10): Promise<QuizUserScore[]> {
     const entries = await this.prisma.client.quizLeaderboard.findMany({
       where: {
@@ -143,6 +148,7 @@ export class ScoresService {
     return resolvedEntries.filter((entry): entry is QuizUserScore => entry !== null);
   }
 
+  // Trie les entrees du classement global.
   private getSortedEntries(): Array<{
     userId: number;
     score: number;
@@ -161,6 +167,7 @@ export class ScoresService {
       });
   }
 
+  // Associe un score aux informations utilisateur correspondantes.
   private async toUserScore(entry: {
     userId: number;
     score: number;

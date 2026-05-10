@@ -126,6 +126,7 @@ Les variables principales sont :
 - `DATABASE_URL`
 - `BACKEND_PORT`
 - `FRONTEND_PORT`
+- `PRISMA_STUDIO_PORT` (optionnel, utilise uniquement par `make dev`)
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
@@ -270,7 +271,6 @@ Ce test verifie :
 - que les 3 containers sont `healthy`
 - que le backend repond sur `/health`
 - que le frontend atteint bien `/health`
-- que le frontend atteint bien `/api`
 - que `register -> login -> session -> /users/me -> logout` fonctionne
 - que les erreurs d'auth utilisent bien le format API standard
 
@@ -378,7 +378,7 @@ Fonctions importantes :
 - `validateUser(dto)` :
   - cherche le user avec `usersService.findUserByEmail(dto.email)`
   - compare le mot de passe avec `bcrypt.compare(dto.password, user.password)`
-  - renvoie `UnauthorizedException("Invalid email or password")` si les credentials sont faux
+  - renvoie `UnauthorizedException("Le mail ou le mot de passe est incorrect")` si les credentials sont faux
 - `sanitizeUser(user)` :
   - retire `password` de l'objet avant de l'envoyer au client
   - base commune de tous les retours `SafeUser`

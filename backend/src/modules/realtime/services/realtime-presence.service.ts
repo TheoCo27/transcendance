@@ -1,3 +1,5 @@
+// Ce fichier suit la presence temps reel en liant les sockets connectes
+// aux utilisateurs authentifies.
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 
 @Injectable()
@@ -5,6 +7,7 @@ export class RealtimePresenceService {
   private readonly socketToUser = new Map<string, number>();
   private readonly userToSockets = new Map<number, Set<string>>();
 
+  // Associe un socket connecte a un utilisateur.
   bindSocketToUser(socketId: string, userId: number): void {
     this.socketToUser.set(socketId, userId);
 
@@ -13,6 +16,7 @@ export class RealtimePresenceService {
     this.userToSockets.set(userId, sockets);
   }
 
+  // Recupere l'utilisateur lie au socket et verifie le payload.
   resolveSocketUser(
     socketId: string,
     payloadUserId?: number,
@@ -31,6 +35,7 @@ export class RealtimePresenceService {
     return boundUserId;
   }
 
+  // Retire un socket du suivi de presence.
   unregisterSocket(socketId: string): number | undefined {
     const userId = this.socketToUser.get(socketId);
     if (typeof userId !== "number") {
@@ -51,10 +56,12 @@ export class RealtimePresenceService {
     return userId;
   }
 
+  // Indique si un utilisateur a encore des sockets actifs.
   hasActiveSockets(userId: number): boolean {
     return this.userToSockets.has(userId);
   }
 
+  // Reinitialise completement l'etat de presence.
   clear(): void {
     this.socketToUser.clear();
     this.userToSockets.clear();

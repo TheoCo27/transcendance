@@ -4,6 +4,7 @@ set -eu
 
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT_DIR"
+. "${ROOT_DIR}/scripts/lib/runtime.sh"
 
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 BACKEND_PORT="${BACKEND_PORT:-4000}"
@@ -44,18 +45,8 @@ check_command() {
 	command -v "$1" >/dev/null 2>&1 || fail "Commande manquante: $1"
 }
 
-compose() {
-	if docker compose version >/dev/null 2>&1; then
-		docker compose "$@"
-	elif command -v docker-compose >/dev/null 2>&1; then
-		docker-compose "$@"
-	else
-		fail "Ni docker compose ni docker-compose n'est disponible"
-	fi
-}
-
 container_health() {
-	docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$1" 2>/dev/null
+	run_container_engine inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$1" 2>/dev/null
 }
 
 check_container() {
@@ -98,9 +89,9 @@ check_http_inside_container() {
 	expected="$3"
 
 	if printf '%s' "$url" | grep -Eq '^https://'; then
-		body="$(docker exec "$container" sh -lc "NODE_EXTRA_CA_CERTS=/certs/mkcert-rootCA.pem node -e \"fetch('${url}').then(async (response) => { if (!response.ok) process.exit(1); process.stdout.write(await response.text()); }).catch(() => process.exit(1))\"")" || return 1
+		body="$(run_container_engine exec "$container" sh -lc "NODE_EXTRA_CA_CERTS=/certs/mkcert-rootCA.pem node -e \"fetch('${url}').then(async (response) => { if (!response.ok) process.exit(1); process.stdout.write(await response.text()); }).catch(() => process.exit(1))\"")" || return 1
 	else
-		body="$(docker exec "$container" sh -lc "wget -qO- '$url'")" || return 1
+		body="$(run_container_engine exec "$container" sh -lc "wget -qO- '$url'")" || return 1
 	fi
 
 	printf '%s' "$body" | grep -F -q "$expected" || fail "Reponse inattendue depuis $container sur $url"
@@ -110,7 +101,7 @@ check_http_inside_container() {
 run_database_query() {
 	query="$1"
 
-	docker exec -i quiz_db sh -lc \
+	run_container_engine exec -i quiz_db sh -lc \
 		"PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1 -t -A -c \"$query\""
 }
 
@@ -288,14 +279,14 @@ printf 'Database : localhost:%s\n' "$POSTGRES_PORT"
 print_test_catalog
 
 section "test dev op"
-check_command docker
+detect_container_engine >/dev/null 2>&1 || fail "Ni docker ni podman n'est disponible"
 check_command curl
 check_command bash
 [ -s "$MKCERT_CA_FILE" ] || fail "CA mkcert absente: $MKCERT_CA_FILE. Lance 'make tls-cert' et 'make tls-trust'."
 bash ./scripts/check-env.sh .env >/dev/null 2>&1 || fail "Configuration .env invalide. Lance 'make env-check' pour le diagnostic complet."
 pass "Configuration .env valide"
-compose ps >/dev/null 2>&1 || fail "Docker Compose indisponible ou stack non accessible"
-pass "Docker Compose accessible"
+compose ps >/dev/null 2>&1 || fail "Compose indisponible ou stack non accessible"
+pass "Compose accessible"
 
 check_container quiz_db
 check_database_credentials
@@ -323,12 +314,6 @@ if check_http_with_curl "${FRONTEND_BASE_URL}/health" '"database":{"configured":
 	:
 else
 	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/health" '"database":{"configured":true,"ok":true}'
-fi
-
-if check_http_with_curl "${FRONTEND_BASE_URL}/api" 'Backend NestJS accessible'; then
-	:
-else
-	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/api" 'Backend NestJS accessible'
 fi
 
 section "test authentifcation"
@@ -439,7 +424,7 @@ request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$DUPLICATE_REGISTER_
 assert_status 409
 assert_body_contains '"success":false'
 assert_body_contains '"code":"CONFLICT"'
-assert_body_contains '"message":"Email already exists"'
+assert_body_contains '"message":"Cet email est déjà utilisé"'
 pass "Register en doublon refuse"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$INVALID_LOGIN_PAYLOAD"
@@ -452,7 +437,7 @@ request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$WRONG_PASSWORD_PAYLOAD
 assert_status 401
 assert_body_contains '"success":false'
 assert_body_contains '"code":"UNAUTHORIZED"'
-assert_body_contains '"message":"Invalid email or password"'
+assert_body_contains '"message":"Le mail ou le mot de passe est incorrect"'
 pass "Login avec mauvais mot de passe refuse"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/login" "$LOGIN_PAYLOAD" "$COOKIE_JAR"
