@@ -31,7 +31,7 @@ export default observer(function GamesPage() {
       if (store.currentGuess === 6 || store.won) {
         clearInterval(intervalId);
       }
-    }, 1200); // update every 1.2s for progress
+    }, 1000); // update every 1s for progress
 
     return () => {
       window.removeEventListener('keyup', store.handleKeyup)
@@ -46,7 +46,7 @@ export default observer(function GamesPage() {
         toast.error(store.ToastMessage);
       else if (store.ToastMessage === `Pour valider un mot, vous devez entrer ${store.nbr_letters} lettres`)
         toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "Vous avez terminé n* (NUM PULL DU BACK)")
+      else if (store.ToastMessage === "Vous avez terminé n* (NUM PULL DU BACK)") //TEMPORAIRE
         toast.success(store.ToastMessage);
       else if (store.ToastMessage === "Le temps est écoulé, vous n'avez pas trouvé le bon mot")
         toast.error(store.ToastMessage);

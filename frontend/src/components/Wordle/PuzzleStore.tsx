@@ -34,8 +34,6 @@ export type PuzzleStoreType = {
   keyInexact : string[];
   AllGuessesMashed : string[]; // que utilisee ici
 
-  players_ready : number;
-
   toast_validWord(guess: string): 1 | 0;
   toast_x_letters(): void;
   toast_won(): void;
@@ -61,14 +59,12 @@ export default {
 	ToastId: 0,
 
 	start_time: -1,
-	time_per_word: 5,
+	time_per_word: 30,
 
-	nbr_letters: 6,
+	nbr_letters: 5,
 	words_array_json: [] as string[],
 	letters_array_json: [] as string[],
 	all_words_array_json: [] as string[],
-
-	players_ready: 1, //PULL VALEUR DU BACK
 
 	get won() {
 		return this.currentGuess > 0 && this.guesses[this.currentGuess - 1] === this.word
@@ -152,14 +148,14 @@ export default {
 		}
 
 		if (this.toast_validWord(guess)) {
-			//autres test a ajouter, des multiplayer pour (toast_inferior_half, toast_timeup, toast_timeup_final)
+
 			this.currentGuess++;
 			if (this.guesses[this.currentGuess - 1] === this.word)
 				this.toast_won();
 			if (!this.timeStatus && this.currentGuess === 6 && this.guesses[this.currentGuess - 1] != this.word)
 				this.toast_lost();
-			//RESET TIMER
-			this.start_time = Date.now() / 1000;
+		
+			this.start_time = Date.now() / 1000;	//RESET TIMER
 		}
 	},
 

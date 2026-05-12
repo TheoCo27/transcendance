@@ -4,7 +4,7 @@
 
 * [ ] Modifier le type de `settings`
 * [ ] Renommer les éléments concernés
-* [ ] Nettoyer les autres fichiers
+* [ ] Nettoyer les fichiers
 
 * [X] Ecourte les msg d'err, met tt en francais
   * [X] clavier azerty
@@ -29,7 +29,8 @@
   * [X] TESTER OU PLUS DE TOAST STACKEE si possible d'accumuler les toast revoit certains cas
   * [\] OPTIONNEL -toast custom orange pour temps ecroule et termine moitiee inferieure
 
-  * [ ] le toast de victoire ajouter le placement pr l'affichage
+  * [/] le toast de victoire ajouter le placement pr l'affichage
+
 
 ## 🎮 Gameplay
 
@@ -42,12 +43,15 @@
 
 * [X] Ajout timer (LIMITE DE 35-45 SEC PAR MOTS)
   * [X] Barre qui se remplie en fonction du temps restant
+  * [X] diminuer le delai en MS pour barre temps plus clean
 
-* [ ] fenetre au dessus de game page
-  * [ ] Regle du jeu en question
-  * [ ] Boutton pour etre pret
-    * [ ] LANCE SEULEMENT SI TOUT LES JOUEURS SONT PRETS (qd implementation multijoueurs)
-      * [ ] affiche pseudo de tt les joueurs non pret en rouge
+  * [X] fenetre au dessus de game page
+  * [X] Regle du jeu en question
+    * [X] les mettres au propre avec generation tableau et tt
+    * [\] OPTIONNEL - img
+  * [X] Boutton pour etre pret
+    * [/] LANCE SEULEMENT SI TOUT LES JOUEURS SONT PRETS (qd implementation multijoueurs)
+      * [/] affiche pseudo de tt les joueurs non pret en rouge
 
 * [X] Gérer les modes avec plus de 5 lettres
 
@@ -72,19 +76,14 @@
 ## Restant
 * [ ] Modifier le type de `settings`
 * [ ] Renommer les éléments concernés
-* [ ] Nettoyer les autres fichiers
+* [/] Nettoyer les fichiers
+* [ ] Ajout commentaires
 
   * [ ] IMPORTANT - Corriger le comportement (pas en crescendo)
 
-  * [ ] le toast de victoire ajouter le placement pr l'affichage
-
-  * [ ] fenetre au dessus de game page
-  * [ ] Regle du jeu en question
-    * [ ] OPTIONNEL - img
-  * [ ] Boutton pour etre pret
-    * [ ] LANCE SEULEMENT SI TOUT LES JOUEURS SONT PRETS (qd implementation multijoueurs)
-      * [ ] affiche pseudo de tt les joueurs non pret en rouge
-
+  * [/] le toast de victoire ajouter le placement pr l'affichage
+    * [/] LANCE SEULEMENT SI TOUT LES JOUEURS SONT PRETS (qd implementation multijoueurs)
+      * [/] affiche pseudo de tt les joueurs non pret en rouge
 
 * [ ] Utiliser `useMemo` pour les lignes déjà complétées
   * [ ] Éviter les recalculs inutiles

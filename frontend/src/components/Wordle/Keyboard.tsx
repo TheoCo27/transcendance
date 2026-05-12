@@ -51,3 +51,5 @@ const azerty = [
 	</div>
 	);
 }
+
+//disabled={store.guesses[store.currentGuess].length !== store.nbr_letters} 

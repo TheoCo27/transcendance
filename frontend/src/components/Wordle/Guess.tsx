@@ -1,9 +1,6 @@
 import type { settings } from "./Settings";
 
 export default function Guess({ checkerValidWord, lettersCount, flag, word, guess, isGuessed}: settings) {
-//   if (word === "debug") return <div>ok</div>;
-//   if (guess === "debug") return <div>ok</div>;
-//   if (isGuessed) return <div>ok</div>;
 
 	if (guess.length === lettersCount)
 	{

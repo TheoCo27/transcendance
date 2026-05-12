@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import PuzzleStore from "./PuzzleStore";
 import { observer } from "mobx-react-lite";
 import type  { PuzzleStoreType } from "./PuzzleStore";
 
@@ -14,7 +13,7 @@ export default observer(function ProgressBar({ store, start_time }: { store: Puz
 		clearInterval(interval);
 		}
 	  setNow(Math.floor(Date.now() / 1000));
-	}, 600); // update every 0.6s for smoother progress
+	}, 500); // update every 0.5s for smoother progress
 	return () =>{
 		clearInterval(interval);
 	} 

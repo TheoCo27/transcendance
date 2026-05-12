@@ -29,7 +29,7 @@ type ToastContextValue = {
 };
 
 const DEFAULT_DURATION_MS = 4500;
-const MAX_TOASTS = 3;
+const MAX_TOASTS = 2;
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
