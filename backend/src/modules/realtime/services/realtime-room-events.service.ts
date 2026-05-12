@@ -1,3 +1,5 @@
+// Ce fichier gere les evenements WebSocket lies au cycle de vie des rooms
+// et au chat temps reel.
 import { ChatMessageDto } from "@/modules/realtime/dto/chat-message.dto";
 import { RoomCreateEventDto } from "@/modules/realtime/dto/room-create-event.dto";
 import { RoomJoinEventDto } from "@/modules/realtime/dto/room-join-event.dto";
@@ -26,6 +28,7 @@ export class RealtimeRoomEventsService {
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
 
+  // Programme le nettoyage d'un utilisateur apres deconnexion.
   async handleDisconnect(clientId: string, server: Server): Promise<void> {
     const userId = this.presence.unregisterSocket(clientId);
     if (typeof userId !== "number" || this.presence.hasActiveSockets(userId)) {
@@ -35,6 +38,7 @@ export class RealtimeRoomEventsService {
     this.scheduleDisconnectCleanup(userId, server);
   }
 
+  // Rejoint a nouveau les rooms du user lors d'une reconnexion.
   async syncSocketRoomMembership(
     userId: number,
     client: Socket,
@@ -60,6 +64,7 @@ export class RealtimeRoomEventsService {
     }
   }
 
+  // Annule tous les timers de nettoyage en attente.
   clearDisconnectCleanupTimers(): void {
     this.pendingDisconnectCleanup.forEach((timeout) => {
       clearTimeout(timeout);
@@ -67,6 +72,7 @@ export class RealtimeRoomEventsService {
     this.pendingDisconnectCleanup.clear();
   }
 
+  // Lance un delai avant de nettoyer les rooms d'un user absent.
   private scheduleDisconnectCleanup(userId: number, server: Server): void {
     this.cancelPendingDisconnectCleanup(userId);
 
@@ -78,6 +84,7 @@ export class RealtimeRoomEventsService {
     this.pendingDisconnectCleanup.set(userId, timeout);
   }
 
+  // Annule un nettoyage planifie pour un utilisateur.
   private cancelPendingDisconnectCleanup(userId: number): void {
     const timeout = this.pendingDisconnectCleanup.get(userId);
     if (!timeout) {
@@ -88,6 +95,7 @@ export class RealtimeRoomEventsService {
     this.pendingDisconnectCleanup.delete(userId);
   }
 
+  // Retire un utilisateur de ses rooms apres expiration du delai.
   private async runDisconnectCleanup(
     userId: number,
     server: Server,
@@ -114,10 +122,12 @@ export class RealtimeRoomEventsService {
     }
   }
 
+  // Envoie la liste actuelle des rooms a un client.
   async handleRoomList(client: Socket): Promise<void> {
     client.emit("room:list", this.response.ok(await this.roomsService.list()));
   }
 
+  // Cree une room depuis un evenement temps reel.
   async handleRoomCreate(
     rawPayload: unknown,
     client: Socket,
@@ -145,6 +155,7 @@ export class RealtimeRoomEventsService {
     await this.broadcastRoomList(server);
   }
 
+  // Fait rejoindre une room a un utilisateur via socket.
   async handleRoomJoin(
     rawPayload: unknown,
     client: Socket,
@@ -182,6 +193,7 @@ export class RealtimeRoomEventsService {
     await this.broadcastRoomList(server);
   }
 
+  // Fait quitter une room et gere sa fermeture si besoin.
   async handleRoomLeave(
     rawPayload: unknown,
     client: Socket,
@@ -215,6 +227,7 @@ export class RealtimeRoomEventsService {
     await this.broadcastRoomList(server);
   }
 
+  // Demarre une partie dans une room.
   async handleRoomStart(
     rawPayload: unknown,
     client: Socket,
@@ -236,6 +249,7 @@ export class RealtimeRoomEventsService {
     await this.broadcastRoomList(server);
   }
 
+  // Enregistre et diffuse un message de chat de room.
   async handleChatMessage(
     rawPayload: unknown,
     client: Socket,
@@ -265,6 +279,7 @@ export class RealtimeRoomEventsService {
       .emit("chat:message", this.response.ok(message));
   }
 
+  // Verifie qu'un utilisateur appartient bien a la room.
   private async assertUserInRoom(roomId: number, userId: number) {
     const room = await this.roomsService.getById(roomId);
     if (!room.players.some((player) => player.userId === userId)) {
@@ -273,6 +288,7 @@ export class RealtimeRoomEventsService {
     return room;
   }
 
+  // Diffuse la liste des rooms a tous les clients.
   private async broadcastRoomList(server: Server): Promise<void> {
     server.emit(
       "room:list-updated",
@@ -280,6 +296,7 @@ export class RealtimeRoomEventsService {
     );
   }
 
+  // Genere le nom de canal Socket.IO d'une room.
   private roomChannel(roomId: number): string {
     return `room:${roomId}`;
   }

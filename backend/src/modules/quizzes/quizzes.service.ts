@@ -1,3 +1,4 @@
+// Ce fichier contient la logique metier de creation et lecture des quiz.
 import { PrismaService } from "@/prisma/prisma.service";
 import { Prisma } from "@generated/prisma/client";
 import {
@@ -45,6 +46,7 @@ type QuizWithQuestions = {
 export class QuizzesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Cree un quiz et ses questions en base.
   async createQuiz(dto: CreateQuizDto): Promise<QuizResponse> {
     this.assertValidQuestions(dto);
 
@@ -80,6 +82,7 @@ export class QuizzesService {
     return this.toQuizResponse(quiz);
   }
 
+  // Retourne tous les quiz tries du plus recent au plus ancien.
   async listQuizzes(): Promise<QuizResponse[]> {
     const quizzes = (await this.prisma.client.quiz.findMany({
       orderBy: {
@@ -97,6 +100,7 @@ export class QuizzesService {
     return quizzes.map((quiz) => this.toQuizResponse(quiz));
   }
 
+  // Recupere un quiz complet par son identifiant.
   async getQuizById(quizId: number): Promise<QuizResponse> {
     const quiz = (await this.prisma.client.quiz.findUnique({
       where: { id: quizId },
@@ -116,6 +120,7 @@ export class QuizzesService {
     return this.toQuizResponse(quiz);
   }
 
+  // Verifie la coherence des bonnes reponses declarees.
   private assertValidQuestions(dto: CreateQuizDto): void {
     dto.questions.forEach((question, index) => {
       if (question.correctAnswerIndex >= question.answers.length) {
@@ -126,6 +131,7 @@ export class QuizzesService {
     });
   }
 
+  // Convertit un quiz Prisma vers le format expose par l'API.
   private toQuizResponse(quiz: QuizWithQuestions): QuizResponse {
     return {
       id: quiz.id,
@@ -144,6 +150,7 @@ export class QuizzesService {
     };
   }
 
+  // Convertit les reponses JSON stockees en tableau de chaines.
   private parseAnswers(value: Prisma.JsonValue): string[] {
     if (
       Array.isArray(value) &&

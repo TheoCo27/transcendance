@@ -1,3 +1,5 @@
+// Ce fichier contient toute la logique metier des rooms:
+// creation, join, configuration, chat et transitions d'etat.
 import { PrismaService } from "@/prisma/prisma.service";
 import { Prisma } from "@generated/prisma/client";
 import {
@@ -54,6 +56,7 @@ export class RoomsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  // Liste toutes les rooms sans exposer leur mot de passe.
   async list(): Promise<Array<Omit<Room, "password">>> {
     const rooms = await this.prisma.client.room.findMany({
       orderBy: { createdAt: "desc" },
@@ -80,15 +83,18 @@ export class RoomsService {
     return rooms.map((room) => this.stripPassword(this.toRoom(room)));
   }
 
+  // Liste les rooms rattachees a un quiz donne.
   async listByQuizId(quizId: number): Promise<Array<Omit<Room, "password">>> {
     return (await this.list()).filter((room) => room.quizId === quizId);
   }
 
+  // Retourne une room par id sans son mot de passe.
   async getById(roomId: number): Promise<Omit<Room, "password">> {
     const room = await this.findRoomOrThrow(roomId);
     return this.stripPassword(this.toRoom(room));
   }
 
+  // Cree une room et memorise sa config transitoire.
   async create(
     dto: CreateRoomDto & {
       ownerUserId?: number;
@@ -143,6 +149,7 @@ export class RoomsService {
     return this.stripPassword(this.toRoom(room));
   }
 
+  // Ajoute un joueur a une room si elle est rejoignable.
   async join(
     roomId: number,
     dto: JoinRoomDto,
@@ -210,6 +217,7 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  // Retourne l'historique de chat d'une room.
   async listMessages(roomId: number, limit = 50): Promise<RoomMessage[]> {
     await this.findRoomOrThrow(roomId);
 
@@ -229,6 +237,7 @@ export class RoomsService {
     }));
   }
 
+  // Enregistre un nouveau message dans la room.
   async createMessage(payload: {
     roomId: number;
     userId: number;
@@ -253,6 +262,7 @@ export class RoomsService {
     };
   }
 
+  // Met a jour la configuration editable d'une room.
   async update(
     roomId: number,
     requesterUserId: number,
@@ -356,6 +366,7 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  // Retire un joueur d'une room et gere le changement de proprietaire.
   async leave(roomId: number, userId: number): Promise<Omit<Room, "password">> {
     const room = await this.findRoomOrThrow(roomId);
     const existingPlayer = await this.prisma.client.roomPlayer.findUnique({
@@ -403,6 +414,7 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  // Demarre la partie d'une room apres validation.
   async start(
     roomId: number,
     requesterUserId: number,
@@ -464,6 +476,7 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  // Passe une room en statut termine.
   async finish(roomId: number): Promise<Omit<Room, "password">> {
     const room = await this.findRoomOrThrow(roomId);
 
@@ -482,6 +495,7 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  // Reprepare une room pour une nouvelle partie.
   async resetAfterGame(roomId: number): Promise<Omit<Room, "password">> {
     const room = await this.findRoomOrThrow(roomId);
 
@@ -501,6 +515,7 @@ export class RoomsService {
     return this.getById(roomId);
   }
 
+  // Supprime une room vide et non active.
   async close(roomId: number): Promise<{ roomId: number }> {
     const room = await this.findRoomOrThrow(roomId);
 
@@ -527,11 +542,13 @@ export class RoomsService {
     return { roomId };
   }
 
+  // Retire le mot de passe du format public d'une room.
   private stripPassword(room: Room): Omit<Room, "password"> {
     const { password, ...publicRoom } = room;
     return publicRoom;
   }
 
+  // Charge une room complete ou leve une erreur.
   private async findRoomOrThrow(roomId: number) {
     const room = await this.prisma.client.room.findUnique({
       where: { id: roomId },
@@ -562,6 +579,7 @@ export class RoomsService {
     return room;
   }
 
+  // Convertit une room Prisma en format API.
   private toRoom(room: {
     id: number;
     name: string;
@@ -601,6 +619,7 @@ export class RoomsService {
     };
   }
 
+  // Verifie que la config de jeu permet un demarrage.
   private assertStartConfiguration(room: {
     gameType: "wordle" | "memory" | "quiz" | null;
     gameConfig: Prisma.JsonValue | null;
@@ -671,6 +690,7 @@ export class RoomsService {
     }
   }
 
+  // Convertit un JSON Prisma en objet exploitable.
   private toObjectRecord(
     value: Prisma.JsonValue | null,
   ): Record<string, unknown> | null {

@@ -1,3 +1,5 @@
+// Ce fichier declare le module des scores et lui fournit
+// l'acces aux utilisateurs et a Prisma.
 import { PrismaModule } from "@/prisma/prisma.module";
 import { UsersModule } from "@/modules/users/users.module";
 import { Module } from "@nestjs/common";

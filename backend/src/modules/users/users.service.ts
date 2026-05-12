@@ -1,3 +1,4 @@
+// Ce fichier contient la logique metier du profil utilisateur et du systeme d'amis.
 import { PrismaService } from "@/prisma/prisma.service";
 import { FriendshipStatus, Prisma, User } from "@generated/prisma/client";
 import {
@@ -7,6 +8,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { UpdateProfilePayload } from "./dto/update-profile-payload.dto";
 
 export type FriendUserSummary = Pick<
   User,
@@ -42,16 +44,19 @@ const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Recherche un utilisateur par email exact.
   async findUserByEmail(email: string): Promise<User | null> {
     return this.findUser({ email });
   }
 
+  // Recherche un utilisateur par pseudo exact.
   async findUserByUsername(username: string): Promise<User | null> {
     const users = await this.findUsersByUsername(username, 1);
 
     return users[0] ?? null;
   }
 
+  // Retourne tous les utilisateurs correspondant a un pseudo.
   async findUsersByUsername(username: string, take?: number): Promise<User[]> {
     return this.findUsers({
       where: { username },
@@ -60,6 +65,7 @@ export class UsersService {
     });
   }
 
+  // Recherche un utilisateur unique via Prisma.
   async findUser(
     userWhereUniqueInput: Prisma.UserWhereUniqueInput,
   ): Promise<User | null> {
@@ -68,6 +74,7 @@ export class UsersService {
     });
   }
 
+  // Recherche une liste d'utilisateurs avec filtres Prisma.
   async findUsers(params: {
     skip?: number;
     take?: number;
@@ -86,12 +93,14 @@ export class UsersService {
     });
   }
 
+  // Cree un utilisateur en base.
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
     return this.prisma.client.user.create({
       data,
     });
   }
 
+  // Met a jour un utilisateur en base.
   async updateUser(params: {
     where: Prisma.UserWhereUniqueInput;
     data: Prisma.UserUpdateInput;
@@ -104,12 +113,14 @@ export class UsersService {
     });
   }
 
+  // Supprime un utilisateur en base.
   async deleteUser(where: Prisma.UserWhereUniqueInput): Promise<User> {
     return this.prisma.client.user.delete({
       where,
     });
   }
 
+  // Retourne la vue globale du systeme d'amis d'un utilisateur.
   async getFriendOverview(userId: number): Promise<FriendOverview> {
     const currentUser = await this.findUser({ id: userId });
 
@@ -188,11 +199,13 @@ export class UsersService {
     };
   }
 
+  // Retourne uniquement la liste des amis.
   async listFriends(userId: number): Promise<FriendUserSummary[]> {
     const overview = await this.getFriendOverview(userId);
     return overview.friends;
   }
 
+  // Verifie si deux utilisateurs sont deja amis.
   async areUsersFriends(userId: number, friendId: number): Promise<boolean> {
     if (userId === friendId) {
       return false;
@@ -220,6 +233,7 @@ export class UsersService {
     return Boolean(relation);
   }
 
+  // Envoie une demande d'ami ou accepte une demande inverse.
   async sendFriendRequest(
     senderId: number,
     rawUsername: string,
@@ -282,7 +296,7 @@ export class UsersService {
       };
     }
 
-    await this.prisma.client.friendRequests.create({
+    const createdRequest = await this.prisma.client.friendRequests.create({
       data: {
         senderId,
         receiverId: receiver.id,
@@ -296,6 +310,7 @@ export class UsersService {
     };
   }
 
+  // Permet d'accepter ou refuser une demande d'ami recue.
   async respondToFriendRequest(
     userId: number,
     requestId: number,
@@ -348,6 +363,7 @@ export class UsersService {
     };
   }
 
+  // Met a jour ou supprime l'avatar d'un utilisateur.
   async updateAvatar(
     userId: number,
     avatarDataUrl: string | null,
@@ -378,6 +394,31 @@ export class UsersService {
     });
   }
 
+  // Met a jour le profil editable d'un utilisateur.
+  async updateProfile(userId: number, payload: UpdateProfilePayload): Promise<User> {
+    const user = await this.findUser({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    const username = this.normalizeUsername(payload.username);
+    const existingUser = await this.findUserByUsername(username);
+
+    if (existingUser && existingUser.id !== userId) {
+      throw new ConflictException("Username already exists");
+    }
+
+    return this.updateUser({
+      where: { id: userId },
+      data: {
+        username,
+        status: payload.status,
+      },
+    });
+  }
+
+  // Recherche la relation d'amitie active entre deux utilisateurs.
   private async getActiveFriendRelation(senderId: number, receiverId: number) {
     return this.prisma.client.friendRequests.findFirst({
       where: {
@@ -399,6 +440,7 @@ export class UsersService {
     });
   }
 
+  // Bloque les actions d'amitie pour les comptes invites.
   private ensureFriendSystemAvailable(user: User): void {
     if (user.isGuest) {
       throw new ForbiddenException(
@@ -407,6 +449,18 @@ export class UsersService {
     }
   }
 
+  // Nettoie et valide un pseudo utilisateur.
+  private normalizeUsername(rawUsername: string): string {
+    const username = rawUsername.trim();
+
+    if (username.length < 2) {
+      throw new BadRequestException("Username must contain at least 2 characters");
+    }
+
+    return username;
+  }
+
+  // Verifie le format et la taille d'un avatar en data URL.
   private assertAvatarDataUrlIsValid(avatarDataUrl: string): void {
     const match = avatarDataUrl.match(
       /^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/,
@@ -438,6 +492,7 @@ export class UsersService {
     }
   }
 
+  // Extrait les champs utiles d'un utilisateur pour la vue ami.
   buildFriendUserSummary(user: User): FriendUserSummary {
     return {
       id: user.id,

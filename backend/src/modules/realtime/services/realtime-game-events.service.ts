@@ -1,3 +1,4 @@
+// Ce fichier gere les evenements WebSocket lies aux reponses de jeu.
 import { SubmitAnswerDto } from "@/modules/game/dto/submit-answer.dto";
 import { GameService } from "@/modules/game/game.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
@@ -23,6 +24,7 @@ export class RealtimeGameEventsService {
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
 
+  // Gere la soumission d'une reponse pendant la partie.
   async handleGameAnswer(
     rawPayload: unknown,
     client: Socket,
@@ -68,6 +70,7 @@ export class RealtimeGameEventsService {
     }
   }
 
+  // Genere le nom de canal Socket.IO d'une room.
   private roomChannel(roomId: number): string {
     return `room:${roomId}`;
   }

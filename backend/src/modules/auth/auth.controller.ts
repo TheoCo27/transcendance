@@ -1,3 +1,5 @@
+// Ce fichier expose les endpoints HTTP d'authentification:
+// login, register, guest, OAuth Google, logout et session courante.
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import { LoginDto } from "@/modules/users/dto/login.dto";
 import { RegisterDto } from "@/modules/users/dto/register.dto";
@@ -7,6 +9,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -22,6 +25,7 @@ import { SafeUser } from "./types/safe-user.type";
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // Authentifie un compte classique puis ouvre une session cookie JWT.
   @Post("login")
   async login(
     @Body() dto: LoginDto,
@@ -31,6 +35,7 @@ export class AuthController {
     return ok(await this.authService.login(user, res));
   }
 
+  // Cree un compte classique puis ouvre directement la session.
   @Post("register")
   async register(
     @Body() dto: RegisterDto,
@@ -39,6 +44,7 @@ export class AuthController {
     return ok(await this.authService.register(dto, res));
   }
 
+  // Cree une session invite pour entrer rapidement dans l'application.
   @Post("guest")
   async guestLogin(
     @Body() dto: GuestLoginDto,
@@ -47,6 +53,29 @@ export class AuthController {
     return ok(await this.authService.loginAsGuest(dto, res));
   }
 
+  // Redirige l'utilisateur vers l'ecran de consentement Google OAuth.
+  @Get("google/start")
+  startGoogleAuth(
+    @Res() res: Response,
+    @Query("returnTo") returnTo?: string,
+  ): void {
+    try {
+      res.redirect(this.authService.buildGoogleAuthorizationUrl(res, returnTo));
+    } catch {
+      res.redirect(this.authService.buildGoogleFailureRedirect("/", "google_not_configured"));
+    }
+  }
+
+  // Termine le flux OAuth Google puis redirige vers le frontend.
+  @Get("google/callback")
+  async handleGoogleCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    res.redirect(await this.authService.handleGoogleCallback(req, res));
+  }
+
+  // Ferme la session courante et supprime le cookie d'acces.
   @Post("logout")
   async logout(
     @Req() req: Request,
@@ -56,6 +85,7 @@ export class AuthController {
     return ok({ loggedOut: true });
   }
 
+  // Retourne l'utilisateur associe au cookie de session courant.
   @Get("session")
   @UseGuards(AuthGuard)
   async session(
