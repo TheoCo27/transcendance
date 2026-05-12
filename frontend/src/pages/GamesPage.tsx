@@ -79,14 +79,15 @@ export default observer(function GamesPage() {
           <ProgressBar start_time={store.start_time} store={store} />
 
           {store.guesses.map((_, i) => (
-            <Guess
-              checkerValidWord={store.all_words_array_json}
-              lettersCount={store.nbr_letters}
-              flag={store.validWord}
-              word={store.word}
-              guess={store.guesses[i] ?? ""}
-              isGuessed={i < store.currentGuess}
-            />
+              <Guess
+                key={i}
+                checkerValidWord={store.all_words_array_json}
+                lettersCount={store.nbr_letters}
+                flag={store.validWord}
+                word={store.word}
+                guess={store.guesses[i] ?? ""}
+                isGuessed={i < store.currentGuess}
+              />
           ))}
 
           <div className="mt-3">

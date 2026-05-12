@@ -16,9 +16,9 @@ const azerty = [
 
 	return (
 	<div className={`flex w-[min(92vw,26rem)] flex-col`}>
-		{azerty.map((row) => (
-		<div className="flex h-15 justify-center">
-			{(Array.isArray(row) ? row : row.split('')).map((key) => (
+		{azerty.map((row,i) => (
+		<div key={i} className="flex h-15 justify-center">
+			{(Array.isArray(row) ? row : row.split('')).map((key,i2) => (
 			isWide = wideKeys.has(key),
 
 			bgColor = store.keyGuessed.includes(key)
@@ -28,6 +28,7 @@ const azerty = [
 			: 'bg-gray-400',
 
 			<div
+			key={i2}
 			className={[
 				`m-px flex h-13 rounded-md ${bgColor} font-bold text-2xl items-center justify-center`,
 				isWide ? "w-16" : "w-9.5",

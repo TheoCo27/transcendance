@@ -136,7 +136,7 @@ export default {
 			this.words_array_json = five_words, this.all_words_array_json = all_five_words, this.nbr_letters = 5;
 
 		this.word = this.words_array_json[Math.floor(Math.random() * this.words_array_json.length)]
-		this.guesses = new Array(this.nbr_letters).fill('');
+		this.guesses = new Array(6).fill(''); //custom taille dynamique, en fonction setting regles
 		this.currentGuess = 0
 	},
 

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { PuzzleStoreType } from "./PuzzleStore";
 
 type RulesPanelProps = {
@@ -34,44 +35,48 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
   let playersReady = 0;
   let numberOfPlayers = 0;
 
+  // Déplacer l'appel onClose() et la modification de start_time dans un useEffect
+  useEffect(() => {
+    if (readyFlag === true && numberOfPlayers === playersReady) {
+      store.start_time = Math.floor(Date.now() / 1000);
+      onClose();
+    }
+  }, [readyFlag, numberOfPlayers, playersReady, onClose, store]); // JUSTE numberOfPlayers, playersReady
+
   if (readyFlag === true)
   {
-    if (numberOfPlayers === playersReady)
-    {
-      onClose()
-      store.start_time = Math.floor(Date.now() / 1000)
-    }
-    else 
-    {
-      return (
-              <div className="h-[40vw] w-[60vw] flex flex-col rounded-2xl border border-white/10 bg-surface">
+      return ( //surement pas h-100
+              <div className="h-100 m-4 md:m-0 p-4 w-full max-w-lg flex flex-col rounded-2xl border border-white/10 bg-surface">
             <div className="flex flex-1 items-center justify-center">
               <div className="max-w-3xl text-center">
-                <p className="m-0 text-lg leading-8 text-text/80">
+                <div className="m-0 text-lg leading-8 text-text/80">
                   EN ATTENTE QUE TOUT LES JOUEURS SOIENT PRÊTS
 
                   {/*pull dans le back TEMPORAIRE*/} 
                   <div>Joueurs manquants : (pull dans le back leur noms) (afficher en rouge) </div>
                         
-                </p>
+                </div>
               </div>
             </div>
           </div>
       );
-    }
   }
   else 
   {
     return (
-      <div className="h-[40vw] w-[60vw] flex flex-col rounded-2xl border border-white/10 bg-surface">
+      <div className="h-fit m-4 md:m-0 p-4 w-full max-w-lg flex flex-col rounded-2xl border border-white/10 bg-surface">
         <div className="flex flex-1 items-center justify-center">
           <div className="max-w-3xl text-center">
             <h1 className="mb-6 text-3xl font-semibold text-text">Règles</h1>
-            <p className="m-0 text-lg leading-8 text-text/80 ">
+            <div className="m-0 text-lg leading-8 text-text/80 ">
+            <div className="text-pretty text-wrap">
+              Un mot de (5 à 7) lettres est choisi aléatoirement. <br /> Vous devez le deviner en 6 essais. <br />
+              À chaque essai, les lettres du mot que vous avez proposé changeront de couleur en fonction de à quel point vous êtes proche de le trouver.
+            </div>
 
-            <div> Un mot de (5 à 7) lettres est choisi aléatoirement. Vous devez le deviner en 6 essais.</div>
+            {/* <div> Un mot de (5 à 7) lettres est choisi aléatoirement. Vous devez le deviner en 6 essais.</div>
             <div> À chaque essai, les lettres du mot que vous avez proposé changeront de couleur</div>
-            <div>  en fonction de à quel point vous êtes proche de le trouver.</div>
+            <div>  en fonction de à quel point vous êtes proche de le trouver.</div> */}
 
 
             <div className="mt-2 flex flex-col items-center justify-center">
@@ -86,7 +91,7 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
             La lettre R n'est pas dans le mot
 
             </div>
-            </p>
+            </div>
         <button
             className="mt-3 rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
             type="button"

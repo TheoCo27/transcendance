@@ -40,6 +40,7 @@ export default function Guess({ checkerValidWord, lettersCount, flag, word, gues
 		return (
 			guess.length === lettersCount && isGuessed ?
 			<div
+			key={i}
 			className={
 				`h-16 w-16 rounded font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`}
 			> 
@@ -47,6 +48,7 @@ export default function Guess({ checkerValidWord, lettersCount, flag, word, gues
 			</div>
 			:
 			<div
+			key={i}
 			className={[
 				`h-16 w-16 border-2 rounded font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`,
 				guess[i] ? "border-gray-400" : "border-gray-600",

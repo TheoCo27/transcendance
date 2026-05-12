@@ -9,7 +9,7 @@ export default observer(function ProgressBar({ store, start_time }: { store: Puz
   useEffect(() => {
 	const interval = setInterval(() => {
 	if (store.currentGuess === 6 || store.won) {
-		console.log("bar finie");
+		console.log("barre finie");
 		clearInterval(interval);
 		}
 	  setNow(Math.floor(Date.now() / 1000));
