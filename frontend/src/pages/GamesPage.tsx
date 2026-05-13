@@ -6,6 +6,7 @@ import { useToast } from "../components/ui/toast";
 import Keyboard from "../components/Wordle/Keyboard";
 import ProgressBar from "../components/Wordle/ProgressBar";
 import RulesPanel from "../components/Wordle/RulesPanel";
+import { toHHMMSS } from "../components/Wordle/ConvertTime";
 
 export default observer(function GamesPage() {
 
@@ -46,7 +47,7 @@ export default observer(function GamesPage() {
         toast.error(store.ToastMessage);
       else if (store.ToastMessage === `Pour valider un mot, vous devez entrer ${store.nbr_letters} lettres`)
         toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "Vous avez terminé n* (NUM PULL DU BACK)") //TEMPORAIRE
+      else if (store.ToastMessage === `Vous avez trouvé le bon mot en, ${toHHMMSS((Math.floor(Date.now() / 1000) - store.total_time).toString())}`) //TEMPORAIRE
         toast.success(store.ToastMessage);
       else if (store.ToastMessage === "Le temps est écoulé, vous n'avez pas trouvé le bon mot")
         toast.error(store.ToastMessage);
@@ -60,19 +61,13 @@ export default observer(function GamesPage() {
     <div className="flex h-screen w-screen flex-col items-center justify-center">
       
     {
+      // si isRulesOpen true, lance pas timer
       isRulesOpen ? (
         <div className="flex items-center justify-end">
           <RulesPanel onClose={() => setRulesOpen(false)} store={store} setReady={() => {setPlayerReady(true); }} readyFlag={isPlayerReady}/>
         </div>
-		    //qd tous pret et que regles sont fermees
-        // peux pas mettre dans autre scope car doit se lancer une seule fois pour le temps
-        //oubien un flag qui passe a 1 pour exec une seule fois
-        // start_time vaux -1 de base donc pas besoin si exec ici, sinon le test ok
-          // if (!isRulesOpen && playersReady === numberOfPlayers)
-            // store.start_time = Math.floor(Date.now() / 1000)
       ) : (
         <>
-          {/* si isRulesOpen true, lance pas timer*/}
           {/* start_timer */}
           <h1>GamePage</h1>
           <h1>Wordle</h1>

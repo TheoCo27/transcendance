@@ -1,6 +1,5 @@
 import type  { PuzzleStoreType } from "./PuzzleStore";
-import enterImg from './img/symbole-de-la-fleche-gauche-dans-un-cercle.png';
-import backspaceImg from './img/retour-arriere.png';
+import { ArrowRightToLine, Delete } from 'lucide-react';
 
 export default function Keyboard({ store }: { store: PuzzleStoreType }){	
 
@@ -12,7 +11,7 @@ const azerty = [
 	const wideKeys = new Set(["Backspace", "Enter"]);
 	let isWide : boolean
 	let bgColor : string
-	let imagesSize= "h-8 w-8"
+	let vectSize= "h-7.5 w-7.5"
 
 	return (
 	<div className={`flex w-[min(92vw,26rem)] flex-col`}>
@@ -37,9 +36,9 @@ const azerty = [
 
 			<button className="uppercase" onClick={() => store.handleKeyboard(key)} >
 			{key === 'Enter' ? (
-				<img src={enterImg} alt="enter" className={`${imagesSize}`} />
+				<ArrowRightToLine className={`${vectSize}`} />
 			) : key === 'Backspace' ? (
-				<img src={backspaceImg} alt="return" className={`${imagesSize}`} />
+				<Delete className={`${vectSize}`} />
 			) : (
 				key
 			)}
@@ -52,5 +51,8 @@ const azerty = [
 	</div>
 	);
 }
+
+// import enterImg from './img/symbole-de-la-fleche-gauche-dans-un-cercle.png';
+// import backspaceImg from './img/retour-arriere.png';
 
 //disabled={store.guesses[store.currentGuess].length !== store.nbr_letters} 

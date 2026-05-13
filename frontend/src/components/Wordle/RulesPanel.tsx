@@ -39,6 +39,7 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
   useEffect(() => {
     if (readyFlag === true && numberOfPlayers === playersReady) {
       store.start_time = Math.floor(Date.now() / 1000);
+      store.total_time = Math.floor(Date.now() / 1000);
       onClose();
     }
   }, [readyFlag, numberOfPlayers, playersReady, onClose, store]); // JUSTE numberOfPlayers, playersReady

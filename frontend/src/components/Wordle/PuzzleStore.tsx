@@ -8,6 +8,8 @@ import all_six_words from "./wordle_compare_6.json"
 import seven_words from "./wordle_7.json"
 import all_seven_words from "./wordle_compare_7.json"
 
+import { toHHMMSS } from "./ConvertTime"
+
 export type PuzzleStoreType = {
   word: string;
   guesses: string[];
@@ -19,6 +21,7 @@ export type PuzzleStoreType = {
   ToastId: number;
 
   start_time: number;
+  total_time: number;
   timeStatus: boolean;
   time_per_word: number;
 
@@ -59,6 +62,7 @@ export default {
 	ToastId: 0,
 
 	start_time: -1,
+	total_time: -1,
 	time_per_word: 30,
 
 	nbr_letters: 5,
@@ -112,7 +116,7 @@ export default {
 	},
 	
 	toast_won() {
-		this.ToastMessage = "Vous avez terminé n* (NUM PULL DU BACK)";
+		this.ToastMessage = `Vous avez trouvé le bon mot en, ${toHHMMSS((Math.floor(Date.now() / 1000) - this.total_time).toString())}`
 		this.ToastId++;
 	},
 
