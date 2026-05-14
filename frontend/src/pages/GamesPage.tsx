@@ -71,7 +71,9 @@ export default observer(function GamesPage() {
           {/* start_timer */}
           <h1>GamePage</h1>
           <h1>Wordle</h1>
+          {/* <div className="flex w-[min(92vw,26rem)]"> */}
           <ProgressBar start_time={store.start_time} store={store} />
+          {/* </div> */}
 
           {store.guesses.map((_, i) => (
               <Guess

@@ -59,7 +59,7 @@ export default function Guess({ checkerValidWord, lettersCount, flag, word, gues
 		colors.fill('bg-black');
 
   return (
-  <div className={`grid ${gridColsClass} gap-1.25 mb-1.25`}> 
+  <div className={`grid ${gridColsClass} gap-1.5 mb-1.25 flex w-[min(92vw,22rem)]`}> 
 	{new Array(lettersCount).fill(0).map((_, i) => {
 
 		const bgColor = colors[i]; 
@@ -69,7 +69,7 @@ export default function Guess({ checkerValidWord, lettersCount, flag, word, gues
 			<div
 			key={i}
 			className={
-				`h-16 w-16 rounded font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`}
+				`h-16 rounded font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`}
 			> 
 			{guess[i]}
 			</div>
@@ -77,7 +77,7 @@ export default function Guess({ checkerValidWord, lettersCount, flag, word, gues
 			<div
 			key={i}
 			className={[
-				`h-16 w-16 border-2 rounded font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`,
+				`h-16 border-2 rounded font-bold text-3xl uppercase flex items-center justify-center ${bgColor}`,
 				guess[i] ? "border-gray-400" : "border-gray-600",
 			].join(" ")}
 			> 

@@ -93,6 +93,7 @@
 * [ ] Utiliser `useMemo` pour les lignes déjà complétées
   * [ ] Éviter les recalculs inutiles
 
+
 * [ ] OPTIONNEL - dans keyboard utiliser disabled
 
 * [ ] Connecter aux rooms
