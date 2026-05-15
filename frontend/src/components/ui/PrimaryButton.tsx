@@ -12,7 +12,7 @@ export default function PrimaryButton({
 }: ButtonProps) {
   return (
     <button
-      className={`rounded-md px-4 py-2 bg-primary font-semibold text-text transition hover:bg-primary/85 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`inline-flex items-center justify-center rounded-md px-4 py-2 bg-primary font-semibold text-text transition hover:bg-primary/85 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       type={type}
       {...props}
     >
