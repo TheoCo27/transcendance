@@ -58,7 +58,7 @@ export default observer(function GamesPage() {
 
   
 	return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center">
+    <div className="flex flex-1 flex-col py-1 items-center justify-center">
       
     {
       // si isRulesOpen true, lance pas timer

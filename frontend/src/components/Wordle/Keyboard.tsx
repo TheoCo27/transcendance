@@ -11,43 +11,42 @@ const azerty = [
 	const wideKeys = new Set(["Backspace", "Enter"]);
 	let isWide : boolean
 	let bgColor : string
-	let vectSize= "h-7.5 w-7.5"
+	let vectSize= "size-7"
 
 	return (
-	<div className={`flex w-[min(92vw,26rem)] flex-col`}>
-		{azerty.map((row,i) => (
-		<div key={i} className="flex h-15 justify-center">
-			{(Array.isArray(row) ? row : row.split('')).map((key,i2) => (
-			isWide = wideKeys.has(key),
-
-			bgColor = store.keyGuessed.includes(key)
-			? 'bg-green-500'
-			: store.keyInexact.includes(key)
-			? 'bg-yellow-400'
-			: 'bg-gray-400',
-
-			<div
-			key={i2}
-			className={[
-				`m-px flex h-13 rounded-md ${bgColor} font-bold text-2xl items-center justify-center`,
-				isWide ? "w-16" : "w-9.5",
-			].join(" ")}
-			>
-
-			<button className="uppercase" onClick={() => store.handleKeyboard(key)} >
-			{key === 'Enter' ? (
-				<ArrowRightToLine className={`${vectSize}`} />
-			) : key === 'Backspace' ? (
-				<Delete className={`${vectSize}`} />
-			) : (
-				key
-			)}
-			</button>
-			
+	<div className="w-full h-full">
+		<div className={`flex w-[min(92vw,26rem)] flex-col`}>
+			{azerty.map((row,i) => (
+			<div key={i} className="flex py-1 justify-center gap-1">
+				{(Array.isArray(row) ? row : row.split('')).map((key,i2) => (
+				isWide = wideKeys.has(key),
+				bgColor = store.keyGuessed.includes(key)
+				? 'bg-green-500'
+				: store.keyInexact.includes(key)
+				? 'bg-yellow-400'
+				: 'bg-gray-400',
+				<div
+				key={i2}
+				className={[
+					` h-15 flex rounded-md ${bgColor} font-bold text-2xl md:text-3xl items-center justify-center`,
+					isWide ? "w-16" : "w-9.5",
+				].join(" ")}
+				>
+				<button className="uppercase" onClick={() => store.handleKeyboard(key)} >
+				{key === 'Enter' ? (
+					<ArrowRightToLine className={`${vectSize}`} />
+				) : key === 'Backspace' ? (
+					<Delete className={`${vectSize}`} />
+				) : (
+					key
+				)}
+				</button>
+		
+				</div>
+				))}
 			</div>
 			))}
 		</div>
-		))}
 	</div>
 	);
 }

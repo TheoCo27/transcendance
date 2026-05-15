@@ -83,7 +83,10 @@
 
 ## Restant
 
-* [ ] rendre flex pour mobile et toutes tailles
+* [X] rendre flex pour mobile et toutes tailles (responsive)
+  * [X] fixer ou faire en sorte que melvin fix le header et footer lors de petites tailles
+
+* [ ] rendre clean le responsive
 
 * [ ] Modifier le type de `settings`
 * [ ] Renommer les éléments concernés
@@ -92,6 +95,7 @@
 
 * [ ] Utiliser `useMemo` pour les lignes déjà complétées
   * [ ] Éviter les recalculs inutiles
+
 
 
 * [ ] OPTIONNEL - dans keyboard utiliser disabled

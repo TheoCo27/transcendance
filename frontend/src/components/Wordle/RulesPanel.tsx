@@ -33,7 +33,7 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
 
   //pull dans le back TEMPORAIRE
   let playersReady = 0;
-  let numberOfPlayers = 0;
+  let numberOfPlayers = 0; //met en flex
 
   // Déplacer l'appel onClose() et la modification de start_time dans un useEffect
   useEffect(() => {
@@ -47,19 +47,21 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
   if (readyFlag === true)
   {
       return ( //surement pas h-100
-              <div className="h-100 m-4 md:m-0 p-4 w-full max-w-lg flex flex-col rounded-2xl border border-white/10 bg-surface">
-            <div className="flex flex-1 items-center justify-center">
-              <div className="max-w-3xl text-center">
-                <div className="m-0 text-lg leading-8 text-text/80">
-                  EN ATTENTE QUE TOUT LES JOUEURS SOIENT PRÊTS
+            <div className="min-h-100 m-4 md:m-0 p-4 w-full max-w-lg flex flex-col rounded-2xl border border-white/10 bg-surface">
+              <div className="flex flex-1 items-center justify-center">
+                <div className="max-w-3xl text-center">
+                  <div className="m-0 text-lg leading-8 text-text/80">
+                  <div className="text-pretty text-wrap">
+                    EN ATTENTE QUE TOUT LES JOUEURS SOIENT PRÊTS
 
-                  {/*pull dans le back TEMPORAIRE*/} 
-                  <div>Joueurs manquants : (pull dans le back leur noms) (afficher en rouge) </div>
-                        
+                    {/*pull dans le back TEMPORAIRE*/} 
+                    <div>Joueurs manquants : (pull dans le back leur noms) (afficher en rouge) </div>
+                          
+                  </div>
+                </div>
                 </div>
               </div>
             </div>
-          </div>
       );
   }
   else 
