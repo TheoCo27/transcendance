@@ -1,4 +1,10 @@
-import { ChevronDown, LogOut, UserRound, UsersRound } from "lucide-react";
+import {
+  ChevronDown,
+  CirclePlus,
+  LogOut,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSession } from "../hooks/useAuthSession";
@@ -42,7 +48,7 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-20 border-b border-slate-900/8 bg-surface text-text backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 md:px-10">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 md:px-10">
         <Link className="flex items-center gap-3" to="/">
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-sm font-semibold uppercase tracking-[0.18em] text-white">
             QZ
@@ -110,6 +116,7 @@ export default function Navbar() {
                         setIsUserMenuOpen(false);
                       }}
                     >
+                      <CirclePlus className="size-5" />
                       Nouveau quiz
                     </Link>
                     <button
@@ -128,18 +135,19 @@ export default function Navbar() {
               </div>
             </div>
           ) : (
-            <>
+            <div className="flex items-center gap-2 md:gap-4 w-full">
               <Link className="text-sm font-medium text-slate-700" to="/login">
                 Se connecter
               </Link>
               <PrimaryButton
+                className="px-2 py-1 md:px-4 md:py-2 text-sm! md:text-base!"
                 onClick={() => {
                   navigate("/register");
                 }}
               >
                 S'inscrire
               </PrimaryButton>
-            </>
+            </div>
           )}
         </div>
       </div>
