@@ -8,6 +8,46 @@ import {
 } from "@nestjs/common";
 import { CreateQuizDto } from "./dto/create-quiz.dto";
 
+export enum SimpleQuizApiCategory {
+  MUSIQUE = "musique",
+  CULTURE_GENERALE = "culture_generale",
+  ART_LITTERATURE = "art_litterature",
+  TV_CINEMA = "tv_cinema",
+  ACTU_POLITIQUE = "actu_politique",
+  SPORT = "sport",
+  JEUX_VIDEOS = "jeux_videos",
+  HISTOIRE = "histoire",
+  GEOGRAPHIE = "geographie",
+  SCIENCE = "science",
+  GASTRONOMIE = "gastronomie",
+}
+
+export enum SimpleQuizApiDifficulty {
+  FACILE = "facile",
+  NORMAL = "normal",
+  DIFFICILE = "difficile",
+}
+
+export type SimpleQuizApiItem = {
+  _id: string;
+  question: string;
+  answer: string;
+  badAnswers: string[];
+  category: SimpleQuizApiCategory;
+  difficulty: SimpleQuizApiDifficulty;
+};
+
+export type SimpleQuizApiResponse = {
+  count: number;
+  quizzes: SimpleQuizApiItem[];
+};
+
+type FetchSimpleQuizParams = {
+  category: SimpleQuizApiCategory;
+  difficulty: SimpleQuizApiDifficulty;
+  limit: number;
+};
+
 type QuizQuestionResponse = {
   id: number;
   questionText: string;
@@ -45,6 +85,41 @@ type QuizWithQuestions = {
 @Injectable()
 export class QuizzesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async fetchSimpleQuizQuestions({
+    category,
+    difficulty,
+    limit,
+  }: FetchSimpleQuizParams): Promise<SimpleQuizApiResponse> {
+    if (limit < 1 || limit > 20) {
+      throw new BadRequestException(
+        "The requested number of questions must be between 1 and 20",
+      );
+    }
+
+    const url = new URL("https://quizzapi.jomoreschi.fr/api/v2/quiz");
+    url.searchParams.set("category", category);
+    url.searchParams.set("difficulty", difficulty);
+    url.searchParams.set("limit", String(limit));
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      throw new BadRequestException(
+        "Unable to fetch questions from the Simple Quiz API",
+      );
+    }
+
+    const data = (await response.json()) as SimpleQuizApiResponse;
+
+    if (!Array.isArray(data.quizzes)) {
+      throw new BadRequestException(
+        "Invalid response from the Simple Quiz API",
+      );
+    }
+
+    return data;
+  }
 
   // Cree un quiz et ses questions en base.
   async createQuiz(dto: CreateQuizDto): Promise<QuizResponse> {
