@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getRoomByName } from "../../services/rooms";
 import { connectWs, emitWs } from "../../services/ws";
 import { connectRoomErrorMsg } from "../../utils/err-msg";
@@ -19,7 +19,14 @@ export default function HomeHeader({
 }: HomeHeaderProps) {
   const [inputOpen, setInputOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const toast = useToast();
+
+  useEffect(() => {
+    if (inputOpen && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [inputOpen]);
 
   async function onRoomJoined(inputValue: string) {
     const trimmedInput = inputValue.trim();
@@ -105,7 +112,7 @@ export default function HomeHeader({
         discute avec les autres joueurs via le chat de room et grimpe dans le
         leaderboard en temps reel.
       </p>
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-6 flex flex-wrap gap-2">
         <PrimaryButton
           className="px-5 py-3 text-lg font-semibold tracking-wide"
           disabled={isCreatingRoom}
@@ -115,7 +122,11 @@ export default function HomeHeader({
         </PrimaryButton>
         <form
           action="submit"
-          className={`flex items-center gap-2 ${inputOpen ? "w-full max-w-lg" : "hidden"}`}
+          className={`flex items-center gap-2 transition-all duration-300 ease-out ${
+            inputOpen
+              ? "w-full max-w-lg opacity-100 translate-x-0"
+              : "w-0 opacity-0 -translate-x-4 overflow-hidden pointer-events-none"
+          }`}
           onSubmit={(e) => {
             e.preventDefault();
             onRoomJoined(inputValue);
@@ -123,20 +134,17 @@ export default function HomeHeader({
         >
           <Input
             type="text"
+            ref={inputRef}
             value={inputValue}
             onChange={onInputChange}
             placeholder="Entrez le lien ou le nom de la room que vous souhaitez rejoindre..."
-            className={`w-full max-w-lg placeholder:truncate ${inputOpen ? "" : "hidden"}`}
+            className="w-full max-w-lg placeholder:truncate"
           />
-          {/* <button
-            className={`${inputOpen ? "" : "hidden"} rounded-md border border-border bg-transparent px-5 py-3 text-lg font-semibold tracking-wide text-text transition hover:bg-bg/40`}
-            type="submit"
-          >
-            Rejoindre
-          </button> */}
         </form>
         <button
-          className={`${inputOpen ? "hidden" : ""} rounded-md border border-border bg-transparent px-5 py-3 text-lg font-semibold tracking-wide text-text transition hover:bg-bg/40`}
+          className={`rounded-md border border-border bg-transparent px-5 py-3 text-lg font-semibold tracking-wide text-text transition hover:bg-bg/40 ${
+            inputOpen ? "hidden" : ""
+          }`}
           type="button"
           onClick={toggleInput}
         >

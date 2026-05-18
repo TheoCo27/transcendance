@@ -120,7 +120,7 @@ export default function Navbar() {
                       Nouveau quiz
                     </Link>
                     <button
-                      className="mt-1 flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm font-semibold text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
+                      className="mt-1 flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm! font-semibold text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
                       type="button"
                       onClick={() => {
                         setIsUserMenuOpen(false);
