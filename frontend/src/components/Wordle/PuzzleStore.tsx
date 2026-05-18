@@ -1,4 +1,4 @@
-//import words depuis fichier json
+//import words from json file
 import five_words from "./wordle_5.json"
 import all_five_words from "./wordle_compare_5.json"
 
@@ -35,7 +35,7 @@ export type PuzzleStoreType = {
 
   keyGuessed : string[];
   keyInexact : string[];
-  AllGuessesMashed : string[]; // que utilisee ici
+  AllGuessesMashed : string[]; // only used here (in PuzzleStore)
 
   toast_validWord(guess: string): 1 | 0;
   toast_x_letters(): void;
@@ -80,7 +80,7 @@ export default {
 
 	get submittedGuesses() {
 	return this.guesses
-		.slice(0, this.currentGuess)               // seulement envoyés
+		.slice(0, this.currentGuess)  // only sent words (from index 0 to, currentGuess)
 		.filter((g) => typeof g === 'string' && g.length === this.nbr_letters && this.all_words_array_json.includes(g))
 	},
 
@@ -96,7 +96,7 @@ export default {
 		return this.word.split('').filter((letter) => this.AllGuessesMashed.includes(letter))
 	},
 
-	//TEMPS
+	//TIME
 	get timeStatus(){
 		return ((Math.floor(Date.now() / 1000) - this.start_time) >= this.time_per_word);
 	},
@@ -121,12 +121,12 @@ export default {
 	},
 
 	toast_timeup() {
-		this.ToastMessage = "Le temps est écoulé, vous n'avez pas trouvé le bon mot";
+		this.ToastMessage = `Le temps est écoulé, vous n'avez pas trouvé le mot: ${this.word}`;
 		this.ToastId++;
 	},
 
 	toast_lost() {
-		this.ToastMessage = "Vous n'avez pas trouvé le bon mot";
+		this.ToastMessage = `Vous n'avez pas trouvé le mot: ${this.word}`;
 		this.ToastId++;
 	},
 
@@ -140,7 +140,7 @@ export default {
 			this.words_array_json = five_words, this.all_words_array_json = all_five_words, this.nbr_letters = 5;
 
 		this.word = this.words_array_json[Math.floor(Math.random() * this.words_array_json.length)]
-		this.guesses = new Array(6).fill(''); //custom taille dynamique, en fonction setting regles
+		this.guesses = new Array(6).fill(''); //custom dynamic size, depending on rules settings
 		this.currentGuess = 0
 	},
 
@@ -159,7 +159,7 @@ export default {
 			if (!this.timeStatus && this.currentGuess === 6 && this.guesses[this.currentGuess - 1] != this.word)
 				this.toast_lost();
 		
-			this.start_time = Date.now() / 1000;	//RESET TIMER
+			this.start_time = Date.now() / 1000;	//RESET TIMER (takes current time)
 		}
 	},
 
@@ -172,7 +172,7 @@ export default {
 				this.toast_x_letters();
 
 			this.currentGuess++;
-			this.start_time = Math.floor(Date.now() / 1000);//RESET TIMER
+			this.start_time = Date.now() / 1000;	//RESET TIMER (takes current time)
 			if (this.currentGuess === 6)
 				this.won ? this.toast_won() : this.toast_timeup()
 		}
@@ -180,7 +180,7 @@ export default {
 
 	handleKeyboard(key : string)
 	{
-		//si bon ou 6 essais et mauvais mot, le return fait R
+		// good word or 6 trys and bad word, else its skipped
 		if (this.won || this.lost)
 			return
 
@@ -200,7 +200,7 @@ export default {
 
 	handleKeyup(e : KeyboardEvent)
 	{
-		//si bon ou 6 essais et mauvais mot, le return fait R
+		// good word or 6 trys and bad word, else its skipped
 		if (this.won || this.lost)
 			return
 

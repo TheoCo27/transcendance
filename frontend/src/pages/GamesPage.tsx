@@ -14,8 +14,9 @@ export default observer(function GamesPage() {
   const toast = useToast();
   const [isRulesOpen, setRulesOpen] = useState(true);
   const [isPlayerReady, setPlayerReady] = useState(false);
+  const debugFlag = false;
 
-  const isRulesOpenRef = useRef(isRulesOpen); //car useEffect garde sinon la tt premiere valeure
+  const isRulesOpenRef = useRef(isRulesOpen); // because useEffect keeps the very first value otherwise
   useEffect(() => {
     isRulesOpenRef.current = isRulesOpen;
   }, [isRulesOpen]);
@@ -24,9 +25,9 @@ export default observer(function GamesPage() {
     store.init()
     window.addEventListener('keyup', store.handleKeyup)
 
-    // L'interval est créé ici, donc UNE fois :
+    // The interval is created here, so only once:
     const intervalId = setInterval(() => {
-      // si tout les joueurs prets
+      // if all players are ready
       if (isRulesOpenRef.current === false)
         store.checkTimeUp();
       if (store.currentGuess === 6 || store.won) {
@@ -49,9 +50,9 @@ export default observer(function GamesPage() {
         toast.error(store.ToastMessage);
       else if (store.ToastMessage === `Vous avez trouvé le bon mot en, ${toHHMMSS((Math.floor(Date.now() / 1000) - store.total_time).toString())}`) //TEMPORAIRE
         toast.success(store.ToastMessage);
-      else if (store.ToastMessage === "Le temps est écoulé, vous n'avez pas trouvé le bon mot")
+      else if (store.ToastMessage === `Le temps est écoulé, vous n'avez pas trouvé le mot: ${store.word}`)
         toast.error(store.ToastMessage);
-      else if (store.ToastMessage === "Vous n'avez pas trouvé le bon mot")
+      else if (store.ToastMessage === `Vous n'avez pas trouvé le mot: ${store.word}`)
         toast.error(store.ToastMessage);
 
   }, [store.ToastId])
@@ -61,19 +62,16 @@ export default observer(function GamesPage() {
     <div className="flex flex-1 flex-col py-1 items-center justify-center">
       
     {
-      // si isRulesOpen true, lance pas timer
+      // if isRulesOpen is true, timer not started
       isRulesOpen ? (
         <div className="flex items-center justify-end">
           <RulesPanel onClose={() => setRulesOpen(false)} store={store} setReady={() => {setPlayerReady(true); }} readyFlag={isPlayerReady}/>
         </div>
       ) : (
         <>
-          {/* start_timer */}
           <h1>GamePage</h1>
           <h1>Wordle</h1>
-          {/* <div className="flex w-[min(92vw,26rem)]"> */}
           <ProgressBar start_time={store.start_time} store={store} />
-          {/* </div> */}
 
           {store.guesses.map((_, i) => (
               <Guess
@@ -90,12 +88,17 @@ export default observer(function GamesPage() {
           <div className="mt-3">
             <Keyboard store={store} />
           </div>
-          
-          {/* creer debug flag */}
+               
+          { debugFlag ? 
+        (
+          <>
           <div>word: {store.word}</div>
-          <div>currentGuess: {store.currentGuess}</div> 
-          <div>guesses: {JSON.stringify(store.guesses)}</div>
-          <div>Secondes passees: {Math.floor(Date.now() / 1000) - store.start_time}</div>
+            <div>currentGuess: {store.currentGuess}</div> 
+            <div>guesses: {JSON.stringify(store.guesses)}</div>
+            <div>Elapsed seconds: {Math.floor(Date.now() / 1000) - store.start_time}</div>
+            </>)          
+           : null}
+          
         </>
       )
     }
@@ -104,15 +107,11 @@ export default observer(function GamesPage() {
   );
 });
 
+
     {/* <Guess {...s} /> */}
   // {/* <Guess word={"test"} guess={"ttst2"} isGuessed={false} /> */}
   // {/* {store.won && <h1> You Won </h1> || store.lost && <h1> You lost </h1>} */}
-  
-
-  // {/* <h1>Azerty clavier</h1>  */}
-
-  // error_list: "This word isn't in the list",
-		
+  		
   // const value = useMemo<ToastContextValue>(
   //   () => ({
   //     error: (message, options) => {

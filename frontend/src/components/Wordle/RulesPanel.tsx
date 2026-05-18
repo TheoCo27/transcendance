@@ -33,20 +33,19 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
 
   //pull dans le back TEMPORAIRE
   let playersReady = 0;
-  let numberOfPlayers = 0; //met en flex
+  let numberOfPlayers = 0;
 
-  // Déplacer l'appel onClose() et la modification de start_time dans un useEffect
   useEffect(() => {
     if (readyFlag === true && numberOfPlayers === playersReady) {
       store.start_time = Math.floor(Date.now() / 1000);
       store.total_time = Math.floor(Date.now() / 1000);
       onClose();
     }
-  }, [readyFlag, numberOfPlayers, playersReady, onClose, store]); // JUSTE numberOfPlayers, playersReady
+  }, [readyFlag, numberOfPlayers, playersReady, onClose, store]); // JUSTE numberOfPlayers, playersReady qd back sera connecte qvec front
 
   if (readyFlag === true)
   {
-      return ( //surement pas h-100
+      return (
             <div className="min-h-100 m-4 md:m-0 p-4 w-full max-w-lg flex flex-col rounded-2xl border border-white/10 bg-surface">
               <div className="flex flex-1 items-center justify-center">
                 <div className="max-w-3xl text-center">
@@ -77,11 +76,6 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
               À chaque essai, les lettres du mot que vous avez proposé changeront de couleur en fonction de à quel point vous êtes proche de le trouver.
             </div>
 
-            {/* <div> Un mot de (5 à 7) lettres est choisi aléatoirement. Vous devez le deviner en 6 essais.</div>
-            <div> À chaque essai, les lettres du mot que vous avez proposé changeront de couleur</div>
-            <div>  en fonction de à quel point vous êtes proche de le trouver.</div> */}
-
-
             <div className="mt-2 flex flex-col items-center justify-center">
 
             {renderWordExample("FRUIT", "F", "bg-green-500", "bg-gray-500")}
@@ -95,7 +89,7 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
 
             </div>
             </div>
-        <button
+          <button
             className="mt-3 rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
             type="button"
             onClick={() => {

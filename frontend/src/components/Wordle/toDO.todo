@@ -86,16 +86,18 @@
 * [X] rendre flex pour mobile et toutes tailles (responsive)
   * [X] fixer ou faire en sorte que melvin fix le header et footer lors de petites tailles
 
-* [ ] rendre clean le responsive
+* [X] rendre clean le responsive
 
-* [ ] Modifier le type de `settings`
-* [ ] Renommer les éléments concernés
 * [/] Nettoyer les fichiers
-* [ ] Ajout commentaires
+* [/] Ajout commentaires
 
-* [ ] Utiliser `useMemo` pour les lignes déjà complétées
-  * [ ] Éviter les recalculs inutiles
+* [\] Utiliser `useMemo` pour les lignes déjà complétées
+* [X] Utiliser `Memo` pour les lignes déjà complétées
+  * [X] Éviter les recalculs inutiles
 
+* [ ] DEBUG
+  * [ ] check que memo ne donne aucun resultats non attendu
+  * [ ] ne pas prendre d'input tant que le isRulesOpen est vrai
 
 
 * [ ] OPTIONNEL - dans keyboard utiliser disabled

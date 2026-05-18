@@ -28,8 +28,8 @@ export default observer(function ProgressBar({ store, start_time }: { store: Puz
 	  value={Math.min(elapsed, max)}
 	  max={max}
 	  style={{height: 26}}
-	  className=" flex w-[min(92vw,28rem)] mb-3 bg-blue-400 my-progress"
+	  className="w-[min(92vw,28rem)] mb-3 bg-blue-400 my-progress"
 	/>
-	//taille correspond rem, vw pour 
+	//rem and vw, for size mesures
   );
 });

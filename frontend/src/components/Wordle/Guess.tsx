@@ -1,6 +1,7 @@
 import type { settings } from "./Settings";
+import { memo } from "react";
 
-export default function Guess({ checkerValidWord, lettersCount, flag, word, guess, isGuessed}: settings) {
+const Guess = memo(function Guess({ checkerValidWord, lettersCount, flag, word, guess, isGuessed}: settings) {
 
 	if (guess.length === lettersCount)
 	{
@@ -56,7 +57,7 @@ export default function Guess({ checkerValidWord, lettersCount, flag, word, gues
 		}
 	} 
 	else if (!isGuessed)
-		colors.fill('bg-black');
+		colors.fill('bg-black'); //if neither, color is black
 
   return (
   <div className={`grid ${gridColsClass} gap-1.5 mb-1.25 flex w-[min(92vw,22rem)]`}> 
@@ -87,5 +88,6 @@ export default function Guess({ checkerValidWord, lettersCount, flag, word, gues
 	})}
 	</div>
   )
-}
+});
 
+export default Guess;
