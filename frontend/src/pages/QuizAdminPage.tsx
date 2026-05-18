@@ -232,8 +232,12 @@ export default function QuizAdminPage() {
           )}
         </div>
 
-        <div className="flex flex-col gap-6">
-          <div className="rounded-4xl border border-slate-900/10 bg-slate-950 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)] flex flex-col overflow-hidden">
+        <div
+          className={`flex flex-col gap-6 `}
+        >
+          <div
+            className={`rounded-4xl border border-slate-900/10 ${questions.length > 1 ? "h-full" : ""} bg-slate-950 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)] flex flex-col overflow-hidden`}
+          >
             <SectionLabel className="text-text/55">Quiz construit</SectionLabel>
             <SectionHeader>Questions validées</SectionHeader>
 
@@ -245,7 +249,7 @@ export default function QuizAdminPage() {
               </p>
             ) : null}
 
-            <div className="mt-6 space-y-4 overflow-y-auto max-h-[min(52vh,36rem)]">
+            <div className="mt-6 space-y-4 overflow-y-auto max-h-[min(65vh,50rem)]">
               {questions.length > 0 ? (
                 questions.map((question, index) => (
                   <article
