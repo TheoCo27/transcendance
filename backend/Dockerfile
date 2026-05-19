@@ -4,7 +4,9 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci
+# Install production + dev deps so `ts-node` and other dev tools are available
+# This allows running `npm run seed` inside the running container after `docker compose up`.
+RUN npm ci --include=dev
 
 COPY . .
 

@@ -97,6 +97,7 @@ dev: env-check setup-host compose-check
 	@echo "Backend dev : https://localhost:$${BACKEND_PORT:-4000}"
 	@echo "Swagger     : https://localhost:$${BACKEND_PORT:-4000}/docs"
 	@echo "Prisma Studio: http://127.0.0.1:$${PRISMA_STUDIO_PORT:-5555} (local only)"
+	@$(MAKE) seed
 
 seed: compose-check
 	$(COMPOSE_DEV) exec backend sh -c "npm run seed"
@@ -121,6 +122,7 @@ restart: env-check setup-host compose-check
 	$(COMPOSE_DEV) down
 	$(COMPOSE) up --build -d
 	bash scripts/wait-for-containers.sh
+	@$(MAKE) seed
 
 logs: compose-check
 	$(COMPOSE) logs -f

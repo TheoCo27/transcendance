@@ -3,8 +3,28 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaClient } from "../generated/prisma/client";
 
+// Prefer a full DATABASE_URL, otherwise build from individual env vars.
 const connectionString =
-  "postgresql://mduchauf:Marseille7513!@db:5432/transcendance";
+  process.env.DATABASE_URL ??
+  (() => {
+    const host = process.env.DB_HOST ?? process.env.POSTGRES_HOST ?? "db";
+    const port = process.env.DB_PORT ?? process.env.POSTGRES_PORT ?? "5432";
+    const user = process.env.DB_USER ?? process.env.POSTGRES_USER;
+    const password = process.env.DB_PASSWORD ?? process.env.POSTGRES_PASSWORD;
+    const database =
+      process.env.DB_NAME ?? process.env.POSTGRES_DB ?? "transcendance";
+
+    if (!user || !password) {
+      throw new Error(
+        "DATABASE_URL or DB_USER and DB_PASSWORD must be set in the environment",
+      );
+    }
+
+    return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(
+      password,
+    )}@${host}:${port}/${database}`;
+  })();
+
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
