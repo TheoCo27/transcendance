@@ -145,7 +145,7 @@ export default function QuizAdminPage() {
         } catch (error) {}
         navigate(`/rooms/${fromRoomId}`);
       } else {
-        navigate(`/quiz/${createdQuiz.id}`);
+        navigate("/");
       }
     } catch (error) {
       setSubmitError(
