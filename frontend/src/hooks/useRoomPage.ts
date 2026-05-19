@@ -583,8 +583,15 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         error instanceof Error
           ? error.message
           : "Impossible d'enregistrer la configuration";
-      setPageError(message);
-      toast.error(message);
+      // For name-conflict errors, show only a toast and keep the page visible.
+      if (typeof message === "string" && message.includes("déjà utilisé")) {
+        toast.error("Nom déjà existant.");
+        setForm((currentForm) => ({ ...currentForm, name: room.name }));
+      } else {
+        setPageError(message);
+        toast.error(message);
+      }
+      return;
     } finally {
       setIsSaving(false);
     }

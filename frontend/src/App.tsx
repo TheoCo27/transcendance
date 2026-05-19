@@ -1,19 +1,20 @@
 import { Route, Routes } from "react-router-dom";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
-import FriendsPage from "./pages/FriendsPage";
-import HomePage from "./pages/HomePage";
-import LoginPage from "./pages/LoginPage";
-import NotFound from "./pages/NotFound";
-import ProfilePage from "./pages/ProfilePage";
-import QuizAdminPage from "./pages/QuizAdminPage";
-import QuizPage from "./pages/QuizPage";
-import RegisterPage from "./pages/RegisterPage";
-import RoomPage from "./pages/RoomPage";
+import {
+  FriendsPage,
+  HomePage,
+  LoginPage,
+  NotFound,
+  ProfilePage,
+  QuizAdminPage,
+  RegisterPage,
+  RoomPage,
+} from "./pages";
 
 export default function App() {
   return (
-    <div className="flex min-h-screen min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col">
       <Navbar />
       <div className="flex flex-1 flex-col">
         <Routes>
@@ -24,7 +25,6 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/rooms/:roomId" element={<RoomPage />} />
-          <Route path="/quiz/:quizId" element={<QuizPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

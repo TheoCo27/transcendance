@@ -23,7 +23,7 @@ type RoomConfigSectionProps = {
   isLoadingQuizzes: boolean;
   isQuizSelectionSaved: boolean;
   isSaving: boolean;
-  onSave: () => void;
+  onSave: () => Promise<void>;
 };
 
 export default function RoomConfigSection({
@@ -312,8 +312,13 @@ export default function RoomConfigSection({
         <PrimaryButton
           className="px-5 py-2.5 text-sm"
           disabled={isSaving}
-          onClick={() => {
-            onSave();
+          onClick={async () => {
+            try {
+              await onSave();
+            } catch {
+              // error already surfaced by caller; swallow to avoid unhandled rejection
+            }
+
             if (isEditingSavedQuiz) setIsEditingSavedQuiz(false);
           }}
         >

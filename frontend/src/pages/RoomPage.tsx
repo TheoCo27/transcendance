@@ -340,9 +340,7 @@ export default function RoomPage() {
               isLoadingQuizzes={isLoadingQuizzes}
               isQuizSelectionSaved={isQuizSelectionSaved}
               isSaving={isSaving}
-              onSave={() => {
-                void handleSave();
-              }}
+              onSave={handleSave}
             />
           ) : null}
 
