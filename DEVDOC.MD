@@ -414,10 +414,19 @@ Frontend:
   - `read`
     - champ present dans le schema mais non exploite dans le flux actuel du chat de room.
 
-Hors base relationnelle:
-
-- `.runtime/private-messages-store.json`
-  - stockage local des messages prives
+- `PrivateMessage` pour les messages prives entre amis
+  - `id`
+    - identifiant unique du message prive.
+  - `senderId`
+    - utilisateur qui envoie le message.
+  - `receiverId`
+    - utilisateur qui recoit le message.
+  - `content`
+    - contenu texte du message.
+  - `createdAt`
+    - horodatage d'envoi; utilise pour ordonner une conversation et construire le resume des conversations.
+  - `readAt`
+    - horodatage de lecture; permet de compter les non-lus et de marquer une conversation comme lue a l'ouverture.
 
 #### Types et structures de donnees importants
 
@@ -485,7 +494,7 @@ Hors base relationnelle:
 
 - NestJS controllers/services
 - Prisma
-- `node:fs` pour le stockage JSON des MP
+- Prisma/PostgreSQL pour les MP et le chat de room
 - React state/hooks
 
 ### Etapes logiques d'implementation
@@ -498,7 +507,7 @@ Hors base relationnelle:
    - demandes envoyees.
 4. Bloquer les comptes invites sur les features sociales privees.
 5. Ajouter la messagerie privee seulement entre amis acceptes.
-6. Choisir un stockage simple sur fichier JSON pour les MP au lieu d'une table SQL.
+6. Persister les MP en base via une table dediee `PrivateMessage`.
 7. Brancher en parallele le chat de room persistant sur la table `Messages`.
 8. Cote frontend, construire une page `FriendsPage` qui fait du polling:
    - toutes les 12 secondes pour le reseau d'amis,
@@ -520,7 +529,6 @@ Hors base relationnelle:
   - `listConversation()` marque les messages lus.
   - `sendMessage()` cree un MP.
   - `assertMessagingAllowed()` interdit les MP hors amitie acceptee.
-  - `loadStore()` / `persistStore()` gerent la persistence disque.
 
 - `backend/src/modules/rooms/rooms.service.ts`
   - `listMessages()` et `createMessage()` couvrent le chat de room.
@@ -534,7 +542,7 @@ Hors base relationnelle:
 ### Ce qu'il faut savoir
 
 - les amis sont persistants en base via `FriendRequests`;
-- les messages prives sont **persistes localement sur fichier JSON**, pas encore en table SQL;
+- les messages prives sont persistants en base via `PrivateMessage`;
 - le chat de room, lui, est persiste en base dans `Messages`;
 - la messagerie privee est volontairement reservee aux amis acceptes pour simplifier les abus et la moderation.
 
