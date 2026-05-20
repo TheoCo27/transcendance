@@ -357,7 +357,7 @@ export default function GamesPage() {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
         <div className="rounded-4xl border border-white/10 bg-bg p-8 text-text">
-          Chargement de la room...
+          Chargement de la partie...
         </div>
       </main>
     );
@@ -391,9 +391,7 @@ export default function GamesPage() {
     );
   }
 
-  if (!room) {
-    return null;
-  }
+  if (!room) return null;
 
   return (
     <main className="mx-auto flex flex-col w-full max-w-7xl flex-1 px-6 py-8 md:px-10 md:py-12 justify-center">
