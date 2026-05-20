@@ -189,6 +189,12 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   }, [isSessionLoading, user]);
 
   useEffect(() => {
+    if (room?.status === "playing" && Number.isFinite(roomId) && roomId > 0) {
+      navigate(`/games/${roomId}`);
+    }
+  }, [navigate, room?.status, roomId]);
+
+  useEffect(() => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
       return;
     }
@@ -226,7 +232,6 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setRoom(response.data);
       setForm(buildFormFromRoom(response.data));
       setRoomActionError(null);
-      void refreshRoom();
     };
 
     const handleRoomLeft = (response: WsResponse<RoomLeftPayload>) => {

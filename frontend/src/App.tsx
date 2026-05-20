@@ -3,6 +3,7 @@ import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import {
   FriendsPage,
+  GamesPage,
   HomePage,
   LoginPage,
   NotFound,
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/rooms/:roomId" element={<RoomPage />} />
+          <Route path="/games/:roomId" element={<GamesPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
