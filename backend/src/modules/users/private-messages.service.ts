@@ -1,12 +1,11 @@
-// Ce fichier gere la messagerie privee entre amis et sa persistence locale sur disque.
+// Ce fichier gere la messagerie privee entre amis via PostgreSQL/Prisma.
+import { PrismaService } from "@/prisma/prisma.service";
 import { UsersService, type FriendUserSummary } from "@/modules/users/users.service";
 import {
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import path from "node:path";
 
 export type PrivateMessage = {
   id: number;
@@ -24,57 +23,57 @@ export type PrivateConversationSummary = {
   unreadCount: number;
 };
 
-type PrivateMessagesStore = {
-  nextMessageId: number;
-  messages: PrivateMessage[];
-};
-
 @Injectable()
 export class PrivateMessagesService {
-  private readonly storeFilePath = path.resolve(
-    process.cwd(),
-    ".runtime/private-messages-store.json",
-  );
-
-  private nextMessageId = 1;
-
-  private messages: PrivateMessage[] = [];
-
   constructor(
+    private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
-  ) {
-    this.loadStore();
-  }
+  ) {}
 
   // Resume chaque conversation privee d'un utilisateur.
   async listConversationSummaries(
     userId: number,
   ): Promise<PrivateConversationSummary[]> {
     const friends = await this.usersService.listFriends(userId);
+    if (friends.length === 0) {
+      return [];
+    }
+
     const friendIds = new Set(friends.map((friend) => friend.id));
-    const latestByFriendId = new Map<number, PrivateMessage>();
+    const messages = await this.prisma.client.privateMessage.findMany({
+      where: {
+        OR: [
+          {
+            senderId: userId,
+            receiverId: {
+              in: Array.from(friendIds),
+            },
+          },
+          {
+            receiverId: userId,
+            senderId: {
+              in: Array.from(friendIds),
+            },
+          },
+        ],
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        senderId: true,
+        receiverId: true,
+        content: true,
+        createdAt: true,
+        readAt: true,
+      },
+    });
+
     const unreadCountByFriendId = new Map<number, number>();
+    const latestByFriendId = new Map<number, typeof messages[number]>();
 
-    for (const message of this.messages) {
-      const isSentByUser =
-        message.senderId === userId && friendIds.has(message.receiverId);
-      const isReceivedByUser =
-        message.receiverId === userId && friendIds.has(message.senderId);
-
-      if (!isSentByUser && !isReceivedByUser) {
-        continue;
-      }
-
+    for (const message of messages) {
       const friendId = message.senderId === userId ? message.receiverId : message.senderId;
-      const previousLatest = latestByFriendId.get(friendId);
-
-      if (
-        !previousLatest ||
-        new Date(message.createdAt).getTime() >
-          new Date(previousLatest.createdAt).getTime() ||
-        (message.createdAt === previousLatest.createdAt &&
-          message.id > previousLatest.id)
-      ) {
+      if (!latestByFriendId.has(friendId)) {
         latestByFriendId.set(friendId, message);
       }
 
@@ -99,7 +98,7 @@ export class PrivateMessagesService {
           lastMessagePreview: latestMessage
             ? this.buildMessagePreview(latestMessage.content)
             : null,
-          lastMessageAt: latestMessage?.createdAt ?? null,
+          lastMessageAt: latestMessage?.createdAt.toISOString() ?? null,
           unreadCount: unreadCountByFriendId.get(friend.id) ?? 0,
         };
       })
@@ -131,52 +130,57 @@ export class PrivateMessagesService {
   async listConversation(userId: number, friendId: number): Promise<PrivateMessage[]> {
     await this.assertMessagingAllowed(userId, friendId);
 
-    let hasUnreadMessages = false;
     const readAt = new Date().toISOString();
-    const conversation = this.messages
-      .filter((message) => this.isConversationMessage(message, userId, friendId))
-      .map((message) => {
-        if (
-          message.senderId === friendId &&
-          message.receiverId === userId &&
-          message.readAt === null
-        ) {
-          hasUnreadMessages = true;
-          return {
-            ...message,
-            readAt,
-          };
-        }
+    const conversation = await this.prisma.client.privateMessage.findMany({
+      where: {
+        OR: [
+          {
+            senderId: userId,
+            receiverId: friendId,
+          },
+          {
+            senderId: friendId,
+            receiverId: userId,
+          },
+        ],
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
 
-        return message;
-      })
-      .sort((left, right) => {
-        const timeDifference =
-          new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
-
-        return timeDifference !== 0 ? timeDifference : left.id - right.id;
-      });
+    const hasUnreadMessages = conversation.some(
+      (message) =>
+        message.senderId === friendId &&
+        message.receiverId === userId &&
+        message.readAt === null,
+    );
 
     if (hasUnreadMessages) {
-      this.messages = this.messages.map((message) => {
-        if (
-          message.senderId === friendId &&
-          message.receiverId === userId &&
-          message.readAt === null
-        ) {
-          return {
-            ...message,
-            readAt,
-          };
-        }
-
-        return message;
+      await this.prisma.client.privateMessage.updateMany({
+        where: {
+          senderId: friendId,
+          receiverId: userId,
+          readAt: null,
+        },
+        data: {
+          readAt: new Date(readAt),
+        },
       });
-
-      this.persistStore();
     }
 
-    return conversation;
+    return conversation.map((message) => ({
+      id: message.id,
+      senderId: message.senderId,
+      receiverId: message.receiverId,
+      content: message.content,
+      createdAt: message.createdAt.toISOString(),
+      readAt:
+        hasUnreadMessages &&
+        message.senderId === friendId &&
+        message.receiverId === userId &&
+        message.readAt === null
+          ? readAt
+          : message.readAt?.toISOString() ?? null,
+    }));
   }
 
   // Envoie un message prive.
@@ -187,22 +191,22 @@ export class PrivateMessagesService {
   ): Promise<PrivateMessage> {
     await this.assertMessagingAllowed(senderId, friendId);
 
-    const content = rawContent.trim();
-    const createdAt = new Date().toISOString();
-    const message: PrivateMessage = {
-      id: this.nextMessageId,
-      senderId,
-      receiverId: friendId,
-      content,
-      createdAt,
-      readAt: null,
+    const message = await this.prisma.client.privateMessage.create({
+      data: {
+        senderId,
+        receiverId: friendId,
+        content: rawContent.trim(),
+      },
+    });
+
+    return {
+      id: message.id,
+      senderId: message.senderId,
+      receiverId: message.receiverId,
+      content: message.content,
+      createdAt: message.createdAt.toISOString(),
+      readAt: message.readAt?.toISOString() ?? null,
     };
-
-    this.nextMessageId += 1;
-    this.messages.push(message);
-    this.persistStore();
-
-    return message;
   }
 
   // Verifie que deux utilisateurs peuvent s'ecrire en prive.
@@ -246,74 +250,5 @@ export class PrivateMessagesService {
     }
 
     return `${normalized.slice(0, 69)}...`;
-  }
-
-  // Indique si un message appartient a cette conversation.
-  private isConversationMessage(
-    message: PrivateMessage,
-    userId: number,
-    friendId: number,
-  ): boolean {
-    return (
-      (message.senderId === userId && message.receiverId === friendId) ||
-      (message.senderId === friendId && message.receiverId === userId)
-    );
-  }
-
-  // Recharge le stockage local des messages prives.
-  private loadStore(): void {
-    if (!existsSync(this.storeFilePath)) {
-      return;
-    }
-
-    try {
-      const rawStore = JSON.parse(
-        readFileSync(this.storeFilePath, "utf8"),
-      ) as Partial<PrivateMessagesStore>;
-
-      this.messages = Array.isArray(rawStore.messages)
-        ? rawStore.messages
-            .filter(
-              (message): message is PrivateMessage =>
-                typeof message?.id === "number" &&
-                typeof message?.senderId === "number" &&
-                typeof message?.receiverId === "number" &&
-                typeof message?.content === "string" &&
-                typeof message?.createdAt === "string" &&
-                (typeof message?.readAt === "string" || message?.readAt === null),
-            )
-            .sort((left, right) => left.id - right.id)
-        : [];
-
-      const highestMessageId = this.messages.reduce(
-        (currentMax, message) => Math.max(currentMax, message.id),
-        0,
-      );
-
-      this.nextMessageId = Math.max(
-        1,
-        typeof rawStore.nextMessageId === "number"
-          ? rawStore.nextMessageId
-          : highestMessageId + 1,
-      );
-    } catch {
-      this.messages = [];
-      this.nextMessageId = 1;
-    }
-  }
-
-  // Sauvegarde les messages prives sur disque.
-  private persistStore(): void {
-    const directory = path.dirname(this.storeFilePath);
-    mkdirSync(directory, { recursive: true });
-
-    const payload: PrivateMessagesStore = {
-      nextMessageId: this.nextMessageId,
-      messages: this.messages,
-    };
-    const temporaryFilePath = `${this.storeFilePath}.tmp`;
-
-    writeFileSync(temporaryFilePath, JSON.stringify(payload, null, 2), "utf8");
-    renameSync(temporaryFilePath, this.storeFilePath);
   }
 }
