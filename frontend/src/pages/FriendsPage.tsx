@@ -23,6 +23,24 @@ import {
 const FRIENDS_POLL_INTERVAL_MS = 12000;
 const CONVERSATION_POLL_INTERVAL_MS = 5000;
 
+function areMessagesEqual(left: PrivateMessage[], right: PrivateMessage[]) {
+  return (
+    left.length === right.length &&
+    left.every((message, index) => {
+      const candidate = right[index];
+
+      return (
+        message.id === candidate?.id &&
+        message.senderId === candidate.senderId &&
+        message.receiverId === candidate.receiverId &&
+        message.content === candidate.content &&
+        message.createdAt === candidate.createdAt &&
+        message.readAt === candidate.readAt
+      );
+    })
+  );
+}
+
 export default function FriendsPage() {
   const { user, isLoading } = useAuthSession();
   const [friendOverview, setFriendOverview] = useState<FriendOverview | null>(
@@ -62,7 +80,11 @@ export default function FriendsPage() {
     friendOverview?.friends.find((friend) => friend.id === selectedFriendId) ??
     null;
 
-  const refreshFriendData = async () => {
+  const refreshFriendData = async (showLoading = false) => {
+    if (showLoading) {
+      setIsFriendsLoading(true);
+    }
+
     const [overview, summaries] = await Promise.all([
       getMyFriendOverview(),
       getConversationSummaries(),
@@ -71,6 +93,10 @@ export default function FriendsPage() {
     setFriendOverview(overview);
     setConversationSummaries(summaries);
     setFriendsError(null);
+
+    if (showLoading) {
+      setIsFriendsLoading(false);
+    }
   };
 
   const refreshConversation = async (friendId: number) => {
@@ -90,8 +116,10 @@ export default function FriendsPage() {
 
     let cancelled = false;
 
-    const loadData = async () => {
-      setIsFriendsLoading(true);
+    const loadData = async (showLoading = false) => {
+      if (showLoading) {
+        setIsFriendsLoading(true);
+      }
 
       try {
         const [overview, summaries] = await Promise.all([
@@ -115,13 +143,13 @@ export default function FriendsPage() {
           );
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && showLoading) {
           setIsFriendsLoading(false);
         }
       }
     };
 
-    void loadData();
+    void loadData(true);
 
     const interval = window.setInterval(() => {
       void loadData();
@@ -165,18 +193,30 @@ export default function FriendsPage() {
 
     let cancelled = false;
 
-    const loadConversation = async () => {
-      setIsConversationLoading(true);
+    const loadConversation = async (
+      showLoading = false,
+      syncFriendData = false,
+    ) => {
+      if (showLoading) {
+        setIsConversationLoading(true);
+      }
 
       try {
         const conversation = await getPrivateConversation(selectedFriendId);
 
         if (!cancelled) {
-          setMessages(conversation);
+          setMessages((currentMessages) =>
+            areMessagesEqual(currentMessages, conversation)
+              ? currentMessages
+              : conversation,
+          );
           setConversationError(null);
-          void refreshFriendData().catch(() => {
-            // The conversation remains usable even if the side summary refresh fails.
-          });
+
+          if (syncFriendData) {
+            void refreshFriendData().catch(() => {
+              // The conversation remains usable even if the side summary refresh fails.
+            });
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -187,13 +227,13 @@ export default function FriendsPage() {
           );
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && showLoading) {
           setIsConversationLoading(false);
         }
       }
     };
 
-    void loadConversation();
+    void loadConversation(true, true);
 
     const interval = window.setInterval(() => {
       void loadConversation();
