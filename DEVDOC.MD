@@ -365,8 +365,54 @@ Frontend:
 #### Elements de base de donnees concernes
 
 - `FriendRequests`
+  - `id`
+    - identifiant unique de la demande; utilise pour cibler une demande precise lors d'un `accept` ou `decline`.
+  - `senderId`
+    - id de l'utilisateur qui envoie la demande; sert a savoir qui est l'initiateur et a detecter les demandes croisées.
+  - `receiverId`
+    - id de l'utilisateur qui recoit la demande; sert a verifier que seul le bon utilisateur peut accepter ou refuser.
+  - `status`
+    - etat de la relation (`pending`, `accepted`, `declined`); c'est le champ central qui permet de distinguer:
+      - une demande en attente,
+      - une amitie deja acceptee,
+      - une demande refusee.
+  - `createdAt`
+    - date de creation; utilisee pour trier les demandes et relations les plus recentes.
+  - relations Prisma `sender` et `receiver`
+    - chargees avec `include` pour recuperer directement les informations du profil associe sans faire une deuxieme requete manuelle.
+
 - `User`
+  - `id`
+    - identifiant technique de l'utilisateur; base de toutes les relations sociales, des controles d'autorisation et de la messagerie.
+  - `username`
+    - pseudo visible; utilise pour rechercher un utilisateur, afficher la liste d'amis et construire les messages de retour.
+  - `isGuest`
+    - indique si le compte est invite; bloque les demandes d'ami et les messages prives pour ces comptes.
+  - `avatar_url`
+    - image de profil affichee dans les vues sociales.
+    - pour un avatar charge depuis la page profil, ce champ contient directement une `data URL` complete de type `data:image/...;base64,...`; l'image est donc stockee dans la colonne elle-meme, pas dans un fichier separe du backend.
+    - il n'existe dans le depot actuel ni dossier `uploads/`, ni bucket, ni repo d'images avatars; la photo n'est pas ecrite sur disque cote backend.
+    - exception importante: pour les comptes connectes via Google OAuth, `avatar_url` peut aussi contenir une URL HTTPS distante (`googleUser.picture`) au lieu d'une image inline.
+  - `status`
+    - statut de presence (`online` ou `offline`); affiche l'etat courant dans le reseau d'amis.
+  - `createdAt`
+    - date de creation du compte; renvoyee dans les resumes d'amis.
+  - champs existants mais pas utilises directement dans ce module social:
+    - `email`, `password`, `googleId` ne servent pas a la logique d'amitie ou de chat de room decrite ici.
+
 - `Messages` pour le chat de room
+  - `id`
+    - identifiant unique du message; utilise pour ordonner et identifier chaque entree de chat.
+  - `senderId`
+    - id de l'expediteur; remappe ensuite en `userId` dans l'objet `RoomMessage` renvoye au frontend.
+  - `roomId`
+    - id de la room a laquelle le message appartient; permet de charger l'historique d'une room precise.
+  - `content`
+    - contenu texte du message.
+  - `sendAt`
+    - horodatage d'envoi; utilise pour trier l'historique du chat et exposer `sentAt` au frontend.
+  - `read`
+    - champ present dans le schema mais non exploite dans le flux actuel du chat de room.
 
 Hors base relationnelle:
 
@@ -375,13 +421,65 @@ Hors base relationnelle:
 
 #### Types et structures de donnees importants
 
-- `FriendOverview`
 - `FriendUserSummary`
+  - definition backend: `backend/src/modules/users/users.service.ts`
+  - miroir frontend: `frontend/src/services/users.ts`
+  - role:
+    - resume public minimal d'un utilisateur dans le contexte social;
+    - contient `id`, `username`, `isGuest`, `avatar_url`, `status`, `createdAt`;
+    - sert a afficher un ami, un expediteur de demande, ou un destinataire de demande sans exposer tout l'objet `User`.
+
 - `FriendRequestSummary`
+  - definition backend: `backend/src/modules/users/users.service.ts`
+  - miroir frontend: `frontend/src/services/users.ts`
+  - role:
+    - represente une demande d'ami prete a etre envoyee au frontend;
+    - contient `id`, `status`, `createdAt` et `user`;
+    - le champ `user` pointe vers le profil resume de l'autre personne impliquee dans la demande.
+
+- `FriendOverview`
+  - definition backend: `backend/src/modules/users/users.service.ts`
+  - miroir frontend: `frontend/src/services/users.ts`
+  - role:
+    - vue agregee principale du reseau social;
+    - regroupe en une seule reponse:
+      - `friends`,
+      - `receivedRequests`,
+      - `sentRequests`;
+    - c'est la structure consommee par `FriendsPage` pour afficher l'etat global du reseau d'amis.
+
 - `FriendActionResult`
+  - definition backend: `backend/src/modules/users/users.service.ts`
+  - miroir frontend: `frontend/src/services/users.ts`
+  - role:
+    - format de retour des actions comme `sendFriendRequest()` et `respondToFriendRequest()`;
+    - contient un `message` humain lisible et `friendshipStatus`;
+    - permet au frontend d'afficher un feedback immediat apres envoi, acceptation ou refus.
+
 - `PrivateMessage`
+  - definition backend: `backend/src/modules/users/private-messages.service.ts`
+  - miroir frontend: `frontend/src/services/users.ts`
+  - role:
+    - represente un message prive entre deux amis;
+    - contient `senderId`, `receiverId`, `content`, `createdAt`, `readAt`;
+    - sert a stocker, renvoyer et afficher l'historique detaille d'une conversation privee.
+
 - `PrivateConversationSummary`
+  - definition backend: `backend/src/modules/users/private-messages.service.ts`
+  - miroir frontend: `frontend/src/services/users.ts`
+  - role:
+    - resume une conversation privee sans charger tout son contenu;
+    - contient `friendId`, `lastMessagePreview`, `lastMessageAt`, `unreadCount`;
+    - sert a construire la liste des conversations dans le panneau de messages prives.
+
 - `RoomMessage`
+  - definition backend: `backend/src/modules/rooms/rooms.service.ts`
+  - role:
+    - format applicatif du chat de room renvoye par `listMessages()` et `createMessage()`;
+    - contient `id`, `roomId`, `userId`, `content`, `sentAt`;
+    - sert d'objet commun entre le service des rooms, le temps reel WebSocket et le frontend pour l'historique et les nouveaux messages.
+  - presence frontend:
+    - ce type n'est pas redefini dans `frontend/src/services/users.ts` car il appartient au domaine `rooms`, pas au domaine `users`.
 
 #### Librairies et outils utilises
 
