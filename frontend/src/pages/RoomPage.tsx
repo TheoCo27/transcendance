@@ -224,7 +224,7 @@ export default function RoomPage() {
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <PrimaryButton
-                  className="inline-flex items-center gap-2"
+                  className="inline-flex items-center justify-center gap-2"
                   onClick={() => copyRoomLink()}
                 >
                   {isRoomLinkCopied
