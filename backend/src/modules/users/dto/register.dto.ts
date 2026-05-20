@@ -7,13 +7,13 @@ export class RegisterDto {
   @ApiProperty({ example: "alex@example.com" })
   @IsEmail()
   @IsNotEmpty()
-  @MaxLength(20, { message: "L'email est trop long" })
+  @MaxLength(255, { message: "email too long" })
   email: string;
 
   // Pseudo choisi pour le nouveau compte.
   @ApiProperty({ example: "alex42", minLength: 2 })
   @IsString()
-  @MaxLength(20, { message: 'Pseudo too long' })
+  @MaxLength(20, { message: 'nickname too long' })
   @MinLength(2)
   username: string;
 
@@ -21,6 +21,6 @@ export class RegisterDto {
   @ApiProperty({ example: "supersecurepass", minLength: 12, writeOnly: true })
   @IsString()
   @MinLength(12)
-  @MaxLength(40, { message: 'Password too long' })
+  @MaxLength(40, { message: 'password too long' })
   password: string;
 }
