@@ -291,6 +291,42 @@ export class GameService {
     return state;
   }
 
+  // Termine une partie pour Wordle puis remet la room en attente d'une nouvelle manche.
+  async finishRoomGame(roomId: number): Promise<GameState> {
+    const room = await this.roomsService.getById(roomId);
+    if (room.status === "finished") {
+      return this.finishGame(roomId);
+    }
+
+    if (room.status !== "playing") {
+      throw new ConflictException("La partie n'est pas en cours");
+    }
+
+    await this.roomsService.resetAfterGame(roomId);
+    return this.finishGame(roomId);
+  }
+
+  // Ajoute des points au classement runtime d'une room.
+  async addRoomScore(
+    roomId: number,
+    userId: number,
+    scoreDelta: number,
+  ): Promise<GameLeaderboardEntry[]> {
+    if (scoreDelta === 0) {
+      return this.buildLeaderboard(this.getRoomRuntime(roomId));
+    }
+
+    const runtime = this.getRoomRuntime(roomId);
+    const nextScore = (runtime.scoresByUser.get(userId) ?? 0) + scoreDelta;
+    runtime.scoresByUser.set(userId, nextScore);
+    this.syncScoresWithPlayers(
+      (await this.roomsService.getById(roomId)).players.map((player) => player.userId),
+      runtime,
+    );
+
+    return this.buildLeaderboard(runtime);
+  }
+
   // Associe un numero de tour a l'id de question correspondant.
   getQuestionIdForTurn(_roomId: number, turnNumber: number): number {
     const questionOrder = this.getRoomQuestionBank(_roomId).map(

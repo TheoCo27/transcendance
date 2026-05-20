@@ -109,6 +109,7 @@ function GamesPage() {
   const [playerNames, setPlayerNames] = useState<Record<number, string>>({});
   const [isRulesOpen, setRulesOpen] = useState(true);
   const [isPlayerReady, setPlayerReady] = useState(false);
+  const hasFinishedWordleRef = useRef(false);
 
   const store = useLocalObservable(() => PuzzleStore);
   const toast = useToast();
@@ -137,6 +138,38 @@ function GamesPage() {
       clearInterval(intervalId);
     };
   }, []);
+
+  useEffect(() => {
+    if (room?.gameType !== "wordle" || !room?.id) {
+      return;
+    }
+
+    if (!store.won && !store.lost) {
+      return;
+    }
+
+    if (hasFinishedWordleRef.current) {
+      return;
+    }
+
+    hasFinishedWordleRef.current = true;
+
+    const finalizeWordle = async () => {
+      try {
+        await connectWs();
+        emitWs("game:finish", { roomId: room.id });
+      } catch (error) {
+        hasFinishedWordleRef.current = false;
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Impossible de finaliser la partie Wordle.",
+        );
+      }
+    };
+
+    void finalizeWordle();
+  }, [room?.gameType, room?.id, store.lost, store.won]);
 
   useEffect(() => {
     if (store.ToastId === 0) return;
@@ -486,9 +519,7 @@ function GamesPage() {
   return (
     <main className="mx-auto flex flex-col w-full max-w-7xl flex-1 px-6 py-8 md:px-10 md:py-12 justify-center">
       {gameTypeLabel && (
-        <h1 className="text-center mb-8 text-3xl font-bold">
-          {gameTypeLabel}
-        </h1>
+        <h1 className="text-center mb-8 text-3xl font-bold">{gameTypeLabel}</h1>
       )}
       {room.gameType === "quiz" ? (
         <QuizGameSection
@@ -515,7 +546,8 @@ function GamesPage() {
             />
           </div>
         ) : (
-          <section className="flex w-fit mx-auto flex-col gap-5 p-6 items-center justify-center rounded-2xl border border-white/10 bg-surface">
+          <section className="flex flex-1 flex-col py-1 items-center justify-center">
+            {store.word}
             <ProgressBar start_time={store.start_time} store={store} />
 
             <div>
