@@ -304,10 +304,10 @@ check_database_query "Connexion PostgreSQL OK" "SELECT 1;" "1"
 check_database_query "Table User presente" "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User';" "1"
 
 section "test front end"
-if check_http_with_curl "${FRONTEND_BASE_URL}" '<title>ft_transcendance starter</title>'; then
+if check_http_with_curl "${FRONTEND_BASE_URL}" '<title>ft_transcendence</title>'; then
 	:
 else
-	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}" '<title>ft_transcendance starter</title>'
+	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}" '<title>ft_transcendence</title>'
 fi
 
 if check_http_with_curl "${FRONTEND_BASE_URL}/health" '"database":{"configured":true,"ok":true}'; then

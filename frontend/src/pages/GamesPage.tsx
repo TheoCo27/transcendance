@@ -518,9 +518,6 @@ function GamesPage() {
 
   return (
     <main className="mx-auto flex flex-col w-full max-w-7xl flex-1 px-6 py-8 md:px-10 md:py-12 justify-center">
-      {gameTypeLabel && (
-        <h1 className="text-center mb-8 text-3xl font-bold">{gameTypeLabel}</h1>
-      )}
       {room.gameType === "quiz" ? (
         <QuizGameSection
           roomStatus={room.status}
