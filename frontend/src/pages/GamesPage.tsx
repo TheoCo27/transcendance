@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { observer, useLocalObservable } from "mobx-react-lite";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import QuizGameSection from "../components/room/QuizGameSection";
 import SectionHeader from "../components/section-header";
 import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import { useToast } from "../components/ui/toast";
+import { toHHMMSS } from "../components/Wordle/ConvertTime";
+import Guess from "../components/Wordle/Guess";
+import Keyboard from "../components/Wordle/Keyboard";
+import ProgressBar from "../components/Wordle/ProgressBar";
+import PuzzleStore from "../components/Wordle/PuzzleStore";
+import RulesPanel from "../components/Wordle/RulesPanel";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getGameState, type GameState } from "../services/game";
 import { getRoomById, type Room } from "../services/rooms";
@@ -32,6 +40,8 @@ function formatGameType(room: Room | null): string {
 
   return "Quiz";
 }
+
+export default observer(GamesPage);
 
 function formatConfigValue(value: unknown): string {
   if (value === null || value === undefined) {
@@ -78,7 +88,7 @@ type TimerPayload = {
   remainingMs: number;
 };
 
-export default function GamesPage() {
+function GamesPage() {
   const { roomId: roomIdParam } = useParams();
   const navigate = useNavigate();
   const { user, isLoading: isSessionLoading } = useAuthSession();
@@ -97,6 +107,63 @@ export default function GamesPage() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [roomClosedReason, setRoomClosedReason] = useState<string | null>(null);
   const [playerNames, setPlayerNames] = useState<Record<number, string>>({});
+  const [isRulesOpen, setRulesOpen] = useState(true);
+  const [isPlayerReady, setPlayerReady] = useState(false);
+
+  const store = useLocalObservable(() => PuzzleStore);
+  const toast = useToast();
+  const isRulesOpenRef = useRef(isRulesOpen); // because useEffect keeps the very first value otherwise
+
+  useEffect(() => {
+    isRulesOpenRef.current = isRulesOpen;
+  }, [isRulesOpen]);
+
+  useEffect(() => {
+    store.init();
+    const handleKeyup = (e: KeyboardEvent) => store.handleKeyup(e);
+    window.addEventListener("keyup", handleKeyup);
+
+    // The interval is created here, so only once:
+    const intervalId = setInterval(() => {
+      // if all players are ready
+      if (isRulesOpenRef.current === false) store.checkTimeUp();
+      if (store.currentGuess === store.maxAttempts || store.won) {
+        clearInterval(intervalId);
+      }
+    }, 1000); // update every 1s for progress
+
+    return () => {
+      window.removeEventListener("keyup", handleKeyup);
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (store.ToastId === 0) return;
+
+    if (store.ToastMessage === "Ce mot n'est pas dans la liste")
+      toast.error(store.ToastMessage);
+    else if (
+      store.ToastMessage ===
+      `Pour valider un mot, vous devez entrer ${roomGameConfig?.wordLength} lettres`
+    )
+      toast.error(store.ToastMessage);
+    else if (
+      store.ToastMessage ===
+      `Vous avez trouvé le bon mot en ${toHHMMSS((Math.floor(Date.now() / 1000) - store.total_time).toString())}`
+    )
+      //TEMPORAIRE
+      toast.success(store.ToastMessage);
+    else if (
+      store.ToastMessage ===
+      `Le temps est écoulé, vous n'avez pas trouvé le mot: ${store.word}`
+    )
+      toast.error(store.ToastMessage);
+    else if (
+      store.ToastMessage === `Vous n'avez pas trouvé le mot: ${store.word}`
+    )
+      toast.error(store.ToastMessage);
+  }, [store.ToastId]);
 
   useEffect(() => {
     const loadGamePage = async () => {
@@ -309,7 +376,7 @@ export default function GamesPage() {
       return null;
     }
 
-    return config as Record<string, unknown>;
+    return config as Record<string, number>;
   }, [room?.gameConfig]);
 
   const gameTypeLabel = useMemo(() => formatGameType(room), [room]);
@@ -317,6 +384,29 @@ export default function GamesPage() {
     () => Object.entries(roomGameConfig ?? {}),
     [roomGameConfig],
   );
+
+  useEffect(() => {
+    // Sync store configuration with room settings for Wordle
+    if (room?.gameType === "wordle") {
+      const configuredLength = roomGameConfig?.wordLength ?? store.nbr_letters;
+      const configuredMaxAttempts =
+        roomGameConfig?.maxAttempts ?? store.maxAttempts;
+      let shouldInit = false;
+      if (configuredLength !== store.nbr_letters) {
+        store.nbr_letters = configuredLength;
+        shouldInit = true;
+      }
+      if (configuredMaxAttempts !== store.maxAttempts) {
+        store.maxAttempts = configuredMaxAttempts;
+        shouldInit = true;
+      }
+      if (shouldInit) {
+        // Re-init to pick proper word list and reset guesses
+        store.init();
+        store.start_time = Math.floor(Date.now() / 1000);
+      }
+    }
+  }, [room?.gameType, roomGameConfig?.wordLength, roomGameConfig?.maxAttempts]);
 
   const playerNamesById = useMemo(() => playerNames, [playerNames]);
 
@@ -381,7 +471,7 @@ export default function GamesPage() {
           <p className="mt-3 text-sm leading-7 text-amber-900/80">
             {roomClosedReason}
           </p>
-          <div className="mt-5 flex gap-3">
+          <div className="mt-5">
             <Link to="/">
               <PrimaryButton>Retour à l'accueil</PrimaryButton>
             </Link>
@@ -395,31 +485,64 @@ export default function GamesPage() {
 
   return (
     <main className="mx-auto flex flex-col w-full max-w-7xl flex-1 px-6 py-8 md:px-10 md:py-12 justify-center">
-      <section className="flex flex-col gap-6">
-        {room.gameType === "quiz" ? (
-          <QuizGameSection
-            roomStatus={room.status}
-            gameState={gameState}
-            currentQuestion={currentQuestion}
-            remainingMs={remainingMs}
-            isUserInRoom={isUserInRoom}
-            selectedAnswer={selectedAnswer}
-            hasAnsweredCurrentQuestion={hasAnsweredCurrentQuestion}
-            onSelectAnswer={handleSelectAnswer}
-            onSubmitAnswer={handleSubmitAnswer}
-          />
-        ) : room.gameType === "wordle" ? (
-          <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-            <SectionLabel className="text-slate-400">Jeux</SectionLabel>
-            <SectionHeader>{room.gameType}</SectionHeader>
-          </section>
+      {gameTypeLabel && (
+        <h1 className="text-center mb-8 text-3xl font-bold">
+          {gameTypeLabel}
+        </h1>
+      )}
+      {room.gameType === "quiz" ? (
+        <QuizGameSection
+          roomStatus={room.status}
+          gameState={gameState}
+          currentQuestion={currentQuestion}
+          remainingMs={remainingMs}
+          isUserInRoom={isUserInRoom}
+          selectedAnswer={selectedAnswer}
+          hasAnsweredCurrentQuestion={hasAnsweredCurrentQuestion}
+          onSelectAnswer={handleSelectAnswer}
+          onSubmitAnswer={handleSubmitAnswer}
+        />
+      ) : room.gameType === "wordle" ? (
+        isRulesOpen ? (
+          <div className="flex items-center justify-center">
+            <RulesPanel
+              onClose={() => setRulesOpen(false)}
+              store={store}
+              setReady={() => {
+                setPlayerReady(true);
+              }}
+              readyFlag={isPlayerReady}
+            />
+          </div>
         ) : (
-          <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-            <SectionLabel className="text-slate-400">Jeux</SectionLabel>
-            <SectionHeader>{room.gameType}</SectionHeader>
+          <section className="flex w-fit mx-auto flex-col gap-5 p-6 items-center justify-center rounded-2xl border border-white/10 bg-surface">
+            <ProgressBar start_time={store.start_time} store={store} />
+
+            <div>
+              {store.guesses.map((_, i) => (
+                <Guess
+                  key={i}
+                  checkerValidWord={store.all_words_array_json}
+                  lettersCount={roomGameConfig?.wordLength ?? 5}
+                  flag={store.validWord}
+                  word={store.word}
+                  guess={store.guesses[i] ?? ""}
+                  isGuessed={i < store.currentGuess}
+                />
+              ))}
+            </div>
+
+            <div className="mt-3">
+              <Keyboard store={store} />
+            </div>
           </section>
-        )}
-      </section>
+        )
+      ) : (
+        <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+          <SectionLabel className="text-slate-400">Jeux</SectionLabel>
+          <SectionHeader>{room.gameType}</SectionHeader>
+        </section>
+      )}
     </main>
   );
 }
