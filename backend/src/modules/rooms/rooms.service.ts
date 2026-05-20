@@ -94,6 +94,40 @@ export class RoomsService {
     return this.stripPassword(this.toRoom(room));
   }
 
+  // Retourne la room la plus recente correspondant a un nom donne.
+  async getByName(roomName: string): Promise<Omit<Room, "password">> {
+    const normalizedRoomName = roomName.trim();
+
+    const room = await this.prisma.client.room.findFirst({
+      where: { name: normalizedRoomName },
+      orderBy: { createdAt: "desc" },
+      include: {
+        games: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            quizId: true,
+          },
+        },
+        players: {
+          select: {
+            userId: true,
+            joinedAt: true,
+          },
+          orderBy: {
+            joinedAt: "asc",
+          },
+        },
+      },
+    });
+
+    if (!room) {
+      throw new NotFoundException(`Room ${normalizedRoomName} not found`);
+    }
+
+    return this.stripPassword(this.toRoom(room));
+  }
+
   // Cree une room et memorise sa config transitoire.
   async create(
     dto: CreateRoomDto & {

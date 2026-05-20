@@ -50,7 +50,7 @@ export default function HomePage() {
 
       if (!response.success || !response.data) {
         const message =
-          response.error?.message ?? createRoomErrorMsg["unknown-error"];
+          response.error?.message ?? createRoomErrorMsg["unknown_error"];
         toast.error(message);
         return;
       }
@@ -75,7 +75,7 @@ export default function HomePage() {
 
       if (!response.success || !response.data) {
         const message =
-          response.error?.message ?? connectRoomErrorMsg["unknown-error"];
+          response.error?.message ?? connectRoomErrorMsg["unknown_error"];
         toast.error(message);
         return;
       }
@@ -90,7 +90,7 @@ export default function HomePage() {
     }) => {
       setJoiningRoomId(null);
       const message =
-        response.error?.message ?? connectRoomErrorMsg["unknown-error"];
+        response.error?.message ?? connectRoomErrorMsg["unknown_error"];
       toast.error(message);
     };
 
@@ -101,7 +101,7 @@ export default function HomePage() {
     }) => {
       setIsCreatingRoom(false);
       const message =
-        response.error?.message ?? createRoomErrorMsg["unknown-error"];
+        response.error?.message ?? createRoomErrorMsg["unknown_error"];
       toast.error(message);
     };
 
@@ -168,7 +168,7 @@ export default function HomePage() {
 
   const createRoom = async () => {
     if (!user) {
-      toast.error(createRoomErrorMsg["auth-required"]);
+      toast.error(createRoomErrorMsg["auth_required"]);
       return;
     }
 
@@ -183,13 +183,13 @@ export default function HomePage() {
       });
     } catch {
       setIsCreatingRoom(false);
-      toast.error(createRoomErrorMsg["unknown-error"]);
+      toast.error(createRoomErrorMsg["unknown_error"]);
     }
   };
 
   const joinRoom = async (roomId: number) => {
     if (!user) {
-      toast.error(connectRoomErrorMsg["auth-required"]);
+      toast.error(connectRoomErrorMsg["auth_required"]);
       return;
     }
 
@@ -203,14 +203,18 @@ export default function HomePage() {
       });
     } catch {
       setJoiningRoomId(null);
-      toast.error(connectRoomErrorMsg["unknown-error"]);
+      toast.error(connectRoomErrorMsg["unknown_error"]);
     }
   };
 
   return (
     <main className="flex flex-1 px-6 py-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <HomeHeader isCreatingRoom={isCreatingRoom} createRoom={createRoom} />
+        <HomeHeader
+          isCreatingRoom={isCreatingRoom}
+          createRoom={createRoom}
+          userId={user?.id}
+        />
         <RoomsList
           rooms={recentRooms}
           onJoin={joinRoom}

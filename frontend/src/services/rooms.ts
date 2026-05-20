@@ -57,6 +57,10 @@ export function getRoomById(roomId: number): Promise<Room> {
   return apiRequest<Room>(`/rooms/${roomId}`);
 }
 
+export function getRoomByName(roomName: string): Promise<Room> {
+  return apiRequest<Room>(`/rooms/by-name?name=${encodeURIComponent(roomName)}`);
+}
+
 export function getRoomsByQuizId(quizId: number): Promise<Room[]> {
   return apiRequest<Room[]>(`/rooms/quizzes/${quizId}`);
 }
