@@ -1,7 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 import { Pool } from "pg";
-import { PrismaClient } from "../generated/prisma/client";
+import { Prisma, PrismaClient } from "../generated/prisma/client";
 
 // Prefer a full DATABASE_URL, otherwise build from individual env vars.
 const connectionString =
@@ -29,6 +29,20 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+function formatSeedError(error: unknown): string {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P1000"
+  ) {
+    return "Quiz seed failed: database authentication failed. Check DATABASE_URL and POSTGRES_* values.";
+  }
+
+  if (error instanceof Error) {
+    return `Quiz seed failed: ${error.message}`;
+  }
+
+  return "Quiz seed failed.";
+}
 async function main() {
   const quizzes = [
     {
@@ -148,7 +162,8 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error(formatSeedError(e));
+    process.exitCode = 1;
   })
   .finally(async () => {
     try {

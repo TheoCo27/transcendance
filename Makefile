@@ -102,6 +102,9 @@ dev: env-check setup-host compose-check
 seed: compose-check
 	$(COMPOSE_DEV) exec backend sh -c "npm run seed"
 
+seed: compose-check
+	$(COMPOSE_DEV) exec backend sh -c "npm run seed"
+
 down: compose-check
 	$(COMPOSE_DEV) down
 
