@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by tcohen, mduchauf, smagassa, hucherea.*
+*This project has been created as part of the 42 curriculum by tcohen, mduchauf, smgassa, hucherea, lscheupl.*
 
 # ft_transcendence
 
@@ -39,8 +39,21 @@ The goal of the project is to build a modern web platform where users can:
 | --- | --- | --- |
 | `tcohen` | PM | Project coordination, integration follow-up, CI/dev environment, OAuth integration, profile and social feature follow-up |
 | `mduchauf` | Tech Lead | Technical architecture, backend structure, data model evolution, room/game integration, refactoring of core flows |
-| `smagassa` | PO | Product vision, user-facing flows, UI foundations, authentication pages, room and lobby experience |
+| `smgassa` | PO | Product vision, user-facing flows, UI foundations, authentication pages, room and lobby experience |
 | `hucherea` | Developer | API consistency, WebSocket layer, real-time gameplay loop, event contracts, protocol and smoke-test support |
+| `lscheupl` | Developer | Multiplayer gameplay presentation scope, browser game flow follow-up, and group-play feature ownership |
+
+## Presentation Task Distribution
+
+This table reflects the current split used by the team to present the implemented modules. It is separate from the implementation contributor tables documented later in this README.
+
+| Person | Login | Modules to Explain |
+| --- | --- | --- |
+| 1 | `hucherea` | Use an ORM, Remote authentication, devops scripts and CI |
+| 2 | `tcohen` | Allow users to interact with other users, Standard user management |
+| 3 | `mduchauf` | Implement real-time features, Remote players |
+| 4 | `lscheupl` | Web-based game, Multiplayer for more than two players |
+| 5 | `smgassa` | Game statistics and match history, Add another game |
 
 ## Project Management
 
@@ -155,15 +168,15 @@ User
 
 | Feature | What It Does | Main Contributors |
 | --- | --- | --- |
-| Classic authentication | Register, log in, log out, restore session with JWT cookie | `mduchauf`, `smagassa` |
+| Classic authentication | Register, log in, log out, restore session with JWT cookie | `mduchauf`, `smgassa` |
 | Guest access | Lets a user enter the platform quickly with a temporary guest account | `tcohen` |
 | Google OAuth 2.0 | Lets users authenticate through Google when credentials are configured | `tcohen` |
 | Profile management | Update username, avatar, and online/offline status | `tcohen` |
 | Friends system | Send requests, accept or decline, and browse friend state | `tcohen` |
 | Private messaging | Exchange direct messages between accepted friends | `tcohen` |
-| Room management | Create, configure, join, leave, and secure public/private rooms | `mduchauf`, `smagassa` |
-| Real-time room chat | Broadcast room messages live to connected players | `mduchauf`, `smagassa` |
-| Quiz creation | Build quizzes with multiple questions and configurable answer timing | `smagassa`, `mduchauf` |
+| Room management | Create, configure, join, leave, and secure public/private rooms | `mduchauf`, `smgassa` |
+| Real-time room chat | Broadcast room messages live to connected players | `mduchauf`, `smgassa` |
+| Quiz creation | Build quizzes with multiple questions and configurable answer timing | `smgassa`, `mduchauf` |
 | Real-time multiplayer quiz | Synchronize question start, timer, answers, and leaderboard updates | `hucherea`, `mduchauf` |
 | Score tracking | Keep global score snapshots and persistent quiz leaderboards | `hucherea`, `mduchauf` |
 | CI and smoke testing | Verify builds, Docker startup, HTTP flows, DB access, and WebSocket flows | `tcohen`, `hucherea` |
@@ -174,20 +187,20 @@ Total module score: **22 points**
 
 | Module | Type | Points | Why We Chose It | Implementation Summary | Main Contributors |
 | --- | --- | ---: | --- | --- | --- |
-| Use a framework for both frontend and backend | Major | 2 | To keep the project structured end to end | React frontend and NestJS backend, both written in TypeScript and containerized | `mduchauf`, `smagassa`, `tcohen` |
-| Use a frontend framework | Minor | 1 | To build a maintainable SPA | React components, routing, stateful room/game pages, reusable UI blocks | `smagassa`, `mduchauf` |
+| Use a framework for both frontend and backend | Major | 2 | To keep the project structured end to end | React frontend and NestJS backend, both written in TypeScript and containerized | `mduchauf`, `smgassa`, `tcohen` |
+| Use a frontend framework | Minor | 1 | To build a maintainable SPA | React components, routing, stateful room/game pages, reusable UI blocks | `smgassa`, `mduchauf` |
 | Use a backend framework | Minor | 1 | To organize APIs and real-time logic clearly | NestJS modules, controllers, services, guards, DTO validation, Swagger | `mduchauf`, `hucherea` |
 | Implement real-time features | Major | 2 | Real-time interaction is core to the project | Socket.IO namespace `/ws`, live room state, chat, timers, answer events, leaderboard broadcasts | `hucherea`, `mduchauf` |
-| Allow users to interact with other users | Major | 2 | The platform is social, not only game-driven | Friends, room chat, private messages, room sharing | `tcohen`, `smagassa`, `mduchauf` |
+| Allow users to interact with other users | Major | 2 | The platform is social, not only game-driven | Friends, room chat, private messages, room sharing | `tcohen`, `smgassa`, `mduchauf` |
 | Use an ORM | Minor | 1 | To manage a growing relational schema safely | Prisma schema, migrations, typed client, generated models | `mduchauf`, `tcohen` |
 | Support for additional browsers | Minor | 1 | To keep the web app usable beyond a single browser | Standard web APIs, HTTPS local setup, cookie-based auth, Socket.IO transport fallback (`websocket` and `polling`) | Team-wide validation |
-| Standard user management | Major | 2 | Identity and profile flows are essential | Register/login/logout, guest mode, session recovery, avatar, status, friends | `mduchauf`, `tcohen`, `smagassa` |
+| Standard user management | Major | 2 | Identity and profile flows are essential | Register/login/logout, guest mode, session recovery, avatar, status, friends | `mduchauf`, `tcohen`, `smgassa` |
 | Game statistics and match history | Minor | 1 | To make the game state meaningful over time | `Game`, `Leaderboard`, and `QuizLeaderboard` data with score aggregation | `mduchauf`, `hucherea` |
 | Remote authentication | Minor | 1 | To improve login UX and cover OAuth requirements | Google OAuth 2.0/OpenID Connect login flow with callback handling | `tcohen` |
-| Web-based game | Major | 2 | The project must be playable in the browser | Multiplayer quiz sessions run directly in the web app | `mduchauf`, `smagassa`, `hucherea` |
+| Web-based game | Major | 2 | The project must be playable in the browser | Multiplayer quiz sessions run directly in the web app | `mduchauf`, `smgassa`, `hucherea` |
 | Remote players | Major | 2 | Players must be able to join from separate machines | HTTPS local stack, cookie auth, Socket.IO synchronization, room joins over the network | `hucherea`, `mduchauf` |
 | Multiplayer for more than two players | Major | 2 | The project targets group play, not only duels | Room player lists, answer aggregation, live ranking for multiple participants | `mduchauf`, `hucherea` |
-| Add another game | Major | 2 | To design the platform as a mini-game hub and not a single-use app | Room configuration supports several mini-game presets (`quiz`, `wordle`, `memory`), with quiz mode being the most complete gameplay path at the moment | `mduchauf`, `smagassa` |
+| Add another game | Major | 2 | To design the platform as a mini-game hub and not a single-use app | Room configuration supports several mini-game presets (`quiz`, `wordle`, `memory`), with quiz mode being the most complete gameplay path at the moment | `mduchauf`, `smgassa` |
 
 ## Instructions
 
@@ -334,7 +347,7 @@ The breakdown below is based on the declared roles and on the Git history of the
 - Drove the transition from an early MVP structure toward a more modular and persisted backend.
 - Main challenge: keeping API, room state, and gameplay flows consistent while the data model evolved. This was handled through service refactors and DTO/schema alignment.
 
-### `smagassa`
+### `smgassa`
 
 - Shaped the product-facing experience and early frontend direction.
 - Built authentication pages, initial room/lobby UI, layout components, navigation, cards, rules/game mockups, and frontend integration work around rooms.

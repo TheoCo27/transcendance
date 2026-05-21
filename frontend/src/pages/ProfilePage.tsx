@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "../components/Avatar";
-import Section from "../components/section";
-import SectionHeader from "../components/section-header";
-import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
@@ -86,10 +83,9 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-10 md:px-10">
-        <Section>
-          <SectionLabel className="text-slate-400">Chargement</SectionLabel>
-          <div className="mt-6 text-white/80">Chargement du profil...</div>
-        </Section>
+        <div className="w-full rounded-4xl border border-slate-900/10 bg-white/70 p-8 text-slate-600 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+          Chargement du profil...
+        </div>
       </main>
     );
   }
@@ -97,8 +93,10 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-10 md:px-10">
-        <Section className="w-full border-amber-200 bg-amber-50 text-amber-950">
-          <SectionLabel className="text-amber-800">Profil</SectionLabel>
+        <section className="w-full rounded-[2.5rem] border border-amber-200 bg-amber-50 p-8 text-amber-950 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-800">
+            Profil
+          </p>
           <h1 className="mt-4 text-4xl font-semibold">Connexion requise</h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-amber-900/80">
             Connecte-toi pour acceder a ta page profil et retrouver tes
@@ -112,7 +110,7 @@ export default function ProfilePage() {
               <SecondaryButton>S'inscrire</SecondaryButton>
             </Link>
           </div>
-        </Section>
+        </section>
       </main>
     );
   }
@@ -249,8 +247,10 @@ export default function ProfilePage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-10 md:px-10">
       <section className="grid w-full gap-6 md:grid-cols-[0.8fr_1.2fr]">
-        <Section className="bg-slate-950 text-white flex flex-col items-start">
-          <SectionLabel className="text-white/55">Profil joueur</SectionLabel>
+        <article className="rounded-[2.5rem] bg-slate-950 p-8 text-white shadow-[0_28px_90px_rgba(15,23,42,0.24)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/55">
+            Profil joueur
+          </p>
           <Avatar
             alt={`Photo de profil de ${user.username}`}
             avatarUrl={user.avatar_url}
@@ -273,20 +273,24 @@ export default function ProfilePage() {
               Membre depuis {formatJoinedDate(user.createdAt)}
             </span>
           </div>
-        </Section>
+        </article>
 
-        <Section>
-          <SectionLabel className="text-slate-400">Informations</SectionLabel>
-          <SectionHeader>Ton espace personnel</SectionHeader>
-          <p className="mt-4 max-w-2xl text-base text-white/70">
+        <article className="rounded-[2.5rem] border border-slate-900/10 bg-white/80 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Informations
+          </p>
+          <h2 className="mt-4 text-3xl font-semibold text-slate-950">
+            Ton espace personnel
+          </h2>
+          <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
             Cette page rassemble les informations de la session courante. Elle
             sert de point d'entree simple depuis la navbar, avec ton pseudo
             toujours accessible.
           </p>
 
           <dl className="mt-8 grid gap-4">
-            <div className="rounded-3xl bg-white/5 px-5 py-4 border border-white/10">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
+              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Photo de profil
               </dt>
               <dd className="mt-4">
@@ -294,12 +298,12 @@ export default function ProfilePage() {
                   <Avatar
                     alt={`Photo de profil de ${user.username}`}
                     avatarUrl={user.avatar_url}
-                    className="h-20 w-20 ring-2 ring-white/10"
+                    className="h-20 w-20 ring-2 ring-slate-900/10"
                     fallbackClassName="text-2xl"
                     username={user.username}
                   />
                   <div className="flex-1">
-                    <p className="text-sm leading-7 text-white/70">
+                    <p className="text-sm leading-7 text-slate-600">
                       Ajoute une image JPG, PNG ou WEBP jusqu'a 2 Mo.
                     </p>
                     <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -332,8 +336,8 @@ export default function ProfilePage() {
                       <p
                         className={`mt-4 text-sm ${
                           avatarNotice.kind === "success"
-                            ? "text-emerald-400"
-                            : "text-rose-400"
+                            ? "text-emerald-700"
+                            : "text-rose-700"
                         }`}
                         role="alert"
                       >
@@ -344,19 +348,11 @@ export default function ProfilePage() {
                 </div>
               </dd>
             </div>
-            <div className="rounded-3xl bg-white/5 px-5 py-4 border border-white/10">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
-                Pseudo
-              </dt>
-              <dd className="mt-2 text-lg font-semibold text-white">
-                {user.username}
-              </dd>
-            </div>
-            <div className="rounded-3xl bg-white/5 px-5 py-4 border border-white/10">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
+              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 {user.isGuest ? "Type de compte" : "Email"}
               </dt>
-              <dd className="mt-2 text-lg font-semibold text-white">
+              <dd className="mt-2 text-lg font-semibold text-slate-950">
                 {user.isGuest ? "Invite" : user.email}
               </dd>
             </div>
@@ -437,14 +433,15 @@ export default function ProfilePage() {
               <SecondaryButton>Voir mes amis</SecondaryButton>
             </Link>
           </div>
-        </Section>
-
-        <Section className="md:col-span-2">
-          <SectionLabel className="text-slate-400">Social</SectionLabel>
-          <h2 className="mt-4 text-3xl font-semibold text-white">
+        </article>
+        <article className="rounded-[2.5rem] border border-slate-900/10 bg-white/80 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.07)] md:col-span-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Social
+          </p>
+          <h2 className="mt-4 text-3xl font-semibold text-slate-950">
             Amis et messages prives
           </h2>
-          <p className="mt-4 max-w-3xl text-base leading-8 text-white/70">
+          <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
             Le reseau joueur dispose maintenant de sa propre page. Tu peux y
             ajouter des amis par pseudo, traiter les demandes recues et discuter
             en prive avec les relations acceptees.
@@ -457,7 +454,7 @@ export default function ProfilePage() {
               <SecondaryButton>Retourner aux rooms</SecondaryButton>
             </Link>
           </div>
-        </Section>
+        </article>
       </section>
     </main>
   );

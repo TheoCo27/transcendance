@@ -1,26 +1,18 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import QuestionComposer from "../components/QuizBuilder/QuestionComposer";
 import QuizRulesCard from "../components/QuizBuilder/QuizRulesCard";
 import QuizSetupCard from "../components/QuizBuilder/QuizSetupCard";
-import SimpleQuizApiCard from "../components/QuizBuilder/SimpleQuizApiCard";
-import Section from "../components/section";
-import SectionHeader from "../components/section-header";
-import SectionLabel from "../components/section-label";
-import EmptyCard from "../components/ui/empty-card";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { createQuiz } from "../services/quizzes";
-import { joinRoom } from "../services/rooms";
 
 type DraftQuestion = {
   questionText: string;
   options: string[];
   correctAnswerIndex: number;
 };
-
-type QuizCreationMode = "manual" | "api";
 
 const EMPTY_DRAFT: DraftQuestion = {
   questionText: "",
@@ -29,12 +21,9 @@ const EMPTY_DRAFT: DraftQuestion = {
 };
 
 export default function QuizAdminPage() {
-  const [searchParams] = useSearchParams();
-  const fromRoomId = searchParams.get("from");
   const navigate = useNavigate();
   const { user, isLoading } = useAuthSession();
   const [title, setTitle] = useState("");
-  const [creationMode, setCreationMode] = useState<QuizCreationMode>("manual");
   const [rule, setRule] = useState<10 | 30 | "unlimited">(10);
   const [draftQuestion, setDraftQuestion] =
     useState<DraftQuestion>(EMPTY_DRAFT);
@@ -89,26 +78,6 @@ export default function QuizAdminPage() {
     void saveDraftQuestion(true);
   };
 
-  const handleImportQuestions = (
-    importedQuestions: DraftQuestion[],
-    suggestedTitle: string,
-  ) => {
-    setQuestions(importedQuestions);
-    setDraftQuestion(EMPTY_DRAFT);
-    setQuestionError(null);
-    setSubmitError(null);
-
-    if (!title.trim()) {
-      setTitle(suggestedTitle);
-    }
-  };
-
-  const handleModeChange = (mode: QuizCreationMode) => {
-    setCreationMode(mode);
-    setQuestionError(null);
-    setSubmitError(null);
-  };
-
   const handleSubmitQuiz = async () => {
     setSubmitError(null);
 
@@ -139,17 +108,10 @@ export default function QuizAdminPage() {
         })),
       });
 
-      if (fromRoomId && user) {
-        try {
-          await joinRoom(Number(fromRoomId), { userId: user.id });
-        } catch (error) {}
-        navigate(`/rooms/${fromRoomId}`);
-      } else {
-        navigate("/");
-      }
+      navigate(`/quiz/${createdQuiz.id}`);
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : "Impossible de créer le quiz.",
+        error instanceof Error ? error.message : "Impossible de creer le quiz.",
       );
     } finally {
       setIsSubmitting(false);
@@ -159,108 +121,64 @@ export default function QuizAdminPage() {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-10 md:px-10">
       <section className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
-        <Section className="border border-dashed border-white/10 bg-white/5">
-          <SectionLabel className="text-slate-300">
-            Mode de création
-          </SectionLabel>
-          <SectionHeader>Choisis comment construire ton quiz</SectionHeader>
-          <p className="mt-2 text-sm text-white/70">
-            Tu peux composer chaque question à la main ou importer un lot de
-            questions depuis la Simple Quiz API.
-          </p>
-
-          <label className="mt-6 block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">
-              Source des questions
-            </span>
-            <select
-              className="w-full rounded-2xl border border-white/10 bg-bg px-4 py-3 text-sm text-text outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
-              value={creationMode}
-              onChange={(event) =>
-                handleModeChange(event.target.value as QuizCreationMode)
-              }
-              disabled={isLoading || isSubmitting}
-            >
-              <option value="manual">Créer les questions moi-même</option>
-              <option value="api">Importer depuis Simple Quiz API</option>
-            </select>
-          </label>
-        </Section>
-
-        <QuizRulesCard value={rule} onChange={setRule} />
-      </section>
-
-      <section className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="grid gap-6">
+        <div className="space-y-6">
           <QuizSetupCard title={title} onTitleChange={setTitle} />
-
-          {creationMode === "api" ? (
-            <SimpleQuizApiCard
-              currentQuestionCount={questions.length}
-              disabled={isLoading || isSubmitting}
-              onImportQuestions={handleImportQuestions}
-            />
-          ) : (
-            <QuestionComposer
-              questionText={draftQuestion.questionText}
-              options={draftQuestion.options}
-              correctAnswerIndex={draftQuestion.correctAnswerIndex}
-              error={questionError}
-              onQuestionTextChange={(value) =>
-                setDraftQuestion((currentDraft) => ({
-                  ...currentDraft,
-                  questionText: value,
-                }))
-              }
-              onOptionChange={(index, value) =>
-                setDraftQuestion((currentDraft) => ({
-                  ...currentDraft,
-                  options: currentDraft.options.map((option, optionIndex) =>
-                    optionIndex === index ? value : option,
-                  ),
-                }))
-              }
-              onCorrectAnswerChange={(index) =>
-                setDraftQuestion((currentDraft) => ({
-                  ...currentDraft,
-                  correctAnswerIndex: index,
-                }))
-              }
-              onValidateQuestion={handleValidateQuestion}
-              onValidateAndAddQuestion={handleValidateAndAddQuestion}
-            />
-          )}
+          <QuestionComposer
+            questionText={draftQuestion.questionText}
+            options={draftQuestion.options}
+            correctAnswerIndex={draftQuestion.correctAnswerIndex}
+            error={questionError}
+            onQuestionTextChange={(value) =>
+              setDraftQuestion((currentDraft) => ({
+                ...currentDraft,
+                questionText: value,
+              }))
+            }
+            onOptionChange={(index, value) =>
+              setDraftQuestion((currentDraft) => ({
+                ...currentDraft,
+                options: currentDraft.options.map((option, optionIndex) =>
+                  optionIndex === index ? value : option,
+                ),
+              }))
+            }
+            onCorrectAnswerChange={(index) =>
+              setDraftQuestion((currentDraft) => ({
+                ...currentDraft,
+                correctAnswerIndex: index,
+              }))
+            }
+            onValidateQuestion={handleValidateQuestion}
+            onValidateAndAddQuestion={handleValidateAndAddQuestion}
+          />
         </div>
 
-        <div
-          className={`flex flex-col gap-6 `}
-        >
-          <div
-            className={`rounded-4xl border border-slate-900/10 ${questions.length > 1 ? "h-full" : ""} bg-slate-950 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)] flex flex-col overflow-hidden`}
-          >
-            <SectionLabel className="text-text/55">Quiz construit</SectionLabel>
-            <SectionHeader>Questions validées</SectionHeader>
+        <div className="space-y-6">
+          <QuizRulesCard value={rule} onChange={setRule} />
 
-            {questions.length > 0 ? (
-              <p className="mt-2 text-sm text-white/70">
-                {questions.length} question{questions.length > 1 ? "s" : ""}{" "}
-                prête
-                {questions.length > 1 ? "s" : ""} à jouer.
-              </p>
-            ) : null}
+          <section className="rounded-[2rem] border border-slate-900/10 bg-slate-950 p-6 text-white shadow-[0_30px_80px_rgba(15,23,42,0.16)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+              Quiz construit
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold">Questions validees</h2>
+            <p className="mt-2 text-sm text-white/70">
+              {questions.length} question{questions.length > 1 ? "s" : ""} prete
+              {questions.length > 1 ? "s" : ""} a jouer.
+            </p>
 
-            <div className="mt-6 space-y-4 overflow-y-auto max-h-[min(65vh,50rem)]">
+            <div className="mt-6 space-y-4">
               {questions.length > 0 ? (
                 questions.map((question, index) => (
                   <article
                     key={`${question.questionText}-${index + 1}`}
-                    className="rounded-3xl border border-white/10 bg-white/6 p-4"
+                    className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">
                         Question {index + 1}
                       </span>
                       <SecondaryButton
+                        className="border-white/15 bg-white/10 px-3 py-2 text-xs text-white"
                         onClick={() =>
                           setQuestions((currentQuestions) =>
                             currentQuestions.filter(
@@ -293,7 +211,9 @@ export default function QuizAdminPage() {
                   </article>
                 ))
               ) : (
-                <EmptyCard>Aucune question validée pour l'instant.</EmptyCard>
+                <div className="rounded-[1.5rem] border border-dashed border-white/18 px-4 py-6 text-sm text-white/62">
+                  Aucune question validee pour l'instant.
+                </div>
               )}
             </div>
 
@@ -305,13 +225,14 @@ export default function QuizAdminPage() {
 
             <PrimaryButton
               className="mt-6 w-full justify-center"
-              disabled={isLoading || isSubmitting || questions.length < 1}
-              id="quiz-submit-button"
-              onClick={() => handleSubmitQuiz()}
+              disabled={isLoading || isSubmitting}
+              onClick={() => {
+                void handleSubmitQuiz();
+              }}
             >
               {isSubmitting ? "Validation..." : "Valider le quiz"}
             </PrimaryButton>
-          </div>
+          </section>
         </div>
       </section>
     </main>

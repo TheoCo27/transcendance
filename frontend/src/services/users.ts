@@ -96,7 +96,7 @@ export function sendPrivateMessage(
   });
 }
 
-export async function updateMyAvatar(avatarDataUrl: string | null): Promise<SafeUser> {
+export function updateMyAvatar(avatarDataUrl: string | null): Promise<SafeUser> {
   return apiRequest<SafeUser>("/users/me/avatar", {
     method: "PATCH",
     body: JSON.stringify({ avatarDataUrl }),
@@ -106,7 +106,7 @@ export async function updateMyAvatar(avatarDataUrl: string | null): Promise<Safe
   });
 }
 
-export async function updateMyProfile(payload: UpdateProfilePayload): Promise<SafeUser> {
+export function updateMyProfile(payload: UpdateProfilePayload): Promise<SafeUser> {
   return apiRequest<SafeUser>("/users/me/profile", {
     method: "PATCH",
     body: JSON.stringify(payload),

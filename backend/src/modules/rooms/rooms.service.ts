@@ -50,29 +50,6 @@ type TransientRoomConfig = {
   questionDurationMs: number | null;
 };
 
-const roomWithRelationsInclude = {
-  games: {
-    orderBy: { createdAt: "desc" },
-    take: 1,
-    select: {
-      quizId: true,
-    },
-  },
-  players: {
-    select: {
-      userId: true,
-      joinedAt: true,
-    },
-    orderBy: {
-      joinedAt: "asc",
-    },
-  },
-} as const;
-
-type RoomWithRelations = Prisma.RoomGetPayload<{
-  include: typeof roomWithRelationsInclude;
-}>;
-
 @Injectable()
 export class RoomsService {
   private readonly transientConfigs = new Map<number, TransientRoomConfig>();
@@ -151,46 +128,6 @@ export class RoomsService {
     return this.stripPassword(this.toRoom(room));
   }
 
-  // Construit un nom de room unique a partir d'une base donnee.
-  private async buildUniqueRoomName(
-    baseName: string,
-    excludedRoomId?: number,
-  ): Promise<string> {
-    const normalizedBaseName = baseName.trim();
-
-    if (normalizedBaseName.length === 0) {
-      throw new BadRequestException("Le nom de la room est requis");
-    }
-
-    const candidateNames = await this.prisma.client.room.findMany({
-      where: {
-        AND: [
-          {
-            OR: [
-              { name: normalizedBaseName },
-              { name: { startsWith: `${normalizedBaseName} ` } },
-            ],
-          },
-          excludedRoomId ? { id: { not: excludedRoomId } } : {},
-        ],
-      },
-      select: { name: true },
-    });
-
-    const existingNames = new Set(candidateNames.map((room) => room.name));
-
-    if (!existingNames.has(normalizedBaseName)) {
-      return normalizedBaseName;
-    }
-
-    let suffix = 1;
-    while (existingNames.has(`${normalizedBaseName} ${suffix}`)) {
-      suffix += 1;
-    }
-
-    return `${normalizedBaseName} ${suffix}`;
-  }
-
   // Cree une room et memorise sa config transitoire.
   async create(
     dto: CreateRoomDto & {
@@ -201,45 +138,38 @@ export class RoomsService {
       throw new BadRequestException("ownerUserId is required to create a room");
     }
 
-    let room: RoomWithRelations | null = null;
-
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const resolvedName = await this.buildUniqueRoomName(dto.name);
-
-      try {
-        room = await this.prisma.client.room.create({
-          data: {
-            name: resolvedName,
-            ownerId: dto.ownerUserId,
-            status: "waiting",
-            isPrivate: dto.isPrivate ?? false,
-            password: dto.password,
-            players: {
-              create: {
-                userId: dto.ownerUserId,
-              },
-            },
+    const room = await this.prisma.client.room.create({
+      data: {
+        name: dto.name.trim(),
+        ownerId: dto.ownerUserId,
+        status: "waiting",
+        isPrivate: dto.isPrivate ?? false,
+        password: dto.password,
+        players: {
+          create: {
+            userId: dto.ownerUserId,
           },
-          include: roomWithRelationsInclude,
-        });
-
-        break;
-      } catch (error: unknown) {
-        const isUniqueRoomNameError =
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2002" &&
-          Array.isArray(error.meta?.target) &&
-          error.meta.target.includes("name");
-
-        if (!isUniqueRoomNameError || attempt === 9) {
-          throw error;
-        }
-      }
-    }
-
-    if (!room) {
-      throw new ConflictException("Impossible de creer la room");
-    }
+        },
+      },
+      include: {
+        games: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            quizId: true,
+          },
+        },
+        players: {
+          select: {
+            userId: true,
+            joinedAt: true,
+          },
+          orderBy: {
+            joinedAt: "asc",
+          },
+        },
+      },
+    });
 
     this.transientConfigs.set(room.id, {
       quizId: dto.quizId ?? null,
@@ -390,24 +320,7 @@ export class RoomsService {
     let hasTransientConfigUpdate = false;
 
     if (typeof dto.name === "string") {
-      const trimmedName = dto.name.trim();
-      if (trimmedName.length === 0) {
-        throw new BadRequestException("Le nom de la room est requis");
-      }
-
-      const existing = await this.prisma.client.room.findFirst({
-        where: {
-          name: trimmedName,
-          NOT: { id: roomId },
-        },
-        select: { id: true },
-      });
-
-      if (existing) {
-        throw new ConflictException("Ce nom de room est déjà utilisé");
-      }
-
-      updateData.name = trimmedName;
+      updateData.name = dto.name.trim();
     }
 
     if (typeof dto.gameType === "string") {

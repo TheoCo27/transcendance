@@ -1,10 +1,6 @@
 import type { FormEvent } from "react";
 import type { FriendUserSummary, PrivateMessage } from "../../services/users";
-import Section from "../section";
-import SectionHeader from "../section-header";
-import SectionLabel from "../section-label";
 import PrimaryButton from "../ui/PrimaryButton";
-import EmptyCard from "../ui/empty-card";
 
 const PRIVATE_MESSAGE_MAX_LENGTH = 1000;
 
@@ -48,13 +44,15 @@ export default function PrivateMessagesPanel({
     messageInput.length >= PRIVATE_MESSAGE_MAX_LENGTH;
 
   return (
-    <Section className="min-h-176">
+    <section className="flex min-h-176 flex-col rounded-4xl bg-white/88 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
       <div className="border-b border-slate-900/8 pb-5">
-        <SectionLabel className="text-slate-400">Messages prives</SectionLabel>
-        <SectionHeader>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+          Messages prives
+        </p>
+        <h2 className="mt-4 text-3xl font-semibold text-slate-950">
           {selectedFriend ? selectedFriend.username : "Choisis un ami"}
-        </SectionHeader>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
           {selectedFriend
             ? "La conversation privee est reservee aux amis acceptes."
             : "Selectionne un ami dans le reseau pour ouvrir ou reprendre une conversation."}
@@ -63,9 +61,9 @@ export default function PrivateMessagesPanel({
 
       {selectedFriend ? (
         <>
-          <div className="mt-5 flex-1 space-y-3 overflow-y-auto rounded-[1.75rem] bg-bg p-4">
+          <div className="mt-5 flex-1 space-y-3 overflow-y-auto rounded-[1.75rem] bg-slate-100/80 p-4">
             {isConversationLoading ? (
-              <div className="rounded bg-foreground/80 px-4 py-4 text-sm text-slate-600">
+              <div className="rounded-[1.25rem] bg-white px-4 py-4 text-sm text-slate-600">
                 Chargement de la conversation...
               </div>
             ) : null}
@@ -79,11 +77,10 @@ export default function PrivateMessagesPanel({
             {!isConversationLoading &&
             !conversationError &&
             messages.length === 0 ? (
-              <EmptyCard>
-                {" "}
+              <div className="rounded-[1.25rem] bg-white px-4 py-4 text-sm leading-7 text-slate-600">
                 Aucun message pour l'instant. Lance la conversation avec{" "}
                 {selectedFriend.username}.
-              </EmptyCard>
+              </div>
             ) : null}
 
             {messages.map((message) => {
@@ -97,8 +94,8 @@ export default function PrivateMessagesPanel({
                   <div
                     className={`max-w-[85%] rounded-[1.4rem] px-4 py-3 shadow-sm ${
                       isOwnMessage
-                        ? "bg-slate-950 text-text"
-                        : "bg-text text-slate-950"
+                        ? "bg-slate-950 text-white"
+                        : "bg-white text-slate-950"
                     }`}
                   >
                     <p className="whitespace-pre-wrap text-sm leading-7">
@@ -111,7 +108,7 @@ export default function PrivateMessagesPanel({
                     >
                       <span>{formatTimestamp(message.createdAt)}</span>
                       {isOwnMessage ? (
-                        <span>{message.readAt ? "Lu" : "Envoyé"}</span>
+                        <span>{message.readAt ? "Lu" : "Envoye"}</span>
                       ) : null}
                     </div>
                   </div>
@@ -125,13 +122,13 @@ export default function PrivateMessagesPanel({
             onSubmit={(event) => void onMessageSubmit(event)}
           >
             <label
-              className="mb-2 block text-sm font-medium text-slate-400"
+              className="mb-2 block text-sm font-medium text-slate-600"
               htmlFor="private-message"
             >
-              Écrire à {selectedFriend.username}
+              Ecrire a {selectedFriend.username}
             </label>
             <textarea
-              className="min-h-32 w-full rounded-xl border border-white/10 bg-bg px-4 py-4 text-text outline-none placeholder:text-text/40 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              className="min-h-32 w-full rounded-3xl border border-slate-900/10 bg-slate-50 px-4 py-4 text-slate-950 outline-none placeholder:text-slate-400"
               id="private-message"
               placeholder="Ecris un message prive..."
               value={messageInput}
@@ -159,6 +156,6 @@ export default function PrivateMessagesPanel({
           prive et commencer a discuter.
         </div>
       )}
-    </Section>
+    </section>
   );
 }
