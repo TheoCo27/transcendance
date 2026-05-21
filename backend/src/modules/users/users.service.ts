@@ -39,6 +39,7 @@ const SUPPORTED_AVATAR_MIME_TYPES = new Set([
   "image/webp",
 ]);
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 @Injectable()
 export class UsersService {
@@ -487,9 +488,68 @@ export class UsersService {
     const estimatedByteSize =
       Math.floor((base64Payload.length * 3) / 4) - paddingLength;
 
+    if (estimatedByteSize <= 0) {
+      throw new BadRequestException("Avatar must contain image data");
+    }
+
     if (estimatedByteSize > MAX_AVATAR_SIZE_BYTES) {
       throw new BadRequestException("Avatar image must be 2 MB or smaller");
     }
+
+    const decodedImage = Buffer.from(base64Payload, "base64");
+
+    if (decodedImage.length !== estimatedByteSize) {
+      throw new BadRequestException("Avatar contains invalid base64 data");
+    }
+
+    const detectedMimeType = this.detectAvatarMimeType(decodedImage);
+
+    if (!detectedMimeType || detectedMimeType !== mimeType) {
+      throw new BadRequestException(
+        "Avatar content does not match the declared image format",
+      );
+    }
+  }
+
+  private detectAvatarMimeType(imageBuffer: Buffer): string | null {
+    if (this.isJpegBuffer(imageBuffer)) {
+      return "image/jpeg";
+    }
+
+    if (this.isPngBuffer(imageBuffer)) {
+      return "image/png";
+    }
+
+    if (this.isWebpBuffer(imageBuffer)) {
+      return "image/webp";
+    }
+
+    return null;
+  }
+
+  private isJpegBuffer(imageBuffer: Buffer): boolean {
+    return (
+      imageBuffer.length >= 3 &&
+      imageBuffer[0] === 0xff &&
+      imageBuffer[1] === 0xd8 &&
+      imageBuffer[2] === 0xff
+    );
+  }
+
+  private isPngBuffer(imageBuffer: Buffer): boolean {
+    if (imageBuffer.length < PNG_SIGNATURE.length) {
+      return false;
+    }
+
+    return PNG_SIGNATURE.every((byte, index) => imageBuffer[index] === byte);
+  }
+
+  private isWebpBuffer(imageBuffer: Buffer): boolean {
+    return (
+      imageBuffer.length >= 12 &&
+      imageBuffer.toString("ascii", 0, 4) === "RIFF" &&
+      imageBuffer.toString("ascii", 8, 12) === "WEBP"
+    );
   }
 
   // Extrait les champs utiles d'un utilisateur pour la vue ami.
