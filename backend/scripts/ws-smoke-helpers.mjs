@@ -85,7 +85,9 @@ export async function createAuthenticatedSession(baseUrl, label) {
   const suffix = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
   const email = `ws-smoke-${label}-${suffix}@test.com`;
   const password = "longsecuredpassword123!";
-  const username = `ws_${label}_${Math.floor(Math.random() * 1000)}`;
+  const randomHex = Math.random().toString(36).substring(2, 8);
+  const username = `ws_${label}_${randomHex}`;
+  //const username = `ws_${label}_${Math.floor(Math.random() * 1000)}`;
 
   const registerResponse = await requestJson(
     baseUrl,
