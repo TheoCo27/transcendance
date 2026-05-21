@@ -7,6 +7,8 @@ import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
 import type { ChatEntry } from "./room-types";
 
+const ROOM_CHAT_MESSAGE_MAX_LENGTH = 500;
+
 type RoomChatSectionProps = {
   entries: ChatEntry[];
   chatInput: string;
@@ -41,6 +43,7 @@ export default function RoomChatSection({
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
   const hasInitializedScrollRef = useRef(false);
+  const hasReachedChatLimit = chatInput.length >= ROOM_CHAT_MESSAGE_MAX_LENGTH;
 
   const isNearBottom = (container: HTMLDivElement) =>
     container.scrollHeight - container.scrollTop - container.clientHeight <=
@@ -185,6 +188,7 @@ export default function RoomChatSection({
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <Input
           className="w-full"
+          maxLength={ROOM_CHAT_MESSAGE_MAX_LENGTH}
           placeholder={
             isUserInRoom
               ? "Écrire un message a la room..."
@@ -207,6 +211,13 @@ export default function RoomChatSection({
           Envoyer
         </PrimaryButton>
       </div>
+
+      {hasReachedChatLimit ? (
+        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Attention : le message a ete tronque. Maximum{" "}
+          {ROOM_CHAT_MESSAGE_MAX_LENGTH} caracteres.
+        </p>
+      ) : null}
 
       {chatError ? (
         <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

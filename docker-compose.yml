@@ -67,7 +67,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 10s
+      start_period: 180s
     restart: unless-stopped
 
   prisma-studio:

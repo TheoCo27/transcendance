@@ -6,6 +6,8 @@ import SectionLabel from "../section-label";
 import PrimaryButton from "../ui/PrimaryButton";
 import EmptyCard from "../ui/empty-card";
 
+const PRIVATE_MESSAGE_MAX_LENGTH = 1000;
+
 type PrivateMessagesPanelProps = {
   currentUserId: number;
   selectedFriend: FriendUserSummary | null;
@@ -42,6 +44,9 @@ export default function PrivateMessagesPanel({
   onMessageSubmit,
   isSendingMessage,
 }: PrivateMessagesPanelProps) {
+  const hasReachedMessageLimit =
+    messageInput.length >= PRIVATE_MESSAGE_MAX_LENGTH;
+
   return (
     <Section className="min-h-176">
       <div className="border-b border-slate-900/8 pb-5">
@@ -132,9 +137,15 @@ export default function PrivateMessagesPanel({
               value={messageInput}
               onChange={(event) => onMessageInputChange(event.target.value)}
               disabled={isSendingMessage}
-              maxLength={1000}
+              maxLength={PRIVATE_MESSAGE_MAX_LENGTH}
               required
             />
+            {hasReachedMessageLimit ? (
+              <p className="mt-3 rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Attention : le message a ete tronque. Maximum{" "}
+                {PRIVATE_MESSAGE_MAX_LENGTH} caracteres.
+              </p>
+            ) : null}
             <div className="mt-4 flex justify-end">
               <PrimaryButton disabled={isSendingMessage} type="submit">
                 {isSendingMessage ? "Envoi..." : "Envoyer le message"}

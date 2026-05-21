@@ -22,6 +22,7 @@ function section(title) {
 function printTestCatalog() {
   console.log("\nTypologies de test executees:");
   console.log(" - test websocket auth");
+  console.log(" - test social rest private messages");
   console.log(" - test websocket room lifecycle");
   console.log(" - test websocket game flow");
   console.log(" - test websocket rest coherence");
@@ -61,10 +62,20 @@ async function run() {
       outsiderSession.cookieHeader,
     );
     pass(`Connexion WS OK (outsider, userId=${outsider.userId})`);
+    sockets.push(owner.socket, guest.socket, outsider.socket);
+
+    section("test social rest private messages");
+    await assertPrivateMessagingRestFlow(
+      WS_BASE_URL,
+      ownerSession,
+      owner.userId,
+      outsiderSession,
+      outsider.userId,
+    );
+
     const quizId = await createSmokeQuiz(WS_BASE_URL);
 
     section("test websocket room lifecycle");
-    sockets.push(owner.socket, guest.socket, outsider.socket);
     const roomId = await createRoomWithOwner(owner, ownerSession.cookieHeader, quizId);
     await assertOutsiderCannotChat(outsider, roomId);
     await joinRoomAsGuest(guest, roomId);
@@ -375,8 +386,196 @@ async function assertScoresLeaderboard(baseUrl, userId, quizId) {
   pass("Scores REST coherent avec la fin de partie WS");
 }
 
+async function assertPrivateMessagingRestFlow(
+  baseUrl,
+  ownerSession,
+  ownerUserId,
+  outsiderSession,
+  outsiderUserId,
+) {
+  const friendRequestPayload = await requestAuthenticatedJson(
+    baseUrl,
+    `/users/me/friends`,
+    {
+      method: "POST",
+      cookieHeader: ownerSession.cookieHeader,
+      body: {
+        username: outsiderSession.username,
+      },
+    },
+    "Friend request creation endpoint",
+  );
+
+  if (friendRequestPayload?.data?.friendshipStatus !== "pending") {
+    fail("Friend request should start in pending status");
+  }
+
+  const receivedRequestsPayload = await requestAuthenticatedJson(
+    baseUrl,
+    `/users/me/friends`,
+    {
+      method: "GET",
+      cookieHeader: outsiderSession.cookieHeader,
+    },
+    "Friend overview endpoint for request receiver",
+  );
+
+  const receivedRequest = receivedRequestsPayload?.data?.receivedRequests?.find(
+    (request) => request?.user?.username === ownerSession.username,
+  );
+
+  if (typeof receivedRequest?.id !== "number") {
+    fail("Receiver did not see the pending friend request");
+  }
+
+  const acceptPayload = await requestAuthenticatedJson(
+    baseUrl,
+    `/users/me/friends/requests/${receivedRequest.id}`,
+    {
+      method: "PATCH",
+      cookieHeader: outsiderSession.cookieHeader,
+      body: {
+        action: "accepted",
+      },
+    },
+    "Friend request accept endpoint",
+  );
+
+  if (acceptPayload?.data?.friendshipStatus !== "accepted") {
+    fail("Friend request acceptance did not return accepted status");
+  }
+
+  const ownerConversationSummaries = await requestAuthenticatedJson(
+    baseUrl,
+    `/users/me/friends/conversations`,
+    {
+      method: "GET",
+      cookieHeader: ownerSession.cookieHeader,
+    },
+    "Conversation summaries endpoint before first DM",
+  );
+
+  const ownerSummary = ownerConversationSummaries?.data?.find(
+    (summary) => summary?.friendId === outsiderUserId,
+  );
+
+  if (!ownerSummary) {
+    fail("Accepted friend is missing from conversation summaries");
+  }
+
+  const dmContent = `hello-private-${Date.now()}`;
+  const sendMessagePayload = await requestAuthenticatedJson(
+    baseUrl,
+    `/users/me/friends/messages/${outsiderUserId}`,
+    {
+      method: "POST",
+      cookieHeader: ownerSession.cookieHeader,
+      body: {
+        content: dmContent,
+      },
+    },
+    "Private message send endpoint",
+  );
+
+  if (
+    sendMessagePayload?.data?.senderId !== ownerUserId ||
+    sendMessagePayload?.data?.receiverId !== outsiderUserId ||
+    sendMessagePayload?.data?.content !== dmContent
+  ) {
+    fail("Private message send payload is malformed");
+  }
+
+  const unreadConversationSummaries = await requestAuthenticatedJson(
+    baseUrl,
+    `/users/me/friends/conversations`,
+    {
+      method: "GET",
+      cookieHeader: outsiderSession.cookieHeader,
+    },
+    "Conversation summaries endpoint with unread DM",
+  );
+
+  const unreadSummary = unreadConversationSummaries?.data?.find(
+    (summary) => summary?.friendId === ownerUserId,
+  );
+
+  if (
+    !unreadSummary ||
+    unreadSummary.unreadCount !== 1 ||
+    unreadSummary.lastMessagePreview !== dmContent
+  ) {
+    fail("Unread DM summary is not coherent");
+  }
+
+  const conversationPayload = await requestAuthenticatedJson(
+    baseUrl,
+    `/users/me/friends/messages/${ownerUserId}`,
+    {
+      method: "GET",
+      cookieHeader: outsiderSession.cookieHeader,
+    },
+    "Private conversation endpoint",
+  );
+
+  if (!Array.isArray(conversationPayload?.data) || conversationPayload.data.length === 0) {
+    fail("Private conversation endpoint returned no messages");
+  }
+
+  const latestMessage = conversationPayload.data[conversationPayload.data.length - 1];
+  if (
+    latestMessage?.senderId !== ownerUserId ||
+    latestMessage?.receiverId !== outsiderUserId ||
+    latestMessage?.content !== dmContent ||
+    typeof latestMessage?.readAt !== "string"
+  ) {
+    fail("Private conversation payload did not mark the unread message as read");
+  }
+
+  const readConversationSummaries = await requestAuthenticatedJson(
+    baseUrl,
+    `/users/me/friends/conversations`,
+    {
+      method: "GET",
+      cookieHeader: outsiderSession.cookieHeader,
+    },
+    "Conversation summaries endpoint after DM read",
+  );
+
+  const readSummary = readConversationSummaries?.data?.find(
+    (summary) => summary?.friendId === ownerUserId,
+  );
+
+  if (!readSummary || readSummary.unreadCount !== 0) {
+    fail("Conversation summary did not clear unread count after conversation fetch");
+  }
+
+  pass("Amis + MP REST coherents avec la persistence DB");
+}
+
 async function fetchHealthyJson(url, label) {
   const response = await fetch(url);
+  return assertHealthyJsonResponse(response, label);
+}
+
+async function requestAuthenticatedJson(baseUrl, path, options, label) {
+  const headers = {
+    Cookie: options.cookieHeader,
+  };
+
+  if (options.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: options.method,
+    headers,
+    ...(options.body !== undefined
+      ? {
+          body: JSON.stringify(options.body),
+        }
+      : {}),
+  });
+
   return assertHealthyJsonResponse(response, label);
 }
 

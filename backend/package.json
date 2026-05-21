@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "build": "npm run prisma:generate && tsc -p tsconfig.build.json",
-    "deps:sync": "sh -c 'if [ -f package-lock.json ]; then npm ci; else npm install --include=dev --no-package-lock; fi'",
+    "deps:sync": "sh ./scripts/ensure-deps.sh",
     "prisma:generate": "prisma generate",
+    "prisma:generate:if-needed": "sh ./scripts/ensure-prisma-client.sh",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "test:ws-smoke": "NODE_EXTRA_CA_CERTS=../certs/mkcert-rootCA.pem node scripts/ws-smoke-test.mjs",
     "start": "node dist/main.js",
-    "start:dev": "npm run prisma:generate && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\"",
-    "start:docker": "npm run deps:sync && npm run prisma:generate && npm run prisma:migrate:deploy && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\"",
-    "seed": "npx ts-node prisma/seed_quiz.ts",
+    "start:dev": "npm run prisma:generate:if-needed && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\"",
+    "start:docker": "npm run deps:sync && npm run prisma:generate:if-needed && npm run prisma:migrate:deploy && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\"",
+    "seed": "npm run prisma:generate:if-needed && npx ts-node prisma/seed_quiz.ts",
     "prisma:seed": "prisma db seed"
   },
   "dependencies": {
