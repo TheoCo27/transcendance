@@ -53,7 +53,9 @@ model User {
   rooms      RoomPlayer[] @relation("UserRoomPlayers")
   ownedRooms Room[]       @relation("RoomOwner")
 
-  messages Messages[] @relation("UserMessages")
+  messages                Messages[]       @relation("UserMessages")
+  sentPrivateMessages     PrivateMessage[] @relation("PrivateMessageSender")
+  receivedPrivateMessages PrivateMessage[] @relation("PrivateMessageReceiver")
 
   answers                PlayerAnswer[]    @relation("UserPlayerAnswers")
   leaderboardEntries     Leaderboard[]     @relation("UserLeaderboardEntries")
@@ -248,4 +250,22 @@ model Messages {
   content String
   sendAt  DateTime @default(now())
   read    Boolean  @default(false)
+}
+
+model PrivateMessage {
+  id Int @id @default(autoincrement())
+
+  sender   User @relation("PrivateMessageSender", fields: [senderId], references: [id])
+  senderId Int
+
+  receiver   User @relation("PrivateMessageReceiver", fields: [receiverId], references: [id])
+  receiverId Int
+
+  content   String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, senderId, createdAt])
+  @@index([receiverId, readAt, createdAt])
 }

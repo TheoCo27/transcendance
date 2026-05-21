@@ -85,13 +85,14 @@ export async function createAuthenticatedSession(baseUrl, label) {
   const suffix = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
   const email = `ws-smoke-${label}-${suffix}@test.com`;
   const password = "longsecuredpassword123!";
+  const username = `ws_${label}_${Math.floor(Math.random() * 1000)}`;
 
   const registerResponse = await requestJson(
     baseUrl,
     "/auth/register",
     {
       email,
-      username: `ws_${label}_${Math.floor(Math.random() * 1000)}`,
+      username,
       password,
     },
   );
@@ -112,7 +113,7 @@ export async function createAuthenticatedSession(baseUrl, label) {
     fail(`Missing access_token cookie for ${label}`);
   }
 
-  return { email, cookieHeader };
+  return { email, username, cookieHeader };
 }
 
 async function requestJson(baseUrl, path, payload) {
