@@ -52,7 +52,7 @@ export class AppService {
   // Expose un resume statique des capacites de l'API.
   getApi() {
     return {
-      name: "ft_transcendance starter",
+      name: "ft_transcendence",
       framework: "nestjs",
       language: "typescript",
       orm: "prisma",
@@ -70,7 +70,7 @@ export class AppService {
         "/rooms/:roomId",
         "/rooms/:roomId/join",
         "/game/:roomId/state",
-        "/game/answer", 
+        "/game/answer",
         "/scores/leaderboard",
         "/scores/users/:userId",
       ],

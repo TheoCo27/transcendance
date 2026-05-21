@@ -107,10 +107,10 @@ export default function HomeHeader({
       <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
         Joue a des mini-jeux en solo ou multijoueur avec tes amis
       </h1>
-      <p className="mt-4 max-w-3xl text-base leading-relaxed text-text-muted md:text-lg">
-        Lance une partie de Wordle, participe a des jeux de mots rapides,
-        discute avec les autres joueurs via le chat de room et grimpe dans le
-        leaderboard en temps reel.
+      <p className="mt-4 max-w-3xl leading-relaxed text-text-muted">
+        Lance une partie de Wordle ou de quiz, participe à des jeux de mots
+        rapides, discute avec les autres joueurs via le chat de room et grimpe
+        dans le classement.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
         <PrimaryButton

@@ -236,9 +236,9 @@ export default function RoomPage() {
                     <Copy className="size-4 rotate-180" />
                   )}
                 </PrimaryButton>
-                <SecondaryButton onClick={() => void refreshRoom()}>
+                {/* <SecondaryButton onClick={() => void refreshRoom()}>
                   Rafraichir
-                </SecondaryButton>
+                </SecondaryButton> */}
               </div>
             </div>
 
@@ -257,7 +257,7 @@ export default function RoomPage() {
                   </p>
                 </div>
 
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                {/* <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
                   <p className="text-xs uppercase tracking-[0.22em] text-amber-200">
                     Timer
                   </p>
@@ -267,7 +267,7 @@ export default function RoomPage() {
                       null,
                     )}
                   </p>
-                </div>
+                </div> */}
 
                 {!user && !isSessionLoading ? (
                   <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
@@ -313,11 +313,11 @@ export default function RoomPage() {
                       >
                         {isLeaving ? "Sortie..." : "Quitter la room"}
                       </SecondaryButton>
-                      {isOwner ? (
+                      {/* {isOwner ? (
                         <PrimaryButton className="w-full justify-center">
                           Supprimer la room
                         </PrimaryButton>
-                      ) : null}
+                      ) : null} */}
                     </div>
                   </div>
                 ) : null}

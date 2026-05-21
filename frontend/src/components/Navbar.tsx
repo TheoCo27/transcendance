@@ -59,7 +59,7 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-6 text-sm font-medium md:flex">
-          <Link to="/admin">Créer</Link>
+          <Link to="/admin">Créer un quiz</Link>
           <Link to="/friends">Amis</Link>
         </div>
 

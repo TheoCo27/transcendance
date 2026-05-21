@@ -87,7 +87,7 @@ up-run: env-check setup-host compose-check ensure-public-stack
 	bash scripts/generate-dev-cert.sh
 	$(COMPOSE) up --build -d
 	bash scripts/wait-for-containers.sh
-	make seed
+# 	make seed
 
 dev: env-check setup-host compose-check
 	bash scripts/generate-dev-cert.sh

@@ -11,7 +11,7 @@ type PublicQuestion = {
   options: string[];
 };
 
-type RoomGameSectionProps = {
+type QuizGameSectionProps = {
   roomStatus: Room["status"];
   gameState: GameState | null;
   currentQuestion: PublicQuestion | null;
@@ -35,7 +35,7 @@ function formatRemainingTime(
   return `${Math.max(0, Math.ceil(source / 1000))} sec`;
 }
 
-export default function RoomGameSection({
+export default function QuizGameSection({
   roomStatus,
   gameState,
   currentQuestion,
@@ -45,7 +45,7 @@ export default function RoomGameSection({
   hasAnsweredCurrentQuestion,
   onSelectAnswer,
   onSubmitAnswer,
-}: RoomGameSectionProps) {
+}: QuizGameSectionProps) {
   return (
     <>
       {gameState?.status === "playing" && currentQuestion ? (
@@ -89,7 +89,7 @@ export default function RoomGameSection({
             ))}
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-6 flex flex-col sm:flex-row sm:items-center">
             <PrimaryButton
               disabled={
                 !isUserInRoom ||
@@ -102,11 +102,7 @@ export default function RoomGameSection({
                 ? "Réponse envoyée"
                 : "Valider ma réponse"}
             </PrimaryButton>
-            <p className="text-sm text-white/68">
-              {isUserInRoom
-                ? "Bonne réponse à trouver avant la fin du timer."
-                : "Tu dois être dans la room pour répondre au mini-jeu."}
-            </p>
+
           </div>
         </section>
       ) : (

@@ -250,11 +250,11 @@ export default function RoomConfigSection({
         ) : form.gameType === "wordle" ? (
           <>
             <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Longueur du mot (4-8)</span>
+              <span className="text-sm font-medium">Longueur du mot (5-7)</span>
               <Input
                 type="number"
-                min={4}
-                max={8}
+                min={5}
+                max={7}
                 value={form.wordleWordLength}
                 onChange={(event) => {
                   setForm((previous) => ({
@@ -266,11 +266,11 @@ export default function RoomConfigSection({
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium ">Essais max (3-10)</span>
+              <span className="text-sm font-medium ">Essais max (3-8)</span>
               <Input
                 type="number"
                 min={3}
-                max={10}
+                max={8}
                 value={form.wordleMaxAttempts}
                 onChange={(event) => {
                   setForm((previous) => ({

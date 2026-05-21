@@ -72,14 +72,20 @@ module.exports = {
     proxy: [
       {
         context: (pathname, req) => {
-          if (!proxyPaths.some((prefix) => pathname.startsWith(prefix))) {
+          // Match proxy paths only when the pathname equals the prefix
+          // or starts with the prefix followed by a '/'. This avoids
+          // accidental matches like '/game' matching '/games'.
+          const shouldProxy = proxyPaths.some((prefix) =>
+            pathname === prefix || pathname.startsWith(prefix + "/"),
+          );
+
+          if (!shouldProxy) {
             return false;
           }
 
           if (
-            pathname.startsWith("/rooms") &&
-            req.headers.accept &&
-            req.headers.accept.includes("text/html")
+            pathname === "/rooms" ||
+            (pathname.startsWith("/rooms/") && req.headers.accept && req.headers.accept.includes("text/html"))
           ) {
             return false;
           }
