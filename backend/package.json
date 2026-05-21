@@ -11,7 +11,9 @@
     "test:ws-smoke": "NODE_EXTRA_CA_CERTS=../certs/mkcert-rootCA.pem node scripts/ws-smoke-test.mjs",
     "start": "node dist/main.js",
     "start:dev": "npm run prisma:generate:if-needed && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\"",
-    "start:docker": "npm run deps:sync && npm run prisma:generate:if-needed && npm run prisma:migrate:deploy && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\""
+    "start:docker": "npm run deps:sync && npm run prisma:generate:if-needed && npm run prisma:migrate:deploy && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\"",
+    "seed": "npx ts-node prisma/seed_quiz.ts",
+    "prisma:seed": "prisma db seed"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.19",

@@ -6,11 +6,13 @@ import { CurrentUser } from "@/modules/auth/decorators/current-user.decorator";
 import { AuthGuard } from "@/modules/auth/guards/auth.guard";
 import { AuthPayload } from "@/modules/auth/types/auth-payload.type";
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Param,
   ParseIntPipe,
+  Query,
   Patch,
   Post,
   UseFilters,
@@ -38,6 +40,18 @@ export class RoomsController {
     @Param("quizId", ParseIntPipe) quizId: number,
   ): Promise<ApiResponse<Array<Omit<Room, "password">>>> {
     return ok(await this.roomsService.listByQuizId(quizId));
+  }
+
+  // Retourne la room publique correspondant a un nom donne.
+  @Get("by-name")
+  async getByName(
+    @Query("name") roomName?: string,
+  ): Promise<ApiResponse<Omit<Room, "password">>> {
+    if (typeof roomName !== "string" || roomName.trim().length === 0) {
+      throw new BadRequestException("Le nom de la room est requis");
+    }
+
+    return ok(await this.roomsService.getByName(roomName));
   }
 
   // Retourne le detail public d'une room.
