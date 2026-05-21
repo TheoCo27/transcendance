@@ -692,21 +692,96 @@ Frontend:
 #### Elements de base de donnees concernes
 
 - `User`
+  - `id`
+    - identifiant technique du compte; sert de cle primaire pour la session JWT, le profil courant et toutes les relations applicatives.
   - `email`
+    - email unique du compte; utilise pour la connexion classique et pour rattacher un compte Google a un compte existant.
+    - pour les comptes invites, une adresse technique de type `guest-...@guest.local` est generee pour satisfaire la contrainte d'unicite.
   - `username`
+    - pseudo visible dans toute l'application; utilise dans la navbar, le profil, les rooms, le reseau d'amis et le payload JWT.
+    - doit rester unique au moment de l'inscription, du mode invite et de la mise a jour de profil.
   - `password`
+    - mot de passe stocke hache uniquement; jamais renvoye au frontend.
+    - pour un compte Google ou invite, une valeur hachee existe quand meme pour garder un modele `User` uniforme.
   - `isGuest`
+    - indique si le compte est un compte invite.
+    - influence plusieurs regles metier:
+      - certaines fonctions sociales sont bloquees;
+      - le logout ne se contente pas de mettre le statut a `offline`, il archive aussi l'identite invite pour liberer le pseudo.
   - `googleId`
+    - identifiant unique du compte Google lie au `User`.
+    - permet de reconnaitre un utilisateur OAuth lors des connexions suivantes.
+    - n'est jamais expose au frontend.
   - `avatar_url`
+    - image de profil affichee dans le frontend.
+    - peut contenir soit une `data URL` inline stockee telle quelle en base, soit une URL HTTPS distante provenant de Google OAuth.
   - `status`
+    - statut de presence `online` ou `offline`.
+    - passe a `online` a l'ouverture de session et repasse a `offline` au logout pour les comptes non invites.
   - `createdAt`
+    - date de creation du compte; utilisee pour afficher l'anciennete du profil et garder une trace stable de creation.
 
 #### Types et structures de donnees importants
 
 - `SafeUser`
+  - definition backend: `backend/src/modules/auth/types/safe-user.type.ts`
+  - miroir frontend: `frontend/src/services/auth.ts`
+  - role:
+    - vue publique standard d'un utilisateur authentifie ou consulte;
+    - retire explicitement `password` et `googleId`;
+    - sert de format de retour pour `register`, `login`, `guest`, `session`, `getMe`, `updateProfile`, `updateAvatar` et `getById`.
+
 - `AuthPayload`
+  - definition backend: `backend/src/modules/auth/types/auth-payload.type.ts`
+  - role:
+    - payload minimal embarque dans le JWT applicatif;
+    - contient `sub`, `email`, `username`;
+    - est decode par `AuthGuard` puis attache a `request.user`.
+
+- `RegisterDto`
+  - definition backend: `backend/src/modules/users/dto/register.dto.ts`
+  - role:
+    - decrit le formulaire d'inscription classique;
+    - impose `email`, `username` et `password`;
+    - porte une partie de la validation d'entree avant d'arriver dans le service.
+
+- `LoginDto`
+  - definition backend: `backend/src/modules/users/dto/login.dto.ts`
+  - role:
+    - decrit la connexion classique par `email` + `password`;
+    - sert d'entree a `validateUser()`.
+
+- `GuestLoginDto`
+  - definition backend: `backend/src/modules/users/dto/guest-login.dto.ts`
+  - role:
+    - decrit le mode invite;
+    - ne demande qu'un `username`;
+    - le backend genere ensuite l'email technique et le mot de passe aleatoire.
+
+- `UpdateProfileDto`
+  - definition backend: `backend/src/modules/users/dto/update-profile.dto.ts`
+  - role:
+    - decrit les champs editables depuis la page profil;
+    - contient `username` et `status`;
+    - sert a proteger le contrat HTTP de `PATCH /users/me/profile`.
+
+- `UpdateAvatarDto`
+  - definition backend: `backend/src/modules/users/dto/update-avatar.dto.ts`
+  - role:
+    - decrit la charge utile de `PATCH /users/me/avatar`;
+    - contient `avatarDataUrl`, qui peut etre une `data URL` ou `null` pour supprimer l'avatar.
+
 - cookie `access_token`
+  - role:
+    - contient le JWT de session;
+    - est pose en cookie `httpOnly`;
+    - est la seule source utilisee par `AuthGuard` pour authentifier une requete HTTP protegee.
+
 - event frontend `auth-changed`
+  - role:
+    - evenement navigateur emis apres login, register, guest login, logout, update profile et update avatar;
+    - declenche la rehydratation de session dans `useAuthSession()`;
+    - permet de garder navbar, profil et ecrans dependants de la session synchronises sans gestionnaire global lourd.
 
 #### Librairies et outils utilises
 
@@ -730,27 +805,202 @@ Frontend:
 
 ### Fichiers et fonctions importants
 
+- `backend/src/modules/auth/auth.controller.ts`
+  - expose les endpoints HTTP d'authentification:
+    - `POST /auth/login`
+    - `POST /auth/register`
+    - `POST /auth/guest`
+    - `GET /auth/google/start`
+    - `GET /auth/google/callback`
+    - `POST /auth/logout`
+    - `GET /auth/session`
+  - joue surtout un role de couche HTTP fine: validation, appel au service, format de reponse.
+
 - `backend/src/modules/auth/auth.service.ts`
-  - `validateUser()` verifie email + mot de passe.
-  - `login()` signe le JWT et pose le cookie.
-  - `register()` cree un compte classique.
-  - `loginAsGuest()` cree un compte invite temporaire.
-  - `logout()` nettoie la session et repasse le statut a `offline`.
-  - `archiveGuestIdentity()` evite la collision de pseudos invites apres logout.
+  - `validateUser()` verifie `email` + `password` avec `bcrypt.compare()`.
+  - `login()`:
+    - bascule l'utilisateur en `online` si necessaire;
+    - construit le payload JWT;
+    - signe le token;
+    - pose le cookie `access_token`;
+    - retourne un `SafeUser`.
+  - `register()`:
+    - verifie unicite email + pseudo;
+    - detecte le cas particulier d'un email deja lie a Google;
+    - hache le mot de passe;
+    - cree le `User`;
+    - ouvre directement la session.
+  - `loginAsGuest()`:
+    - verifie la disponibilite du pseudo;
+    - archive eventuellement une ancienne identite invite deconnectee qui bloquerait ce pseudo;
+    - genere email technique + mot de passe aleatoire;
+    - cree un `User` avec `isGuest = true`;
+    - ouvre directement la session.
+  - `logout()`:
+    - lit le cookie courant;
+    - si l'utilisateur existe encore:
+      - archive les comptes invites;
+      - met les comptes classiques en `offline`;
+    - supprime le cookie `access_token`.
+  - `getSessionUser()` recharge l'utilisateur courant depuis `auth.sub`.
+  - `sanitizeUser()` garantit la non-exposition de `password` et `googleId`.
+  - `buildGoogleAuthorizationUrl()` et `handleGoogleCallback()` encapsulent tout le flux Google OAuth.
+  - `findOrCreateGoogleUser()` rattache un compte Google a un `User` existant ou en cree un nouveau.
+  - `archiveGuestIdentity()` renomme les identites invites hors session pour eviter les collisions de pseudo et d'email.
 
 - `backend/src/modules/auth/guards/auth.guard.ts`
-  - verifie le cookie et injecte le payload JWT dans la requete.
+  - verifie la presence du cookie `access_token`;
+  - decode et verifie le JWT via `JwtService`;
+  - injecte le `AuthPayload` dans `request.user`;
+  - rejette la requete avec `UnauthorizedException` si le cookie est absent, invalide ou expire.
+
+- `backend/src/modules/users/users.controller.ts`
+  - expose les endpoints lies au profil:
+    - `GET /users/me`
+    - `PATCH /users/me/profile`
+    - `PATCH /users/me/avatar`
+    - `GET /users/:id`
+  - applique `AuthGuard` sur les routes du compte courant;
+  - resanitise les objets `User` avant exposition.
 
 - `backend/src/modules/users/users.service.ts`
-  - `updateAvatar()` valide le format data URL, le type MIME et la taille.
-  - `updateProfile()` verifie l'unicite du pseudo et permet de changer le statut.
+  - `findUserByEmail()` et `findUserByUsername()` servent de primitives de recherche pour auth et profil.
+  - `createUser()` et `updateUser()` encapsulent les operations Prisma de base sur `User`.
+  - `updateProfile()`:
+    - recharge l'utilisateur courant;
+    - normalise le pseudo;
+    - verifie l'unicite;
+    - met a jour `username` et `status`.
+  - `updateAvatar()`:
+    - accepte `null` pour suppression;
+    - sinon trim la valeur;
+    - valide le format `data:image/...;base64,...`;
+    - valide les MIME types supportes;
+    - estime la taille reelle de l'image;
+    - stocke la chaine complete dans `avatar_url`.
+  - `normalizeUsername()` centralise les regles minimales de pseudo.
+  - `assertAvatarDataUrlIsValid()` centralise les regles de validation d'avatar.
+
+- `frontend/src/services/auth.ts`
+  - definit le type frontend `SafeUser`;
+  - expose `login()`, `register()`, `loginAsGuest()`, `getSession()`, `logout()`;
+  - emet `auth-changed` apres chaque action qui modifie la session.
+
+- `frontend/src/services/users.ts`
+  - expose `updateMyProfile()` et `updateMyAvatar()`;
+  - emet aussi `auth-changed` apres mise a jour pour provoquer une relecture de session.
 
 - `frontend/src/hooks/useAuthSession.ts`
   - recharge la session au mount,
   - ecoute l'evenement `auth-changed`.
+  - sert de point de verite React pour l'utilisateur courant.
+
+- `frontend/src/pages/LoginPage.tsx`
+  - orchestre la connexion classique, le mode invite et l'entree dans le flux Google OAuth.
+
+- `frontend/src/pages/RegisterPage.tsx`
+  - orchestre l'inscription classique puis laisse `auth.ts` propager la nouvelle session.
 
 - `frontend/src/pages/ProfilePage.tsx`
-  - bon point d'entree pour comprendre comment l'avatar et le statut sont modifies.
+  - bon point d'entree pour comprendre comment le frontend:
+    - lit la session courante;
+    - met a jour `username` et `status`;
+    - convertit un fichier image en `data URL`;
+    - pousse la mise a jour d'avatar.
+
+### Schema du flux de session
+
+```text
+[Frontend]
+Login / Register / Guest
+        |
+        v
+[POST /auth/login|register|guest]
+        |
+        v
+[AuthService]
+- validation
+- creation eventuelle du User
+- hash mot de passe si necessaire
+- status => online
+- signature JWT
+        |
+        v
+Set-Cookie: access_token=...
+        |
+        v
+[Frontend]
+emit "auth-changed"
+        |
+        v
+[useAuthSession]
+GET /auth/session
+        |
+        v
+[AuthGuard]
+lit et verifie le cookie
+        |
+        v
+[AuthService.getSessionUser]
+retourne SafeUser
+        |
+        v
+state React utilisateur courant
+```
+
+### Schema du flux avatar
+
+```text
+[Utilisateur choisit un fichier image]
+                |
+                v
+[frontend/src/pages/ProfilePage.tsx]
+FileReader.readAsDataURL(file)
+                |
+                v
+avatarDataUrl = "data:image/png;base64,..."
+                |
+                v
+PATCH /users/me/avatar
+body: { avatarDataUrl }
+                |
+                v
+[backend/src/modules/users/users.controller.ts]
+transmet au service
+                |
+                v
+[backend/src/modules/users/users.service.ts]
+- trim de la chaine
+- verification du format data URL
+- verification du MIME type
+- verification de la taille max
+                |
+                v
+[Prisma / table User]
+colonne avatar_url = la chaine complete
+                |
+                v
+[frontend/src/hooks/useAuthSession.ts]
+GET /auth/session
+                |
+                v
+SafeUser.avatar_url
+                |
+                v
+[frontend/src/components/Avatar.tsx]
+<img src={avatar_url} />
+```
+
+### Explication du stockage avatar
+
+- le frontend ne televerse pas un fichier binaire vers un dossier `uploads/`;
+- il convertit l'image en `data URL` complete avec `FileReader.readAsDataURL(file)`;
+- cette chaine contient a la fois le type MIME et le contenu base64 de l'image;
+- le backend ne fabrique pas une URL publique locale: il valide la chaine puis la stocke telle quelle dans `User.avatar_url`;
+- quand le frontend recharge la session, `avatar_url` revient deja dans un format affichable par le navigateur;
+- le composant `Avatar` peut donc utiliser directement `<img src={avatar_url}>` sans route statique supplementaire;
+- dans l'etat actuel du depot, il n'existe pas de dossier `uploads/`, pas de bucket, et pas de transformation backend vers une URL `/files/...`;
+- exception importante: pour Google OAuth, `avatar_url` peut contenir une URL HTTPS distante `googleUser.picture` au lieu d'une `data URL`.
 
 ### Ce qu'il faut savoir .
 
@@ -758,6 +1008,8 @@ Frontend:
 - `SafeUser` est un garde-fou architectural important;
 - le mode invite n'est pas juste une "session anonyme", c'est un vrai `User` avec `isGuest = true`;
 - les avatars sont stockes en `data URL` directement dans `avatar_url`.
+- les routes `/auth/session`, `/users/me`, `/users/me/profile` et `/users/me/avatar` ne "font confiance" qu'au cookie JWT, jamais a un `userId` envoye par le client.
+- le statut `online/offline` est gere par la logique serveur de session et de logout, pas uniquement par l'interface.
 
 ---
 
