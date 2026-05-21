@@ -81,7 +81,7 @@ model FriendRequests {
 
 model Room {
   id   Int    @id @default(autoincrement())
-  name String
+  name String @unique
 
   owner   User @relation("RoomOwner", fields: [ownerId], references: [id])
   ownerId Int

@@ -10,16 +10,7 @@ import {
   login,
   loginAsGuest,
 } from "../services/auth";
-
-const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  google_access_denied: "La connexion Google a ete annulee.",
-  google_callback_failed:
-    "Impossible de finaliser la connexion Google. Verifie la configuration OAuth.",
-  google_not_configured:
-    "La connexion Google n'est pas encore configuree sur le backend.",
-  google_state_mismatch:
-    "La tentative de connexion Google a expire. Reessaie depuis cette page.",
-};
+import { oauthErrorMsg } from "../utils/err-msg";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -30,8 +21,8 @@ export default function LoginPage() {
   const joinRoomId = Number(joinRoomParam);
   const shouldJoinRoomAfterAuth = Number.isFinite(joinRoomId) && joinRoomId > 0;
   const oauthError =
-    oauthErrorParam && OAUTH_ERROR_MESSAGES[oauthErrorParam]
-      ? OAUTH_ERROR_MESSAGES[oauthErrorParam]
+    oauthErrorParam && oauthErrorMsg[oauthErrorParam]
+      ? oauthErrorMsg[oauthErrorParam]
       : null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -167,19 +158,20 @@ export default function LoginPage() {
           </PrimaryButton>
         </form>
 
-        <a
-          className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-slate-900/15 bg-black px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900/30 hover:bg-slate-50"
-          href={googleAuthUrl}
+        <button
+          className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-slate-900/15 bg-black/90 px-6 py-3 text-sm font-semibold text-foreground transition hover:border-slate-900/30 hover:text-foreground/90 hover:bg-black/50"
+          // href={googleAuthUrl}
+          onClick={() => (window.location.href = googleAuthUrl)}
         >
           Continuer avec Google
-        </a>
+        </button>
 
         <div className="my-6 flex items-center gap-4">
-          <div className="h-px flex-1 bg-white/10" />
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text/45">
+          <div className="h-px flex-1 bg-slate-500" />
+          <span className="text-xs font-semibold uppercase text-slate-400">
             ou
           </span>
-          <div className="h-px flex-1 bg-white/10" />
+          <div className="h-px flex-1 bg-slate-500" />
         </div>
 
         <form
@@ -212,8 +204,8 @@ export default function LoginPage() {
             {isGuestSubmitting
               ? "Connexion invite..."
               : shouldJoinRoomAfterAuth
-                ? "Continuer en invite et rejoindre la room"
-                : "Continuer en invite"}
+                ? "Continuer en invité et rejoindre la room"
+                : "Continuer en invité"}
           </SecondaryButton>
         </form>
 
