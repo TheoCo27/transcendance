@@ -126,7 +126,7 @@ async function main() {
   ];
 
   for (const quiz of quizzes) {
-    const savedQuiz = await prisma.quiz.upsert({
+    await prisma.quiz.upsert({
       where: { id: quiz.id },
       update: {
         questionDurationSec: quiz.questionDurationSec,
@@ -157,7 +157,7 @@ async function main() {
       },
     });
   }
-  console.log(`Successfully created ${quizzes.length} quizzes.`);
+  console.log(`[seed] Successfully created or updated ${quizzes.length} quizzes.`);
 }
 
 main()
