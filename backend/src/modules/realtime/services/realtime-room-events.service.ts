@@ -120,7 +120,7 @@ export class RealtimeRoomEventsService {
       const updatedRoom = await this.roomsService.leave(room.id, userId);
       hasRoomStateChanged = true;
 
-      if (updatedRoom.players.length === 0 && updatedRoom.status !== "waiting") {
+      if (updatedRoom.players.length === 0) {
         await this.gameRuntime.closeRoom(room.id, "room_empty", server);
         continue;
       }
