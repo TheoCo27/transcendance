@@ -12,7 +12,6 @@ import { getRoomById, updateRoom, type Room } from "../services/rooms";
 import { getUserById } from "../services/users";
 import {
   connectWs,
-  disconnectWs,
   emitWs,
   offWs,
   onWs,
@@ -174,21 +173,6 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
 
     void loadRoomPage();
   }, [roomId]);
-
-  useEffect(() => {
-    if (isSessionLoading) {
-      return;
-    }
-
-    if (user) {
-      void connectWs().catch(() => {
-        // Action-level flows already surface feedback.
-      });
-      return;
-    }
-
-    disconnectWs();
-  }, [isSessionLoading, user]);
 
   useEffect(() => {
     if (room?.status === "playing" && Number.isFinite(roomId) && roomId > 0) {

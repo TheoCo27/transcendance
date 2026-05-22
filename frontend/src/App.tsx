@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
+import { useAuthSession } from "./hooks/useAuthSession";
 import {
   FriendsPage,
   GamesPage,
@@ -13,8 +15,26 @@ import {
   RegisterPage,
   RoomPage,
 } from "./pages";
+import { connectWs, disconnectWs } from "./services/ws";
 
 export default function App() {
+  const { user, isLoading } = useAuthSession();
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    if (user) {
+      void connectWs().catch(() => {
+        // Les pages concernées gèrent déjà leurs erreurs métier.
+      });
+      return;
+    }
+
+    disconnectWs();
+  }, [isLoading, user]);
+
   return (
     <div className="flex min-h-dvh flex-col">
       <Navbar />
