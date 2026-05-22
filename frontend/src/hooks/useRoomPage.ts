@@ -120,6 +120,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
   const roomLinkCopiedTimeoutRef = useRef<number | null>(null);
   const previousUserIdRef = useRef<number | null>(null);
+  const requestedChatHistoryKeyRef = useRef<string | null>(null);
   const cameFromWordleResult = Boolean(
     location.state &&
     typeof location.state === "object" &&
@@ -337,6 +338,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setRemainingMs(null);
       setSelectedAnswer(null);
       setHasAnsweredCurrentQuestion(false);
+      requestedChatHistoryKeyRef.current = null;
       setChatMessages([]);
       setChatInput("");
       setChatError(null);
@@ -421,6 +423,8 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         return;
       }
 
+      const historyKey = `${response.data.roomId}:${user?.id ?? "guest"}`;
+      requestedChatHistoryKeyRef.current = historyKey;
       setChatMessages(response.data.messages);
     };
 
@@ -505,6 +509,34 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       offWs("game:ended", handleGameEnded);
     };
   }, [navigate, refreshRoom, room?.ownerUserId, roomId, toast, user]);
+
+  useEffect(() => {
+    if (
+      !user ||
+      !room ||
+      !room.players.some((player) => player.userId === user.id)
+    ) {
+      return;
+    }
+
+    const requestKey = `${room.id}:${user.id}`;
+    if (requestedChatHistoryKeyRef.current === requestKey) {
+      return;
+    }
+
+    requestedChatHistoryKeyRef.current = requestKey;
+
+    void connectWs()
+      .then(() => {
+        emitWs("chat:history:request", {
+          roomId: room.id,
+          userId: user.id,
+        });
+      })
+      .catch(() => {
+        requestedChatHistoryKeyRef.current = null;
+      });
+  }, [room, user]);
 
   useEffect(() => {
     const userIds = new Set<number>();

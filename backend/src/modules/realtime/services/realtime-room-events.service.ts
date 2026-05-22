@@ -1,6 +1,7 @@
 // Ce fichier gere les evenements WebSocket lies au cycle de vie des rooms
 // et au chat temps reel.
 import { ChatMessageDto } from "@/modules/realtime/dto/chat-message.dto";
+import { ChatHistoryRequestDto } from "@/modules/realtime/dto/chat-history-request.dto";
 import { RoomCreateEventDto } from "@/modules/realtime/dto/room-create-event.dto";
 import { RoomDeleteDto } from "@/modules/realtime/dto/room-delete.dto";
 import { RoomJoinEventDto } from "@/modules/realtime/dto/room-join-event.dto";
@@ -208,6 +209,30 @@ export class RealtimeRoomEventsService {
       .to(this.roomChannel(payload.roomId))
       .emit("room:state", this.response.ok(room));
     await this.broadcastRoomList(server);
+  }
+
+  // Recharge l'historique de chat pour une room deja rejointe.
+  async handleChatHistoryRequest(
+    rawPayload: unknown,
+    client: Socket,
+  ): Promise<void> {
+    const payload = this.validation.validatePayload(
+      ChatHistoryRequestDto,
+      rawPayload,
+    );
+    const userId = this.presence.resolveSocketUser(client.id, payload.userId);
+    await this.assertUserInRoom(payload.roomId, userId);
+
+    client.emit(
+      "chat:history",
+      this.response.ok({
+        roomId: payload.roomId,
+        messages: await this.roomsService.listMessages(
+          payload.roomId,
+          CHAT_HISTORY_LIMIT,
+        ),
+      }),
+    );
   }
 
   // Fait quitter une room et gere sa fermeture si besoin.
