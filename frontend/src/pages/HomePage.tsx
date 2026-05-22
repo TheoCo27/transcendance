@@ -173,7 +173,7 @@ export default function HomePage() {
     };
 
     void loadRecentRooms();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (!user) {

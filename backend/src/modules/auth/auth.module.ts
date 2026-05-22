@@ -1,5 +1,7 @@
 // Ce fichier assemble toute la couche d'authentification:
 // controller, service, guard et configuration JWT.
+import { GameModule } from "@/modules/game/game.module";
+import { RoomsModule } from "@/modules/rooms/rooms.module";
 import { UsersModule } from "@/modules/users/users.module";
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
@@ -11,6 +13,8 @@ import { AuthGuard } from "./guards/auth.guard";
 @Module({
   imports: [
     UsersModule,
+    RoomsModule,
+    GameModule,
     JwtModule.registerAsync({
       global: true,
       useFactory: () => {

@@ -115,10 +115,12 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [isDeletingRoom, setIsDeletingRoom] = useState(false);
   const [isRoomLinkCopied, setIsRoomLinkCopied] = useState(false);
   const [availableQuizzes, setAvailableQuizzes] = useState<Quiz[]>([]);
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
   const roomLinkCopiedTimeoutRef = useRef<number | null>(null);
+  const previousUserIdRef = useRef<number | null>(null);
   const cameFromWordleResult = Boolean(
     location.state &&
     typeof location.state === "object" &&
@@ -205,6 +207,23 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   }, [isSessionLoading, user]);
 
   useEffect(() => {
+    if (isSessionLoading || !Number.isFinite(roomId) || roomId <= 0) {
+      return;
+    }
+
+    const previousUserId = previousUserIdRef.current;
+    const currentUserId = user?.id ?? null;
+    previousUserIdRef.current = currentUserId;
+
+    if (previousUserId !== null && currentUserId === null) {
+      navigate("/", { replace: true });
+      return;
+    }
+
+    void refreshRoom();
+  }, [isSessionLoading, navigate, refreshRoom, roomId, user?.id]);
+
+  useEffect(() => {
     if (
       room?.status === "playing" &&
       Number.isFinite(roomId) &&
@@ -289,6 +308,20 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         return;
       }
 
+      setIsDeletingRoom(false);
+      setIsLeaving(false);
+      setIsStarting(false);
+
+      if (
+        response.data.reason === "deleted_by_owner" &&
+        user &&
+        room?.ownerUserId === user.id
+      ) {
+        toast.success("Room supprimée");
+        navigate("/");
+        return;
+      }
+
       setRoom(null);
       setGameState(null);
       setCurrentQuestion(null);
@@ -298,9 +331,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setChatMessages([]);
       setChatInput("");
       setChatError(null);
-      setRoomClosedReason(
-        "Cette room n'est plus active. Reviens a l'accueil pour en ouvrir une nouvelle.",
-      );
+      setRoomClosedReason(getRoomClosedReasonMessage(response.data.reason));
     };
 
     const handleQuestionStarted = (
@@ -418,6 +449,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
 
       setIsStarting(false);
       setIsLeaving(false);
+      setIsDeletingRoom(false);
       setRoomActionError(
         getUserFacingServerMessage(
           response.error?.message,
@@ -434,6 +466,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     onWs("room:join:error", handleRoomError);
     onWs("room:start:error", handleRoomError);
     onWs("room:leave:error", handleRoomError);
+    onWs("room:delete:error", handleRoomError);
     onWs("game:answer:error", handleRoomError);
     onWs("chat:history", handleChatHistory);
     onWs("chat:message", handleChatMessage);
@@ -452,6 +485,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       offWs("room:join:error", handleRoomError);
       offWs("room:start:error", handleRoomError);
       offWs("room:leave:error", handleRoomError);
+      offWs("room:delete:error", handleRoomError);
       offWs("game:answer:error", handleRoomError);
       offWs("chat:history", handleChatHistory);
       offWs("chat:message", handleChatMessage);
@@ -461,7 +495,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       offWs("game:state", handleGameState);
       offWs("game:ended", handleGameEnded);
     };
-  }, [navigate, refreshRoom, roomId, user]);
+  }, [navigate, refreshRoom, room?.ownerUserId, roomId, toast, user]);
 
   useEffect(() => {
     const userIds = new Set<number>();
@@ -682,6 +716,30 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     }
   }, [isUserInRoom, room, user]);
 
+  const deleteRoom = useCallback(async () => {
+    if (!user || !room || room.ownerUserId !== user.id) {
+      return;
+    }
+
+    try {
+      setIsDeletingRoom(true);
+      setRoomActionError(null);
+      await connectWs();
+      emitWs("room:delete", {
+        roomId: room.id,
+        userId: user.id,
+      });
+    } catch (error) {
+      setIsDeletingRoom(false);
+      setRoomActionError(
+        getUserFacingErrorMessage(
+          error,
+          "Connexion temps reel impossible pour supprimer la room.",
+        ),
+      );
+    }
+  }, [room, user]);
+
   const startRoom = useCallback(async () => {
     if (!user || !room || !isUserInRoom) {
       return;
@@ -827,6 +885,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     isSaving,
     isStarting,
     isLeaving,
+    isDeletingRoom,
     isRoomLinkCopied,
     availableQuizzes,
     isLoadingQuizzes,
@@ -836,11 +895,24 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     handleSave,
     joinRoom,
     leaveRoom,
+    deleteRoom,
     startRoom,
     submitAnswer,
     sendChatMessage,
     copyRoomLink,
   };
+}
+
+function getRoomClosedReasonMessage(reason: string): string {
+  if (reason === "deleted_by_owner") {
+    return "Le proprietaire a supprime cette room.";
+  }
+
+  if (reason === "room_empty") {
+    return "Cette room etait vide et a ete supprimee automatiquement.";
+  }
+
+  return "Cette room n'est plus active. Reviens a l'accueil pour en ouvrir une nouvelle.";
 }
 
 function buildFormFromRoom(room: Room): RoomConfigForm {

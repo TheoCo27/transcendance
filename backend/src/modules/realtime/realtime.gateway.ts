@@ -128,6 +128,17 @@ export class RealtimeGateway
     });
   }
 
+  // Traite la suppression d'une room par son proprietaire.
+  @SubscribeMessage("room:delete")
+  async handleRoomDelete(
+    @MessageBody() payload: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    await this.runSafely(client, "room:delete:error", async () => {
+      await this.roomEvents.handleRoomDelete(payload, client, this.server);
+    });
+  }
+
   // Traite le lancement d'une partie depuis la room.
   @SubscribeMessage("room:start")
   async handleRoomStart(

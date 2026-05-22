@@ -1,5 +1,7 @@
 // Ce fichier contient toute la logique metier d'authentification:
 // login classique, guest login, session JWT et OAuth Google.
+import { GameService } from "@/modules/game/game.service";
+import { RoomsService } from "@/modules/rooms/rooms.service";
 import { LoginDto } from "@/modules/users/dto/login.dto";
 import { RegisterDto } from "@/modules/users/dto/register.dto";
 import { GuestLoginDto } from "@/modules/users/dto/guest-login.dto";
@@ -84,6 +86,8 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private readonly roomsService: RoomsService,
+    private readonly gameService: GameService,
   ) {}
 
   // Verifie les identifiants classiques d'un utilisateur.
@@ -413,6 +417,8 @@ export class AuthService {
         const user = await this.usersService.findUser({ id: auth.sub });
 
         if (user) {
+          await this.cleanupUserRoomsOnLogout(user.id);
+
           if (user.isGuest) {
             await this.archiveGuestIdentity(user.id);
           } else {
@@ -428,6 +434,28 @@ export class AuthService {
     }
 
     res.clearCookie("access_token", this.getAuthCookieOptions());
+  }
+
+  // Retire immediatement l'utilisateur de toutes ses rooms au logout.
+  private async cleanupUserRoomsOnLogout(userId: number): Promise<void> {
+    const rooms = await this.roomsService.list();
+
+    for (const room of rooms) {
+      if (!room.players.some((player) => player.userId === userId)) {
+        continue;
+      }
+
+      try {
+        const updatedRoom = await this.roomsService.leave(room.id, userId);
+
+        if (updatedRoom.players.length === 0) {
+          this.gameService.clearRoomState(room.id);
+          await this.roomsService.closeIfEmpty(room.id);
+        }
+      } catch {
+        // La room a pu etre supprimee ou mise a jour entre temps.
+      }
+    }
   }
 
   // Retourne l'utilisateur associe a la session courante.

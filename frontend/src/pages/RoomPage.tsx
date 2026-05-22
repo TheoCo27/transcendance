@@ -1,5 +1,5 @@
 import { Check, Copy } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import RoomChatSection from "../components/room/RoomChatSection";
 import RoomConfigSection from "../components/room/RoomConfigSection";
@@ -7,6 +7,16 @@ import RoomLeaderboardSection from "../components/room/RoomLeaderboardSection";
 import RoomPlayersSection from "../components/room/RoomPlayersSection";
 import RoomSectionLabel from "../components/room/room-section-label";
 import type { ChatEntry } from "../components/room/room-types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../components/ui/alert-dialog";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useRoomPage } from "../hooks/useRoomPage";
@@ -38,6 +48,7 @@ function formatRoomStatus(status: Room["status"]) {
 
 export default function RoomPage() {
   const { roomId: roomIdParam } = useParams();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const {
     room,
     form,
@@ -61,6 +72,7 @@ export default function RoomPage() {
     isSaving,
     isStarting,
     isLeaving,
+    isDeletingRoom,
     isRoomLinkCopied,
     availableQuizzes,
     isLoadingQuizzes,
@@ -70,6 +82,7 @@ export default function RoomPage() {
     handleSave,
     joinRoom,
     leaveRoom,
+    deleteRoom,
     startRoom,
     submitAnswer,
     sendChatMessage,
@@ -308,15 +321,60 @@ export default function RoomPage() {
                     <div className="w-full flex gap-2">
                       <SecondaryButton
                         className="w-full justify-center"
+                        disabled={isLeaving || isDeletingRoom}
                         onClick={leaveRoom}
                       >
                         {isLeaving ? "Sortie..." : "Quitter la room"}
                       </SecondaryButton>
-                      {/* {isOwner ? (
-                        <PrimaryButton className="w-full justify-center">
-                          Supprimer la room
-                        </PrimaryButton>
-                      ) : null} */}
+                      {isOwner ? (
+                        <AlertDialog
+                          open={isDeleteDialogOpen}
+                          onOpenChange={setIsDeleteDialogOpen}
+                        >
+                          <AlertDialogTrigger asChild>
+                            <PrimaryButton
+                              className="w-full justify-center bg-danger hover:bg-danger/85"
+                              disabled={isDeletingRoom}
+                            >
+                              {isDeletingRoom
+                                ? "Suppression..."
+                                : "Supprimer la room"}
+                            </PrimaryButton>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Supprimer cette room ?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Cette action ferme la room pour tous les joueurs
+                                et supprime son contenu en cours.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <SecondaryButton
+                                disabled={isDeletingRoom}
+                                onClick={() => setIsDeleteDialogOpen(false)}
+                              >
+                                Annuler
+                              </SecondaryButton>
+                              <AlertDialogAction
+                                className="inline-flex items-center justify-center rounded-md bg-danger px-4 py-2 font-semibold text-white transition hover:bg-danger/85 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={isDeletingRoom}
+                                onClick={() => {
+                                  setIsDeleteDialogOpen(false);
+                                  void deleteRoom();
+                                }}
+                                type="button"
+                              >
+                                {isDeletingRoom
+                                  ? "Suppression..."
+                                  : "Oui, supprimer"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : null}
                     </div>
                   </div>
                 ) : null}
