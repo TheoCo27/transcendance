@@ -10,11 +10,16 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { RealtimeGameRuntimeService } from "./realtime-game-runtime.service";
 import { RealtimePresenceService } from "./realtime-presence.service";
+import { RealtimeRateLimitService } from "./realtime-rate-limit.service";
 import { RealtimeResponseService } from "./realtime-response.service";
 import { RealtimeValidationService } from "./realtime-validation.service";
 
 const CHAT_HISTORY_LIMIT = 100;
 const DISCONNECT_GRACE_PERIOD_MS = 10_000;
+const CHAT_MESSAGE_RATE_LIMITS = [
+  { limit: 5, windowMs: 5_000 },
+  { limit: 20, windowMs: 60_000 },
+] as const;
 
 @Injectable()
 export class RealtimeRoomEventsService {
@@ -26,6 +31,7 @@ export class RealtimeRoomEventsService {
     private readonly response: RealtimeResponseService,
     private readonly presence: RealtimePresenceService,
     private readonly gameRuntime: RealtimeGameRuntimeService,
+    private readonly rateLimit: RealtimeRateLimitService,
   ) {}
 
   // Programme le nettoyage d'un utilisateur apres deconnexion.
@@ -258,6 +264,21 @@ export class RealtimeRoomEventsService {
     const payload = this.validation.validatePayload(ChatMessageDto, rawPayload);
     const userId = this.presence.resolveSocketUser(client.id, payload.userId);
     await this.assertUserInRoom(payload.roomId, userId);
+    const limitResult = this.rateLimit.consume(
+      `chat:${userId}`,
+      CHAT_MESSAGE_RATE_LIMITS,
+    );
+
+    if (!limitResult.allowed) {
+      client.emit(
+        "chat:message:error",
+        this.response.fail(
+          "TOO_MANY_REQUESTS",
+          `Too many chat messages. Retry in ${Math.ceil(limitResult.retryAfterMs / 1000)}s.`,
+        ),
+      );
+      return;
+    }
 
     const content = payload.content?.trim();
     if (!content) {
