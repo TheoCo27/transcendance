@@ -3,9 +3,10 @@ import { PrismaService } from "@/prisma/prisma.service";
 import { UsersService, type FriendUserSummary } from "@/modules/users/users.service";
 import {
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
-  TooManyRequestsException,
 } from "@nestjs/common";
 import { PrivateMessageRateLimitService } from "./private-message-rate-limit.service";
 
@@ -204,8 +205,9 @@ export class PrivateMessagesService {
     );
 
     if (!limitResult.allowed) {
-      throw new TooManyRequestsException(
+      throw new HttpException(
         `Vous avez envoye trop de messages. Reessayez dans ${Math.ceil(limitResult.retryAfterMs / 1000)} secondes.`,
+        HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
