@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import QuestionComposer from "../components/QuizBuilder/QuestionComposer";
 import QuizRulesCard from "../components/QuizBuilder/QuizRulesCard";
 import QuizSetupCard from "../components/QuizBuilder/QuizSetupCard";
+import SectionHeader from "../components/section-header";
+import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
@@ -34,11 +36,11 @@ export default function QuizAdminPage() {
 
   const validateDraftQuestion = () => {
     if (draftQuestion.questionText.trim().length < 6) {
-      return "La question doit contenir au moins 6 caracteres.";
+      return "La question doit contenir au moins 6 caractères.";
     }
 
     if (draftQuestion.options.some((option) => option.trim().length < 1)) {
-      return "Les 4 options de reponse sont obligatoires.";
+      return "Les 4 options de réponse sont obligatoires.";
     }
 
     return null;
@@ -87,7 +89,7 @@ export default function QuizAdminPage() {
     }
 
     if (title.trim().length < 2) {
-      setSubmitError("Le nom du quiz doit contenir au moins 2 caracteres.");
+      setSubmitError("Le nom du quiz doit contenir au moins 2 caractères.");
       return;
     }
 
@@ -121,120 +123,117 @@ export default function QuizAdminPage() {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-10 md:px-10">
       <section className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
-        <div className="space-y-6">
-          <QuizSetupCard title={title} onTitleChange={setTitle} />
-          <QuestionComposer
-            questionText={draftQuestion.questionText}
-            options={draftQuestion.options}
-            correctAnswerIndex={draftQuestion.correctAnswerIndex}
-            error={questionError}
-            onQuestionTextChange={(value) =>
-              setDraftQuestion((currentDraft) => ({
-                ...currentDraft,
-                questionText: value,
-              }))
-            }
-            onOptionChange={(index, value) =>
-              setDraftQuestion((currentDraft) => ({
-                ...currentDraft,
-                options: currentDraft.options.map((option, optionIndex) =>
-                  optionIndex === index ? value : option,
-                ),
-              }))
-            }
-            onCorrectAnswerChange={(index) =>
-              setDraftQuestion((currentDraft) => ({
-                ...currentDraft,
-                correctAnswerIndex: index,
-              }))
-            }
-            onValidateQuestion={handleValidateQuestion}
-            onValidateAndAddQuestion={handleValidateAndAddQuestion}
-          />
-        </div>
-
-        <div className="space-y-6">
-          <QuizRulesCard value={rule} onChange={setRule} />
-
-          <section className="rounded-[2rem] border border-slate-900/10 bg-slate-950 p-6 text-white shadow-[0_30px_80px_rgba(15,23,42,0.16)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
-              Quiz construit
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold">Questions validees</h2>
-            <p className="mt-2 text-sm text-white/70">
-              {questions.length} question{questions.length > 1 ? "s" : ""} prete
-              {questions.length > 1 ? "s" : ""} a jouer.
-            </p>
-
-            <div className="mt-6 space-y-4">
-              {questions.length > 0 ? (
-                questions.map((question, index) => (
-                  <article
-                    key={`${question.questionText}-${index + 1}`}
-                    className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">
-                        Question {index + 1}
-                      </span>
-                      <SecondaryButton
-                        className="border-white/15 bg-white/10 px-3 py-2 text-xs text-white"
-                        onClick={() =>
-                          setQuestions((currentQuestions) =>
-                            currentQuestions.filter(
-                              (_, currentIndex) => currentIndex !== index,
-                            ),
-                          )
-                        }
-                      >
-                        Supprimer
-                      </SecondaryButton>
-                    </div>
-                    <p className="mt-3 text-base font-medium text-white">
-                      {question.questionText}
-                    </p>
-                    <ol className="mt-4 space-y-2 text-sm text-white/74">
-                      {question.options.map((option, optionIndex) => (
-                        <li
-                          key={`${option}-${optionIndex + 1}`}
-                          className={[
-                            "rounded-xl px-3 py-2",
-                            question.correctAnswerIndex === optionIndex
-                              ? "bg-emerald-400/18 text-emerald-100"
-                              : "bg-white/6",
-                          ].join(" ")}
-                        >
-                          {option}
-                        </li>
-                      ))}
-                    </ol>
-                  </article>
-                ))
-              ) : (
-                <div className="rounded-[1.5rem] border border-dashed border-white/18 px-4 py-6 text-sm text-white/62">
-                  Aucune question validee pour l'instant.
-                </div>
-              )}
-            </div>
-
-            {submitError ? (
-              <p className="mt-5 rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">
-                {submitError}
-              </p>
-            ) : null}
-
-            <PrimaryButton
-              className="mt-6 w-full justify-center"
-              disabled={isLoading || isSubmitting}
-              onClick={() => {
-                void handleSubmitQuiz();
-              }}
-            >
-              {isSubmitting ? "Validation..." : "Valider le quiz"}
-            </PrimaryButton>
-          </section>
-        </div>
+        <QuizSetupCard title={title} onTitleChange={setTitle} />
+        <QuizRulesCard value={rule} onChange={setRule} />
       </section>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
+        <QuestionComposer
+          questionText={draftQuestion.questionText}
+          options={draftQuestion.options}
+          correctAnswerIndex={draftQuestion.correctAnswerIndex}
+          error={questionError}
+          onQuestionTextChange={(value) =>
+            setDraftQuestion((currentDraft) => ({
+              ...currentDraft,
+              questionText: value,
+            }))
+          }
+          onOptionChange={(index, value) =>
+            setDraftQuestion((currentDraft) => ({
+              ...currentDraft,
+              options: currentDraft.options.map((option, optionIndex) =>
+                optionIndex === index ? value : option,
+              ),
+            }))
+          }
+          onCorrectAnswerChange={(index) =>
+            setDraftQuestion((currentDraft) => ({
+              ...currentDraft,
+              correctAnswerIndex: index,
+            }))
+          }
+          onValidateQuestion={handleValidateQuestion}
+          onValidateAndAddQuestion={handleValidateAndAddQuestion}
+        />
+
+        <section
+          className={`rounded-4xl border border-slate-900/10 ${questions.length > 1 ? "" : "h-fit"} bg-slate-950 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)] flex flex-col overflow-hidden`}
+        >
+          <SectionLabel className="text-text/55">Quiz construit</SectionLabel>
+          <SectionHeader>Questions validées</SectionHeader>
+          <p className="mt-2 text-sm text-white/70">
+            {questions.length} question{questions.length > 1 ? "s" : ""} prête
+            {questions.length > 1 ? "s" : ""} à jouer.
+          </p>
+
+          <div className="mt-6 space-y-4 overflow-y-auto max-h-[min(45vh,40rem)]">
+            {questions.length > 0 ? (
+              questions.map((question, index) => (
+                <article
+                  key={`${question.questionText}-${index + 1}`}
+                  className="rounded-3xl border border-white/10 bg-white/6 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">
+                      Question {index + 1}
+                    </span>
+                    <SecondaryButton
+                      onClick={() =>
+                        setQuestions((currentQuestions) =>
+                          currentQuestions.filter(
+                            (_, currentIndex) => currentIndex !== index,
+                          ),
+                        )
+                      }
+                    >
+                      Supprimer
+                    </SecondaryButton>
+                  </div>
+                  <p className="mt-3 text-base font-medium text-white">
+                    {question.questionText}
+                  </p>
+                  <ol className="mt-4 space-y-2 text-sm text-white/74">
+                    {question.options.map((option, optionIndex) => (
+                      <li
+                        key={`${option}-${optionIndex + 1}`}
+                        className={[
+                          "rounded-xl px-3 py-2",
+                          question.correctAnswerIndex === optionIndex
+                            ? "bg-emerald-400/18 text-emerald-100"
+                            : "bg-white/6",
+                        ].join(" ")}
+                      >
+                        {option}
+                      </li>
+                    ))}
+                  </ol>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-3xl border border-dashed border-white/18 px-4 py-6 text-sm text-white/62">
+                Aucune question validée pour l'instant.
+              </div>
+            )}
+          </div>
+
+          {submitError ? (
+            <p className="mt-5 rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">
+              {submitError}
+            </p>
+          ) : null}
+
+          <PrimaryButton
+            className="mt-6 w-full justify-center"
+            disabled={isLoading || isSubmitting}
+            onClick={() => {
+              void handleSubmitQuiz();
+            }}
+          >
+            {isSubmitting ? "Validation..." : "Valider le quiz"}
+          </PrimaryButton>
+        </section>
+      </div>
     </main>
   );
 }

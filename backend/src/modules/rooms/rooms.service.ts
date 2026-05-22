@@ -138,38 +138,51 @@ export class RoomsService {
       throw new BadRequestException("ownerUserId is required to create a room");
     }
 
-    const room = await this.prisma.client.room.create({
-      data: {
-        name: dto.name.trim(),
-        ownerId: dto.ownerUserId,
-        status: "waiting",
-        isPrivate: dto.isPrivate ?? false,
-        password: dto.password,
-        players: {
-          create: {
-            userId: dto.ownerUserId,
+    let room;
+
+    try {
+      room = await this.prisma.client.room.create({
+        data: {
+          name: dto.name.trim(),
+          ownerId: dto.ownerUserId,
+          status: "waiting",
+          isPrivate: dto.isPrivate ?? false,
+          password: dto.password,
+          players: {
+            create: {
+              userId: dto.ownerUserId,
+            },
           },
         },
-      },
-      include: {
-        games: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: {
-            quizId: true,
+        include: {
+          games: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              quizId: true,
+            },
+          },
+          players: {
+            select: {
+              userId: true,
+              joinedAt: true,
+            },
+            orderBy: {
+              joinedAt: "asc",
+            },
           },
         },
-        players: {
-          select: {
-            userId: true,
-            joinedAt: true,
-          },
-          orderBy: {
-            joinedAt: "asc",
-          },
-        },
-      },
-    });
+      });
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new ConflictException("Ce nom de room est déjà pris");
+      }
+
+      throw error;
+    }
 
     this.transientConfigs.set(room.id, {
       quizId: dto.quizId ?? null,

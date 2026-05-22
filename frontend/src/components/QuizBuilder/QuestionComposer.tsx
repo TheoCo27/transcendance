@@ -1,3 +1,7 @@
+import Section from "../section";
+import SectionHeader from "../section-header";
+import SectionLabel from "../section-label";
+import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 
@@ -25,30 +29,23 @@ export default function QuestionComposer({
   onValidateAndAddQuestion,
 }: QuestionComposerProps) {
   return (
-    <section className="rounded-[2rem] border border-slate-900/10 bg-white/80 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">
-        Creer une question
-      </p>
-      <h2 className="mt-3 text-2xl font-semibold text-slate-950">
-        Composer la manche
-      </h2>
-      <p className="mt-2 text-sm text-slate-600">
-        Ecris la question, remplis les 4 options puis choisis la bonne reponse.
+    <Section>
+      <SectionLabel className="text-slate-400">Créer une question</SectionLabel>
+      <SectionHeader>Composer la manche</SectionHeader>
+      <p className="mt-2 text-sm ">
+        Écris la question, remplis les 4 options puis choisis la bonne réponse.
       </p>
 
-      <label
-        className="mt-6 block text-sm font-medium text-slate-700"
-        htmlFor="question-text"
-      >
-        Question
+      <label className="flex flex-col gap-1 mt-8" htmlFor="question-text">
+        <span className="text-sm font-medium">Question</span>
+        <textarea
+          id="question-text"
+          className="mt-2 min-h-30 w-full rounded-xl border border-white/10 bg-bg px-4 py-3 placeholder:text-text/40 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+          placeholder="Quel studio a crée Journey ?"
+          value={questionText}
+          onChange={(event) => onQuestionTextChange(event.target.value)}
+        />
       </label>
-      <textarea
-        id="question-text"
-        className="mt-2 min-h-30 w-full rounded-[1.25rem] border border-slate-900/10 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-amber-500"
-        placeholder="Quel studio a cree Journey ?"
-        value={questionText}
-        onChange={(event) => onQuestionTextChange(event.target.value)}
-      />
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {options.map((option, index) => {
@@ -58,25 +55,28 @@ export default function QuestionComposer({
             <div
               key={`option-${index + 1}`}
               className={[
-                "rounded-[1.5rem] border px-4 py-4 transition",
+                "rounded-3xl border px-4 py-4 transition",
                 isCorrect
-                  ? "border-emerald-500/40 bg-emerald-50"
-                  : "border-slate-900/10 bg-slate-50/80",
+                  ? "border-success/40 bg-success/10 text-success"
+                  : "border-white/10 bg-bg/50 text-text-muted",
               ].join(" ")}
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between">
                 <label
-                  className="text-sm font-semibold text-slate-700"
+                  className={[
+                    "text-sm font-semibold",
+                    isCorrect ? "text-success" : "text-text-muted",
+                  ].join(" ")}
                   htmlFor={`option-${index + 1}`}
                 >
                   Option {index + 1}
                 </label>
                 <button
                   className={[
-                    "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]",
+                    "rounded-full px-3 py-1 text-xs font-bold uppercase transition-colors",
                     isCorrect
-                      ? "bg-emerald-600 text-white"
-                      : "bg-slate-900/6 text-slate-700",
+                      ? "bg-success text-white border border-success"
+                      : "bg-white/10 text-text-muted border border-white/10 hover:bg-border/10 hover:text-text",
                   ].join(" ")}
                   type="button"
                   onClick={() => onCorrectAnswerChange(index)}
@@ -84,9 +84,9 @@ export default function QuestionComposer({
                   {isCorrect ? "Bonne" : "Choisir"}
                 </button>
               </div>
-              <input
+              <Input
                 id={`option-${index + 1}`}
-                className="mt-3 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-amber-500"
+                className={`mt-3 w-full ${isCorrect ? "focus:ring-success focus:border-success" : ""}`}
                 placeholder={`Reponse ${index + 1}`}
                 value={option}
                 onChange={(event) => onOptionChange(index, event.target.value)}
@@ -106,16 +106,26 @@ export default function QuestionComposer({
         <SecondaryButton
           className="w-full sm:w-auto"
           onClick={onValidateQuestion}
+          disabled={
+            !questionText.trim() ||
+            options.length !== 4 ||
+            options.some((opt) => !opt.trim())
+          }
         >
           Valider la question
         </SecondaryButton>
         <PrimaryButton
           className="w-full sm:w-auto"
           onClick={onValidateAndAddQuestion}
+          disabled={
+            !questionText.trim() ||
+            options.length !== 4 ||
+            options.some((opt) => !opt.trim())
+          }
         >
           Valider et ajouter une question
         </PrimaryButton>
       </div>
-    </section>
+    </Section>
   );
 }

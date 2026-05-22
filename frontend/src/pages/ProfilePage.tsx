@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "../components/Avatar";
+import Section from "../components/section";
+import SectionHeader from "../components/section-header";
+import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
-import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
 import { updateMyAvatar, updateMyProfile } from "../services/users";
 
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
@@ -60,7 +63,9 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isAvatarSubmitting, setIsAvatarSubmitting] = useState(false);
   const [profileUsername, setProfileUsername] = useState("");
-  const [profileStatus, setProfileStatus] = useState<"online" | "offline">("online");
+  const [profileStatus, setProfileStatus] = useState<"online" | "offline">(
+    "online",
+  );
   const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
   const [avatarNotice, setAvatarNotice] = useState<{
     kind: "success" | "error";
@@ -99,7 +104,7 @@ export default function ProfilePage() {
           </p>
           <h1 className="mt-4 text-4xl font-semibold">Connexion requise</h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-amber-900/80">
-            Connecte-toi pour acceder a ta page profil et retrouver tes
+            Connecte-toi pour accéder à ta page profil et retrouver tes
             informations de session.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -192,7 +197,9 @@ export default function ProfilePage() {
     }
   };
 
-  const handleProfileSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleProfileSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
     const trimmedUsername = profileUsername.trim();
@@ -247,10 +254,8 @@ export default function ProfilePage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-10 md:px-10">
       <section className="grid w-full gap-6 md:grid-cols-[0.8fr_1.2fr]">
-        <article className="rounded-[2.5rem] bg-slate-950 p-8 text-white shadow-[0_28px_90px_rgba(15,23,42,0.24)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/55">
-            Profil joueur
-          </p>
+        <Section className="bg-slate-950 text-white flex flex-col items-start">
+          <SectionLabel className="text-white/55">Profil joueur</SectionLabel>
           <Avatar
             alt={`Photo de profil de ${user.username}`}
             avatarUrl={user.avatar_url}
@@ -273,24 +278,20 @@ export default function ProfilePage() {
               Membre depuis {formatJoinedDate(user.createdAt)}
             </span>
           </div>
-        </article>
+        </Section>
 
-        <article className="rounded-[2.5rem] border border-slate-900/10 bg-white/80 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-            Informations
-          </p>
-          <h2 className="mt-4 text-3xl font-semibold text-slate-950">
-            Ton espace personnel
-          </h2>
-          <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
+        <Section>
+          <SectionLabel className="text-slate-400">Informations</SectionLabel>
+          <SectionHeader>Ton espace personnel</SectionHeader>
+          <p className="mt-4 max-w-2xl text-sm text-white/70">
             Cette page rassemble les informations de la session courante. Elle
             sert de point d'entree simple depuis la navbar, avec ton pseudo
             toujours accessible.
           </p>
 
           <dl className="mt-8 grid gap-4">
-            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <div className="rounded-3xl bg-white/5 px-5 py-4 border border-white/10">
+              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
                 Photo de profil
               </dt>
               <dd className="mt-4">
@@ -298,12 +299,12 @@ export default function ProfilePage() {
                   <Avatar
                     alt={`Photo de profil de ${user.username}`}
                     avatarUrl={user.avatar_url}
-                    className="h-20 w-20 ring-2 ring-slate-900/10"
+                    className="h-20 w-20 ring-2 ring-white/10"
                     fallbackClassName="text-2xl"
                     username={user.username}
                   />
                   <div className="flex-1">
-                    <p className="text-sm leading-7 text-slate-600">
+                    <p className="text-sm leading-7 text-white/70">
                       Ajoute une image JPG, PNG ou WEBP jusqu'a 2 Mo.
                     </p>
                     <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -336,8 +337,8 @@ export default function ProfilePage() {
                       <p
                         className={`mt-4 text-sm ${
                           avatarNotice.kind === "success"
-                            ? "text-emerald-700"
-                            : "text-rose-700"
+                            ? "text-emerald-400"
+                            : "text-rose-400"
                         }`}
                         role="alert"
                       >
@@ -348,11 +349,11 @@ export default function ProfilePage() {
                 </div>
               </dd>
             </div>
-            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <div className="rounded-3xl bg-white/5 px-5 py-4 border border-white/10">
+              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
                 {user.isGuest ? "Type de compte" : "Email"}
               </dt>
-              <dd className="mt-2 text-lg font-semibold text-slate-950">
+              <dd className="mt-2 text-lg font-semibold text-white">
                 {user.isGuest ? "Invite" : user.email}
               </dd>
             </div>
@@ -361,14 +362,21 @@ export default function ProfilePage() {
                 Pseudo et statut
               </dt>
               <dd className="mt-4">
-                <form className="space-y-4" onSubmit={(event) => void handleProfileSubmit(event)}>
+                <form
+                  className="space-y-4"
+                  onSubmit={(event) => void handleProfileSubmit(event)}
+                >
                   <label className="block">
-                    <span className="text-sm font-medium text-slate-700">Pseudo</span>
+                    <span className="text-sm font-medium text-slate-700">
+                      Pseudo
+                    </span>
                     <input
                       className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
                       maxLength={40}
                       minLength={AUTH_USERNAME_MIN_LENGTH}
-                      onChange={(event) => setProfileUsername(event.target.value)}
+                      onChange={(event) =>
+                        setProfileUsername(event.target.value)
+                      }
                       placeholder="Ton pseudo"
                       type="text"
                       value={profileUsername}
@@ -376,11 +384,15 @@ export default function ProfilePage() {
                   </label>
 
                   <label className="block">
-                    <span className="text-sm font-medium text-slate-700">Statut</span>
+                    <span className="text-sm font-medium text-slate-700">
+                      Statut
+                    </span>
                     <select
                       className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
                       onChange={(event) =>
-                        setProfileStatus(event.target.value as "online" | "offline")
+                        setProfileStatus(
+                          event.target.value as "online" | "offline",
+                        )
                       }
                       value={profileStatus}
                     >
@@ -394,7 +406,9 @@ export default function ProfilePage() {
                       disabled={isProfileSubmitting || !hasProfileChanges}
                       type="submit"
                     >
-                      {isProfileSubmitting ? "Enregistrement..." : "Enregistrer"}
+                      {isProfileSubmitting
+                        ? "Enregistrement..."
+                        : "Enregistrer"}
                     </PrimaryButton>
                     <SecondaryButton
                       disabled={isProfileSubmitting || !hasProfileChanges}
@@ -433,18 +447,13 @@ export default function ProfilePage() {
               <SecondaryButton>Voir mes amis</SecondaryButton>
             </Link>
           </div>
-        </article>
-        <article className="rounded-[2.5rem] border border-slate-900/10 bg-white/80 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.07)] md:col-span-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-            Social
-          </p>
-          <h2 className="mt-4 text-3xl font-semibold text-slate-950">
-            Amis et messages prives
-          </h2>
-          <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-            Le reseau joueur dispose maintenant de sa propre page. Tu peux y
-            ajouter des amis par pseudo, traiter les demandes recues et discuter
-            en prive avec les relations acceptees.
+        </Section>
+        <Section className="md:col-span-2">
+          <SectionLabel className="text-slate-400">Social</SectionLabel>
+          <SectionHeader>Amis et messages prives</SectionHeader>
+          <p className="mt-4 max-w-3xl text-base">
+            Tu peux ajouter des amis pour discuter en privé ou voir quand ils
+            sont en ligne.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link to="/friends">
@@ -454,7 +463,7 @@ export default function ProfilePage() {
               <SecondaryButton>Retourner aux rooms</SecondaryButton>
             </Link>
           </div>
-        </article>
+        </Section>
       </section>
     </main>
   );

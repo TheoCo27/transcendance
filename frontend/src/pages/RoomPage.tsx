@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import RoomChatSection from "../components/room/RoomChatSection";
 import RoomConfigSection from "../components/room/RoomConfigSection";
-import RoomGameSection from "../components/room/RoomGameSection";
 import RoomLeaderboardSection from "../components/room/RoomLeaderboardSection";
 import RoomPlayersSection from "../components/room/RoomPlayersSection";
 import RoomSectionLabel from "../components/room/room-section-label";
@@ -280,7 +279,7 @@ export default function RoomPage() {
                         <PrimaryButton>Se connecter</PrimaryButton>
                       </Link>
                       <Link to="/register">
-                        <SecondaryButton>Creer un compte</SecondaryButton>
+                        <SecondaryButton>Créer un compte</SecondaryButton>
                       </Link>
                     </div>
                   </div>
@@ -324,7 +323,7 @@ export default function RoomPage() {
 
                 {user && !isUserInRoom && room.status !== "waiting" ? (
                   <div className="rounded-3xl border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-7 text-amber-100">
-                    Cette room a deja demarre. Les nouveaux joueurs ne peuvent
+                    Cette room a déja démarrée. Les nouveaux joueurs ne peuvent
                     plus la rejoindre.
                   </div>
                 ) : null}
@@ -352,7 +351,7 @@ export default function RoomPage() {
             </section>
           ) : null}
 
-          <section className="mt-8 grid gap-6 lg:grid-cols-[0.85fr_1.15fr] xl:grid-cols-[0.8fr_1.2fr] xl:items-stretch">
+          <section className="mt-8 grid gap-6 lg:grid-cols-[0.85fr_1.15fr] xl:grid-cols-[0.8fr_1.2fr] xl:items-stretch min-h-125 xl:min-h-150">
             <div className="flex flex-col gap-6 xl:min-h-full">
               <RoomPlayersSection
                 players={room.players}
@@ -363,19 +362,7 @@ export default function RoomPage() {
               <RoomLeaderboardSection entries={scoreboard} />
             </div>
 
-            <div className="flex flex-col gap-6 xl:min-h-full">
-              <RoomGameSection
-                roomStatus={room.status}
-                gameState={gameState}
-                currentQuestion={currentQuestion}
-                remainingMs={remainingMs}
-                isUserInRoom={isUserInRoom}
-                selectedAnswer={selectedAnswer}
-                hasAnsweredCurrentQuestion={hasAnsweredCurrentQuestion}
-                onSelectAnswer={setSelectedAnswer}
-                onSubmitAnswer={submitAnswer}
-              />
-
+            <div className="h-full">
               <RoomChatSection
                 entries={chatEntries}
                 chatInput={chatInput}

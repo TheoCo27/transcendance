@@ -166,9 +166,15 @@ export default function HomePage() {
     void syncRoomList();
   }, [user]);
 
-  const createRoom = async () => {
+  const createRoom = async (roomName: string) => {
     if (!user) {
       toast.error(createRoomErrorMsg["auth_required"]);
+      return;
+    }
+
+    const trimmedRoomName = roomName.trim();
+    if (!trimmedRoomName) {
+      toast.error("Le nom de la room est obligatoire");
       return;
     }
 
@@ -177,7 +183,7 @@ export default function HomePage() {
       await connectWs();
 
       emitWs("room:create", {
-        name: `Room de ${user.username}`,
+        name: trimmedRoomName,
         userId: user.id,
         isPrivate: false,
       });
@@ -213,6 +219,7 @@ export default function HomePage() {
         <HomeHeader
           isCreatingRoom={isCreatingRoom}
           createRoom={createRoom}
+          userName={user?.username}
           userId={user?.id}
         />
         <RoomsList

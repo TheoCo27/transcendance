@@ -65,6 +65,7 @@ export default function RegisterPage() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             disabled={isSubmitting}
+            autoComplete="email"
             required
           />
 
@@ -83,6 +84,7 @@ export default function RegisterPage() {
             onChange={(event) => setUsername(event.target.value)}
             disabled={isSubmitting}
             minLength={AUTH_USERNAME_MIN_LENGTH}
+            autoComplete="username"
             required
           />
 
@@ -102,6 +104,7 @@ export default function RegisterPage() {
             aria-invalid={error ? "true" : "false"}
             disabled={isSubmitting}
             minLength={AUTH_PASSWORD_MIN_LENGTH}
+            autoComplete="new-password"
             required
           />
 

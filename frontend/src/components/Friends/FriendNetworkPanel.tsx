@@ -6,6 +6,7 @@ import type {
   PrivateConversationSummary,
 } from "../../services/users";
 import Avatar from "../Avatar";
+import Section from "../section";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 
@@ -69,7 +70,7 @@ export default function FriendNetworkPanel({
   usernameMinLength,
 }: FriendNetworkPanelProps) {
   return (
-    <section className="rounded-4xl bg-slate-100/80 p-6">
+    <Section>
       {currentUser.isGuest ? (
         <div className="mt-8 rounded-[1.75rem] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950">
           <p className="text-sm font-semibold">Compte invite detecte</p>
@@ -336,6 +337,6 @@ export default function FriendNetworkPanel({
           </div>
         </>
       )}
-    </section>
+    </Section>
   );
 }
