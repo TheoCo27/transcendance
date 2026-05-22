@@ -35,6 +35,8 @@ help:
 	@echo "  make page                -> Open the frontend in Firefox"
 	@echo "  make ps                  -> Show running containers"
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
+	@echo "  make test_http           -> Curl all local HTTP endpoints exposed by the stack"
+	@echo "  make test_https          -> Curl all local HTTPS endpoints exposed by the stack"
 	@echo "  make smoke-test          -> Run the general smoke test (dev op, db, websocket api, authentifcation, front end)"
 	@echo "  make smoke-test-ws       -> Run only the backend WebSocket smoke test"
 	@echo "  make setup-host          -> Verify and auto-prepare the machine for Docker/Podman + mkcert"
@@ -157,6 +159,37 @@ test-stack: compose-check
 	@echo "Frontend : https://localhost:$${FRONTEND_PORT:-3000}"
 	@echo "Backend  : https://localhost:$${BACKEND_PORT:-4000}/health"
 	@echo "Database : localhost:$${POSTGRES_PORT:-5432}"
+
+test_http: env-check
+	@set -e; \
+	optional_urls="http://127.0.0.1:$${PRISMA_STUDIO_PORT:-5555}"; \
+	for url in $$optional_urls; do \
+		echo "==> curl $$url"; \
+		if curl -fsS -o /dev/null -w "HTTP %{http_code} | %{url_effective}\n" "$$url"; then \
+			:; \
+		else \
+			echo "skip: $$url indisponible (Prisma Studio est expose uniquement via 'make dev')"; \
+		fi; \
+	done
+
+test_https: env-check
+	@set -e; \
+	required_urls="https://localhost:$${FRONTEND_PORT:-3000} \
+https://localhost:$${FRONTEND_PORT:-3000}/health \
+https://localhost:$${BACKEND_PORT:-4000}/health"; \
+	optional_urls="https://localhost:$${BACKEND_PORT:-4000}/docs"; \
+	for url in $$required_urls; do \
+		echo "==> curl $$url"; \
+		curl -k -fsS -o /dev/null -w "HTTP %{http_code} | %{url_effective}\n" "$$url"; \
+	done; \
+	for url in $$optional_urls; do \
+		echo "==> curl $$url"; \
+		if curl -k -fsS -o /dev/null -w "HTTP %{http_code} | %{url_effective}\n" "$$url"; then \
+			:; \
+		else \
+			echo "skip: $$url indisponible (Swagger est generalement expose via 'make dev')"; \
+		fi; \
+	done
 
 smoke-test: env-check compose-check
 	bash scripts/smoke-test.sh
