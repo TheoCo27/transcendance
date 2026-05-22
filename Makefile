@@ -22,8 +22,9 @@ help:
 	@echo "  make down                -> Stop containers"
 	@echo "  make clean               -> Remove containers and images, keep volumes"
 	@echo "  make fclean              -> Full clean: containers, images and volumes"
+	@echo "  make prune-build-cache   -> Remove unused Docker/Podman build cache"
 	@echo "  make fclean_all          -> Full clean + engine prune on Docker or Podman"
-	@echo "  make re                  -> Full clean then rebuild and start"
+	@echo "  make re                  -> Full clean, prune build cache, then rebuild and start"
 	@echo "  make restart             -> Restart all containers with rebuild"
 	@echo "  make logs                -> Follow all container logs"
 	@echo "  make logs-back           -> Follow backend logs"
@@ -102,23 +103,29 @@ seed: compose-check
 	$(COMPOSE_DEV) exec backend sh -c "npm run seed"
 
 down: compose-check
-	$(COMPOSE_DEV) down
+	$(COMPOSE_DEV) down --remove-orphans
 
 clean: compose-check
-	$(COMPOSE_DEV) down --rmi all
+	$(COMPOSE_DEV) down --remove-orphans --rmi all
 
 fclean: compose-check
-	$(COMPOSE_DEV) down -v --rmi all
+	$(COMPOSE_DEV) down --remove-orphans -v --rmi all
+
+prune-build-cache: compose-check
+	$(ENGINE) builder prune -af
 
 fclean_all: compose-check
-	$(COMPOSE_DEV) down -v --rmi all
+	$(COMPOSE_DEV) down --remove-orphans -v --rmi all
 	$(ENGINE) system prune -af --volumes
 
-re: fclean up
+re:
+	@$(MAKE) fclean
+	@$(MAKE) prune-build-cache
+	@$(MAKE) up
 
 restart: env-check setup-host compose-check
 	bash scripts/generate-dev-cert.sh
-	$(COMPOSE_DEV) down
+	$(COMPOSE_DEV) down --remove-orphans
 	$(COMPOSE) up --build -d
 	bash scripts/wait-for-containers.sh
 
@@ -395,6 +402,6 @@ push-file-dev:
 .PHONY: help \
 	all \
 	compose-check \
-	up down clean fclean re restart logs logs-back logs-front logs-db page ps test-stack smoke-test smoke-test-ws \
+	up down clean fclean prune-build-cache fclean_all re restart logs logs-back logs-front logs-db page ps test-stack smoke-test smoke-test-ws \
 	shell-back shell-front shell-db \
 	push push-dev branch branch-create branch-create-push duplicate_branch status pull-dev pull-branch merge-dev rebase-dev push-file-dev

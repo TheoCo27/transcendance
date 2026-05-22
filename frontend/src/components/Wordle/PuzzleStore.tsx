@@ -35,6 +35,7 @@ export type PuzzleStoreType = {
 
   won: boolean;
   lost: boolean;
+  endedByTimeout: boolean;
 
   keyGuessed: string[];
   keyInexact: string[];
@@ -82,6 +83,7 @@ export default {
   get lost() {
     return this.currentGuess === this.maxAttempts;
   },
+  endedByTimeout: false,
 
   get submittedGuesses() {
     return this.guesses
@@ -134,16 +136,19 @@ export default {
   },
 
   toast_won() {
+    this.endedByTimeout = false;
     this.ToastMessage = `Vous avez trouvé le bon mot en ${toHHMMSS((Math.floor(Date.now() / 1000) - this.total_time).toString())}`;
     this.ToastId++;
   },
 
   toast_timeup() {
+    this.endedByTimeout = true;
     this.ToastMessage = `Le temps est écoulé, vous n'avez pas trouvé le mot: ${this.word}`;
     this.ToastId++;
   },
 
   toast_lost() {
+    this.endedByTimeout = false;
     this.ToastMessage = `Vous n'avez pas trouvé le mot: ${this.word}`;
     this.ToastId++;
   },
@@ -173,6 +178,7 @@ export default {
     this.currentGuess = 0;
     this.ToastMessage = "";
     this.validWord = true;
+    this.endedByTimeout = false;
   },
 
   submitGuess() {

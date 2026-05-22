@@ -653,10 +653,17 @@ function GamesPage() {
             </div>
 
             {store.won || store.lost ? (
-              <p className="mb-4 text-center text-sm text-white/70">
-                Ta manche est terminée. Tu restes connecté jusqu'à ce que tous
-                les joueurs aient fini.
-              </p>
+              <div className="mb-4 text-center">
+                <p className="text-sm text-white/70">
+                  Ta manche est terminée. Tu restes connecté jusqu'à ce que
+                  tous les joueurs aient fini.
+                </p>
+                {store.lost && store.endedByTimeout ? (
+                  <p className="mt-2 text-base font-semibold uppercase tracking-[0.14em] text-amber-300">
+                    Le mot à trouver était {store.word}
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
             <ProgressBar start_time={store.start_time} store={store} />
