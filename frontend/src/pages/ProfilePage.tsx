@@ -446,17 +446,6 @@ export default function ProfilePage() {
             </div>
           </dl>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link to="/admin">
-              <PrimaryButton>Creer un quiz</PrimaryButton>
-            </Link>
-            <Link to="/join">
-              <SecondaryButton>Rejoindre une room</SecondaryButton>
-            </Link>
-            <Link to="/friends">
-              <SecondaryButton>Voir mes amis</SecondaryButton>
-            </Link>
-          </div>
         </Section>
         <Section className="md:col-span-2">
           <SectionLabel className="text-slate-400">Social</SectionLabel>

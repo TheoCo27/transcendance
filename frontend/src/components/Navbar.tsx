@@ -1,6 +1,5 @@
 import {
   ChevronDown,
-  CirclePlus,
   LogOut,
   UserRound,
   UsersRound,
@@ -67,7 +66,6 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-6 text-sm font-medium md:flex">
-          <Link to="/admin">Créer un quiz</Link>
           <Link to="/friends">Amis</Link>
         </div>
 
@@ -115,17 +113,6 @@ export default function Navbar() {
                     >
                       <UsersRound className="size-5" />
                       Amis
-                    </Link>
-                    <Link
-                      className="mt-1 flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-text transition hover:bg-white/10"
-                      role="menuitem"
-                      to="/admin"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                      }}
-                    >
-                      <CirclePlus className="size-5" />
-                      Nouveau quiz
                     </Link>
                     <button
                       className="mt-1 flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm! font-semibold text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
