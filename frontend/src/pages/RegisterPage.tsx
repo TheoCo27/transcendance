@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Input from "../components/ui/input";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import { getUserFacingErrorMessage } from "../services/api";
 import {
   AUTH_PASSWORD_MIN_LENGTH,
   AUTH_USERNAME_MIN_LENGTH,
@@ -34,9 +35,7 @@ export default function RegisterPage() {
       navigate("/");
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Échec de l'inscription",
+        getUserFacingErrorMessage(submitError, "Échec de l'inscription"),
       );
     } finally {
       setIsSubmitting(false);

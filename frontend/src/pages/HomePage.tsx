@@ -4,6 +4,7 @@ import HomeHeader from "../components/Home/HomeHeader";
 import RoomsList from "../components/Home/RoomsList";
 import { useToast } from "../components/ui/toast";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { getUserFacingServerMessage } from "../services/api";
 import { getRooms, type Room } from "../services/rooms";
 import { connectWs, emitWs, offWs, onWs } from "../services/ws";
 import { connectRoomErrorMsg, createRoomErrorMsg } from "../utils/err-msg";
@@ -50,8 +51,13 @@ export default function HomePage() {
 
       if (!response.success || !response.data) {
         const message =
-          response.error?.message ?? createRoomErrorMsg["unknown_error"];
-        toast.error(message);
+          getUserFacingServerMessage(
+            response.error?.message,
+            createRoomErrorMsg["unknown_error"],
+          );
+        if (message) {
+          toast.error(message);
+        }
         return;
       }
 
@@ -75,8 +81,13 @@ export default function HomePage() {
 
       if (!response.success || !response.data) {
         const message =
-          response.error?.message ?? connectRoomErrorMsg["unknown_error"];
-        toast.error(message);
+          getUserFacingServerMessage(
+            response.error?.message,
+            connectRoomErrorMsg["unknown_error"],
+          );
+        if (message) {
+          toast.error(message);
+        }
         return;
       }
 
@@ -90,8 +101,13 @@ export default function HomePage() {
     }) => {
       setJoiningRoomId(null);
       const message =
-        response.error?.message ?? connectRoomErrorMsg["unknown_error"];
-      toast.error(message);
+        getUserFacingServerMessage(
+          response.error?.message,
+          connectRoomErrorMsg["unknown_error"],
+        );
+      if (message) {
+        toast.error(message);
+      }
     };
 
     const handleRoomCreateError = (response: {
@@ -101,8 +117,13 @@ export default function HomePage() {
     }) => {
       setIsCreatingRoom(false);
       const message =
-        response.error?.message ?? createRoomErrorMsg["unknown_error"];
-      toast.error(message);
+        getUserFacingServerMessage(
+          response.error?.message,
+          createRoomErrorMsg["unknown_error"],
+        );
+      if (message) {
+        toast.error(message);
+      }
     };
 
     const handleWsAuthError = (response: {
@@ -113,8 +134,13 @@ export default function HomePage() {
       setIsCreatingRoom(false);
       setJoiningRoomId(null);
       const message =
-        response.error?.message ?? "Authentification WebSocket requise";
-      toast.error(message);
+        getUserFacingServerMessage(
+          response.error?.message,
+          "Authentification WebSocket requise",
+        );
+      if (message) {
+        toast.error(message);
+      }
     };
 
     onWs("room:list", handleRoomList);

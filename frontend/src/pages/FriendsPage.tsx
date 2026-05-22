@@ -8,6 +8,7 @@ import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
+import { getUserFacingErrorMessage } from "../services/api";
 import {
   getConversationSummaries,
   getMyFriendOverview,
@@ -137,9 +138,10 @@ export default function FriendsPage() {
       } catch (error) {
         if (!cancelled) {
           setFriendsError(
-            error instanceof Error
-              ? error.message
-              : "Impossible de charger la page amis",
+            getUserFacingErrorMessage(
+              error,
+              "Impossible de charger la page amis",
+            ),
           );
         }
       } finally {
@@ -221,9 +223,10 @@ export default function FriendsPage() {
       } catch (error) {
         if (!cancelled) {
           setConversationError(
-            error instanceof Error
-              ? error.message
-              : "Impossible de charger cette conversation",
+            getUserFacingErrorMessage(
+              error,
+              "Impossible de charger cette conversation",
+            ),
           );
         }
       } finally {
@@ -294,13 +297,16 @@ export default function FriendsPage() {
       });
       await refreshFriendData();
     } catch (error) {
-      setFriendNotice({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Impossible d'ajouter cet ami",
-      });
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible d'ajouter cet ami",
+      );
+      if (message) {
+        setFriendNotice({
+          kind: "error",
+          message,
+        });
+      }
     } finally {
       setIsSendingRequest(false);
     }
@@ -321,13 +327,16 @@ export default function FriendsPage() {
       });
       await refreshFriendData();
     } catch (error) {
-      setFriendNotice({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Impossible de mettre a jour la demande",
-      });
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible de mettre a jour la demande",
+      );
+      if (message) {
+        setFriendNotice({
+          kind: "error",
+          message,
+        });
+      }
     } finally {
       setPendingActionId(null);
     }
@@ -351,9 +360,7 @@ export default function FriendsPage() {
       ]);
     } catch (error) {
       setConversationError(
-        error instanceof Error
-          ? error.message
-          : "Impossible d'envoyer le message",
+        getUserFacingErrorMessage(error, "Impossible d'envoyer le message"),
       );
     } finally {
       setIsSendingMessage(false);

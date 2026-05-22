@@ -205,7 +205,7 @@ export class PrivateMessagesService {
 
     if (!limitResult.allowed) {
       throw new TooManyRequestsException(
-        `Vous envoyez trop de messages prives. Reessayez dans ${Math.ceil(limitResult.retryAfterMs / 1000)} s.`,
+        `Vous avez envoye trop de messages. Reessayez dans ${Math.ceil(limitResult.retryAfterMs / 1000)} secondes.`,
       );
     }
 

@@ -13,6 +13,7 @@ import ProgressBar from "../components/Wordle/ProgressBar";
 import PuzzleStore from "../components/Wordle/PuzzleStore";
 import RulesPanel from "../components/Wordle/RulesPanel";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { getUserFacingErrorMessage } from "../services/api";
 import { getGameState, type GameState } from "../services/game";
 import { getRoomById, type Room } from "../services/rooms";
 import { getUserById } from "../services/users";
@@ -161,9 +162,10 @@ function GamesPage() {
       } catch (error) {
         hasFinishedWordleRef.current = false;
         setPageError(
-          error instanceof Error
-            ? error.message
-            : "Impossible de finaliser la partie Wordle.",
+          getUserFacingErrorMessage(
+            error,
+            "Impossible de finaliser la partie Wordle.",
+          ),
         );
       }
     };
@@ -220,9 +222,7 @@ function GamesPage() {
         setGameState(fetchedGameState);
       } catch (error) {
         setPageError(
-          error instanceof Error
-            ? error.message
-            : "Impossible de charger cette room.",
+          getUserFacingErrorMessage(error, "Impossible de charger cette room."),
         );
       } finally {
         setIsLoadingPage(false);

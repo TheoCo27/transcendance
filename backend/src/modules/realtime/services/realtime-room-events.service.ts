@@ -274,7 +274,7 @@ export class RealtimeRoomEventsService {
         "chat:message:error",
         this.response.fail(
           "TOO_MANY_REQUESTS",
-          `Vous envoyez trop de messages. Reessayez dans ${Math.ceil(limitResult.retryAfterMs / 1000)} s.`,
+          `Vous avez envoye trop de messages. Reessayez dans ${Math.ceil(limitResult.retryAfterMs / 1000)} secondes.`,
         ),
       );
       return;

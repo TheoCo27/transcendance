@@ -8,6 +8,7 @@ import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { getUserFacingErrorMessage } from "../services/api";
 import { createQuiz } from "../services/quizzes";
 
 type DraftQuestion = {
@@ -113,7 +114,7 @@ export default function QuizAdminPage() {
       navigate(`/quiz/${createdQuiz.id}`);
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : "Impossible de creer le quiz.",
+        getUserFacingErrorMessage(error, "Impossible de creer le quiz."),
       );
     } finally {
       setIsSubmitting(false);
