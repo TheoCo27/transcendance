@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HomeHeader from "../components/Home/HomeHeader";
 import RoomsList from "../components/Home/RoomsList";
@@ -12,10 +12,16 @@ import { connectRoomErrorMsg, createRoomErrorMsg } from "../utils/err-msg";
 export default function HomePage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { user } = useAuthSession();
+  const { user, isLoading: isSessionLoading } = useAuthSession();
   const [recentRooms, setRecentRooms] = useState<Room[]>([]);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [joiningRoomId, setJoiningRoomId] = useState<number | null>(null);
+  const roomListWsVersionRef = useRef(0);
+  const latestRestRequestIdRef = useRef(0);
+
+  const applyRoomListSnapshot = useCallback((rooms: Room[]) => {
+    setRecentRooms(rooms.slice(0, 5));
+  }, []);
 
   useEffect(() => {
     const handleRoomList = (response: {
@@ -27,7 +33,8 @@ export default function HomePage() {
         return;
       }
 
-      setRecentRooms(response.data.slice(0, 5));
+      roomListWsVersionRef.current += 1;
+      applyRoomListSnapshot(response.data);
     };
 
     const handleRoomListUpdated = (response: {
@@ -39,7 +46,8 @@ export default function HomePage() {
         return;
       }
 
-      setRecentRooms(response.data.slice(0, 5));
+      roomListWsVersionRef.current += 1;
+      applyRoomListSnapshot(response.data);
     };
 
     const handleRoomCreated = (response: {
@@ -63,6 +71,7 @@ export default function HomePage() {
 
       const createdRoom = response.data;
 
+      roomListWsVersionRef.current += 1;
       setRecentRooms((previousRooms) =>
         [
           createdRoom,
@@ -160,20 +169,45 @@ export default function HomePage() {
       offWs("room:create:error", handleRoomCreateError);
       offWs("ws:auth:error", handleWsAuthError);
     };
-  }, [navigate, toast]);
+  }, [applyRoomListSnapshot, navigate, toast]);
 
   useEffect(() => {
     const loadRecentRooms = async () => {
+      const requestId = latestRestRequestIdRef.current + 1;
+      latestRestRequestIdRef.current = requestId;
+      const wsVersionAtRequestStart = roomListWsVersionRef.current;
+
       try {
         const rooms = await getRooms();
-        setRecentRooms(rooms.slice(0, 5));
+
+        if (
+          requestId !== latestRestRequestIdRef.current ||
+          wsVersionAtRequestStart !== roomListWsVersionRef.current
+        ) {
+          return;
+        }
+
+        applyRoomListSnapshot(rooms);
       } catch {
-        setRecentRooms([]);
+        if (
+          requestId !== latestRestRequestIdRef.current ||
+          wsVersionAtRequestStart !== roomListWsVersionRef.current
+        ) {
+          return;
+        }
+
+        setRecentRooms((currentRooms) =>
+          currentRooms.length > 0 ? currentRooms : [],
+        );
       }
     };
 
+    if (isSessionLoading) {
+      return;
+    }
+
     void loadRecentRooms();
-  }, [user]);
+  }, [applyRoomListSnapshot, isSessionLoading]);
 
   useEffect(() => {
     if (!user) {
