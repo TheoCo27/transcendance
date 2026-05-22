@@ -1,6 +1,7 @@
 // Ce fichier contient toute la logique metier d'authentification:
 // login classique, guest login, session JWT et OAuth Google.
 import { GameService } from "@/modules/game/game.service";
+import { RealtimeBroadcastService } from "@/modules/realtime/services/realtime-broadcast.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
 import { LoginDto } from "@/modules/users/dto/login.dto";
 import { RegisterDto } from "@/modules/users/dto/register.dto";
@@ -88,6 +89,7 @@ export class AuthService {
     private jwtService: JwtService,
     private readonly roomsService: RoomsService,
     private readonly gameService: GameService,
+    private readonly realtimeBroadcast: RealtimeBroadcastService,
   ) {}
 
   // Verifie les identifiants classiques d'un utilisateur.
@@ -417,7 +419,9 @@ export class AuthService {
         const user = await this.usersService.findUser({ id: auth.sub });
 
         if (user) {
-          await this.cleanupUserRoomsOnLogout(user.id);
+          const hasRoomStateChanged = await this.cleanupUserRoomsOnLogout(
+            user.id,
+          );
 
           if (user.isGuest) {
             await this.archiveGuestIdentity(user.id);
@@ -426,6 +430,10 @@ export class AuthService {
               where: { id: auth.sub },
               data: { status: "offline" },
             });
+          }
+
+          if (hasRoomStateChanged) {
+            await this.realtimeBroadcast.broadcastRoomList();
           }
         }
       } catch {
@@ -437,8 +445,9 @@ export class AuthService {
   }
 
   // Retire immediatement l'utilisateur de toutes ses rooms au logout.
-  private async cleanupUserRoomsOnLogout(userId: number): Promise<void> {
+  private async cleanupUserRoomsOnLogout(userId: number): Promise<boolean> {
     const rooms = await this.roomsService.list();
+    let hasRoomStateChanged = false;
 
     for (const room of rooms) {
       if (!room.players.some((player) => player.userId === userId)) {
@@ -447,6 +456,7 @@ export class AuthService {
 
       try {
         const updatedRoom = await this.roomsService.leave(room.id, userId);
+        hasRoomStateChanged = true;
 
         if (updatedRoom.players.length === 0) {
           this.gameService.clearRoomState(room.id);
@@ -456,6 +466,8 @@ export class AuthService {
         // La room a pu etre supprimee ou mise a jour entre temps.
       }
     }
+
+    return hasRoomStateChanged;
   }
 
   // Retourne l'utilisateur associe a la session courante.

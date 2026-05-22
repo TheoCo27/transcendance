@@ -9,6 +9,7 @@ import { RealtimeGateway } from "./realtime.gateway";
 import { RealtimeGameEventsService } from "./services/realtime-game-events.service";
 import { RealtimeGameRuntimeService } from "./services/realtime-game-runtime.service";
 import { RealtimeAuthService } from "./services/realtime-auth.service";
+import { RealtimeBroadcastService } from "./services/realtime-broadcast.service";
 import { RealtimePresenceService } from "./services/realtime-presence.service";
 import { RealtimeResponseService } from "./services/realtime-response.service";
 import { RealtimeRoomEventsService } from "./services/realtime-room-events.service";
@@ -20,6 +21,7 @@ import { RealtimeValidationService } from "./services/realtime-validation.servic
   providers: [
     RealtimeGateway,
     RealtimeAuthService,
+    RealtimeBroadcastService,
     RealtimeResponseService,
     RealtimeValidationService,
     RealtimePresenceService,
@@ -28,5 +30,6 @@ import { RealtimeValidationService } from "./services/realtime-validation.servic
     RealtimeRoomEventsService,
     RealtimeRateLimitService,
   ],
+  exports: [RealtimeBroadcastService],
 })
 export class RealtimeModule {}
