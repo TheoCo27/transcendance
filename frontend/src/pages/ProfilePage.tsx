@@ -300,7 +300,7 @@ export default function ProfilePage() {
           </p>
 
           <dl className="mt-8 grid gap-4">
-            <div className="rounded-3xl bg-white/5 px-5 py-4 border border-white/10">
+            <div className="rounded-3xl bg-white/5 px-6 py-6 border border-white/10">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
                 Photo de profil
               </dt>
@@ -359,7 +359,7 @@ export default function ProfilePage() {
                 </div>
               </dd>
             </div>
-            <div className="rounded-3xl bg-white/5 px-5 py-4 border border-white/10">
+            <div className="rounded-3xl bg-white/5 px-6 py-6 border border-white/10">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
                 {user.isGuest ? "Type de compte" : "Email"}
               </dt>
@@ -367,7 +367,7 @@ export default function ProfilePage() {
                 {user.isGuest ? "Invite" : user.email}
               </dd>
             </div>
-            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
+            <div className="rounded-3xl bg-slate-100/80 px-6 py-6">
               <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Pseudo et statut
               </dt>
@@ -445,18 +445,7 @@ export default function ProfilePage() {
               </dd>
             </div>
           </dl>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link to="/admin">
-              <PrimaryButton>Creer un quiz</PrimaryButton>
-            </Link>
-            <Link to="/join">
-              <SecondaryButton>Rejoindre une room</SecondaryButton>
-            </Link>
-            <Link to="/friends">
-              <SecondaryButton>Voir mes amis</SecondaryButton>
-            </Link>
-          </div>
+          
         </Section>
         <Section className="md:col-span-2">
           <SectionLabel className="text-slate-400">Social</SectionLabel>
