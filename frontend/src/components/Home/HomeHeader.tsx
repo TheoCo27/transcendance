@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getUserFacingErrorMessage } from "../../services/api";
 import { getRoomByName } from "../../services/rooms";
 import { connectWs, emitWs } from "../../services/ws";
 import { connectRoomErrorMsg } from "../../utils/err-msg";
@@ -70,11 +71,13 @@ export default function HomeHeader({
           const room = await getRoomByName(trimmedInput);
           roomId = room.id;
         } catch (nameLookupError) {
-          toast.error(
-            nameLookupError instanceof Error
-              ? nameLookupError.message
-              : connectRoomErrorMsg["unknown_error"],
+          const message = getUserFacingErrorMessage(
+            nameLookupError,
+            connectRoomErrorMsg["unknown_error"],
           );
+          if (message) {
+            toast.error(message);
+          }
           return;
         }
       }

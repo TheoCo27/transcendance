@@ -4,6 +4,7 @@ import RoomSection from "../components/room/RoomSection";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { getUserFacingErrorMessage } from "../services/api";
 import { getQuizById, type Quiz } from "../services/quizzes";
 import { getRoomById, type Room } from "../services/rooms";
 
@@ -52,9 +53,10 @@ export default function RoomAccessPage() {
         }
       } catch (error) {
         setPageError(
-          error instanceof Error
-            ? error.message
-            : "Impossible de charger cette invitation.",
+          getUserFacingErrorMessage(
+            error,
+            "Impossible de charger cette invitation.",
+          ),
         );
       } finally {
         setIsLoadingPage(false);

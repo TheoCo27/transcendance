@@ -10,6 +10,7 @@ import {
   login,
   loginAsGuest,
 } from "../services/auth";
+import { getUserFacingErrorMessage } from "../services/api";
 import { oauthErrorMsg } from "../utils/err-msg";
 
 export default function LoginPage() {
@@ -52,11 +53,7 @@ export default function LoginPage() {
       toast.success("Connecte avec succes");
       navigateAfterAuth();
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Echec de connexion",
-      );
+      setError(getUserFacingErrorMessage(submitError, "Echec de connexion"));
     } finally {
       setIsSubmitting(false);
     }
@@ -75,9 +72,7 @@ export default function LoginPage() {
       navigateAfterAuth();
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Echec de connexion invite",
+        getUserFacingErrorMessage(submitError, "Echec de connexion invite"),
       );
     } finally {
       setIsGuestSubmitting(false);

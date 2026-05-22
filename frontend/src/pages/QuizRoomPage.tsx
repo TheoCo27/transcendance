@@ -3,6 +3,10 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
+import {
+  getUserFacingErrorMessage,
+  getUserFacingServerMessage,
+} from "../services/api";
 import { getQuizById, type Quiz } from "../services/quizzes";
 import { getRoomsByQuizId, type Room } from "../services/rooms";
 import {
@@ -88,9 +92,10 @@ export default function QuizRoomPage() {
       setQuizLeaderboard(fetchedLeaderboard);
     } catch (error) {
       setPageError(
-        error instanceof Error
-          ? error.message
-          : "Impossible de charger cette page quiz.",
+        getUserFacingErrorMessage(
+          error,
+          "Impossible de charger cette page quiz.",
+        ),
       );
     } finally {
       setIsLoadingPage(false);
@@ -148,7 +153,12 @@ export default function QuizRoomPage() {
         return;
       }
 
-      setRoomActionError(response.error?.message ?? "Action room impossible.");
+      setRoomActionError(
+        getUserFacingServerMessage(
+          response.error?.message,
+          "Action room impossible.",
+        ),
+      );
     };
 
     onWs("room:created", handleRoomCreated);
@@ -180,9 +190,10 @@ export default function QuizRoomPage() {
       });
     } catch (error) {
       setRoomActionError(
-        error instanceof Error
-          ? error.message
-          : "Connexion temps reel impossible pour creer la room.",
+        getUserFacingErrorMessage(
+          error,
+          "Connexion temps reel impossible pour creer la room.",
+        ),
       );
     }
   };

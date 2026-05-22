@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
+import { getUserFacingErrorMessage } from "../services/api";
 import { getQuizzes, type Quiz } from "../services/quizzes";
 import { getRoomsByQuizId } from "../services/rooms";
 
@@ -45,9 +46,7 @@ export default function JoinQuizRoomPage() {
         setQuizzes(quizzesWithRooms);
       } catch (loadError) {
         setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Impossible de charger les quiz.",
+          getUserFacingErrorMessage(loadError, "Impossible de charger les quiz."),
         );
       } finally {
         setIsLoading(false);

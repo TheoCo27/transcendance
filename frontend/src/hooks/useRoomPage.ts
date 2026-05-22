@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { RoomConfigForm } from "../components/room/room-types";
 import { useToast } from "../components/ui/toast";
+import {
+  getUserFacingErrorMessage,
+  getUserFacingServerMessage,
+} from "../services/api";
 import { getGameState, type GameState } from "../services/game";
 import { getQuizzes, type Quiz } from "../services/quizzes";
 import { getRoomById, updateRoom, type Room } from "../services/rooms";
@@ -130,9 +134,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setGameState(await getGameState(roomId));
     } catch (error) {
       setPageError(
-        error instanceof Error
-          ? error.message
-          : "Impossible de rafraichir cette room.",
+        getUserFacingErrorMessage(error, "Impossible de rafraichir cette room."),
       );
     }
   }, [roomId]);
@@ -160,10 +162,10 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         setForm(buildFormFromRoom(fetchedRoom));
         setGameState(fetchedGameState);
       } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Impossible de charger cette room.";
+        const message = getUserFacingErrorMessage(
+          error,
+          "Impossible de charger cette room.",
+        );
         setPageError(message);
       } finally {
         setIsLoadingPage(false);
@@ -375,7 +377,12 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         return;
       }
 
-      setChatError(response.error?.message ?? "Envoi du message impossible.");
+      setChatError(
+        getUserFacingServerMessage(
+          response.error?.message,
+          "Envoi du message impossible.",
+        ),
+      );
     };
 
     const handleRoomError = (response: WsResponse<never>) => {
@@ -385,7 +392,12 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
 
       setIsStarting(false);
       setIsLeaving(false);
-      setRoomActionError(response.error?.message ?? "Action room impossible.");
+      setRoomActionError(
+        getUserFacingServerMessage(
+          response.error?.message,
+          "Action room impossible.",
+        ),
+      );
     };
 
     onWs("room:joined", handleRoomJoined);
@@ -584,12 +596,14 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       await saveCurrentForm();
       toast.success("Configuration enregistrée");
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Impossible d'enregistrer la configuration";
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible d'enregistrer la configuration",
+      );
       setPageError(message);
-      toast.error(message);
+      if (message) {
+        toast.error(message);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -610,9 +624,10 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       });
     } catch (error) {
       setRoomActionError(
-        error instanceof Error
-          ? error.message
-          : "Connexion temps reel impossible pour rejoindre la room.",
+        getUserFacingErrorMessage(
+          error,
+          "Connexion temps reel impossible pour rejoindre la room.",
+        ),
       );
     }
   }, [navigate, room, user]);
@@ -633,9 +648,10 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     } catch (error) {
       setIsLeaving(false);
       setRoomActionError(
-        error instanceof Error
-          ? error.message
-          : "Connexion temps reel impossible pour quitter la room.",
+        getUserFacingErrorMessage(
+          error,
+          "Connexion temps reel impossible pour quitter la room.",
+        ),
       );
     }
   }, [isUserInRoom, room, user]);
@@ -678,9 +694,10 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     } catch (error) {
       setIsStarting(false);
       setRoomActionError(
-        error instanceof Error
-          ? error.message
-          : "Connexion temps reel impossible pour lancer la room.",
+        getUserFacingErrorMessage(
+          error,
+          "Connexion temps reel impossible pour lancer la room.",
+        ),
       );
     }
   }, [form, isUserInRoom, room, saveCurrentForm, user]);
@@ -708,9 +725,10 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setHasAnsweredCurrentQuestion(true);
     } catch (error) {
       setRoomActionError(
-        error instanceof Error
-          ? error.message
-          : "Connexion temps reel impossible pour envoyer la reponse.",
+        getUserFacingErrorMessage(
+          error,
+          "Connexion temps reel impossible pour envoyer la reponse.",
+        ),
       );
     }
   }, [currentQuestion, isUserInRoom, room, selectedAnswer, user]);
@@ -731,9 +749,10 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setChatInput("");
     } catch (error) {
       setChatError(
-        error instanceof Error
-          ? error.message
-          : "Connexion temps reel impossible pour envoyer le message.",
+        getUserFacingErrorMessage(
+          error,
+          "Connexion temps reel impossible pour envoyer le message.",
+        ),
       );
     }
   }, [chatInput, isUserInRoom, room, user]);

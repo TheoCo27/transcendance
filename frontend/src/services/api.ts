@@ -9,6 +9,40 @@ type ApiResponse<T> = {
   error: ApiError | null;
 };
 
+const INTERNAL_SERVER_ERROR_PATTERN = /^internal serv(?:e|o)r error\.?$/i;
+
+export function getUserFacingServerMessage(
+  message: string | null | undefined,
+  fallback?: string,
+): string | null {
+  if (typeof message === "string" && message.trim().length > 0) {
+    if (INTERNAL_SERVER_ERROR_PATTERN.test(message.trim())) {
+      console.error("Suppressed backend error message:", message);
+      return null;
+    }
+
+    return message;
+  }
+
+  return fallback ?? null;
+}
+
+export function getUserFacingErrorMessage(
+  error: unknown,
+  fallback?: string,
+): string | null {
+  if (error instanceof Error) {
+    if (INTERNAL_SERVER_ERROR_PATTERN.test(error.message.trim())) {
+      console.error("Suppressed backend error:", error);
+      return null;
+    }
+
+    return error.message.trim().length > 0 ? error.message : (fallback ?? null);
+  }
+
+  return fallback ?? null;
+}
+
 export async function apiRequest<T>(
   path: string,
   init?: RequestInit,
