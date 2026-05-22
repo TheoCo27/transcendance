@@ -8,7 +8,6 @@ ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 BREW_ROOT="${HOME}/.linuxbrew/Homebrew"
 BREW_BIN_DIR="${HOME}/.linuxbrew/bin"
 BREW_BIN="${BREW_BIN_DIR}/brew"
-BASHRC_FILE="${HOME}/.bashrc"
 ZSHRC_FILE="${HOME}/.zshrc"
 BREW_SHELLENV_LINE='eval "$($HOME/.linuxbrew/bin/brew shellenv)"'
 COMMENTED_ZSH_BLOCK_START="#if [ -t 1 ]; then"
@@ -30,57 +29,6 @@ ok() {
 fail() {
 	printf '[ko] %s\n' "$1" >&2
 	exit 1
-}
-
-append_line_if_missing() {
-	local file="$1"
-	local line="$2"
-
-	mkdir -p "$(dirname "$file")"
-	touch "$file"
-
-	if ! grep -F -x -q "$line" "$file"; then
-		printf '\n%s\n' "$line" >>"$file"
-		ok "Ajout de Homebrew au PATH dans ${file}"
-	fi
-}
-
-ensure_school_bashrc_layout() {
-	local tmp_file
-
-	mkdir -p "$(dirname "$BASHRC_FILE")"
-	touch "$BASHRC_FILE"
-	tmp_file="$(mktemp)"
-
-	awk '
-		BEGIN {
-			in_block = 0
-		}
-		/^[[:space:]]*if[[:space:]]+\[[[:space:]]+-t[[:space:]]+1[[:space:]]*\][[:space:]]*;[[:space:]]*then[[:space:]]*$/ {
-			print "#if [ -t 1 ]; then"
-			in_block = 1
-			next
-		}
-		in_block && /^[[:space:]]*exec[[:space:]]+zsh[[:space:]]*$/ {
-			print "#exec zsh"
-			next
-		}
-		in_block && /^[[:space:]]*fi[[:space:]]*$/ {
-			print "#fi"
-			in_block = 0
-			next
-		}
-		{
-			print
-		}
-	' "$BASHRC_FILE" >"$tmp_file"
-
-	mv "$tmp_file" "$BASHRC_FILE"
-
-	append_line_if_missing "$BASHRC_FILE" "$COMMENTED_ZSH_BLOCK_START"
-	append_line_if_missing "$BASHRC_FILE" "$COMMENTED_ZSH_BLOCK_EXEC"
-	append_line_if_missing "$BASHRC_FILE" "$COMMENTED_ZSH_BLOCK_END"
-	append_line_if_missing "$BASHRC_FILE" "$BREW_SHELLENV_LINE"
 }
 
 ensure_shellenv_loaded() {
@@ -114,16 +62,6 @@ ensure_linuxbrew() {
 	ok "Homebrew local installe"
 }
 
-ensure_brew_shellenv_in_rc() {
-	ensure_school_bashrc_layout
-
-	case "${SHELL:-}" in
-		*/zsh)
-			append_line_if_missing "$ZSHRC_FILE" "$BREW_SHELLENV_LINE"
-			;;
-	esac
-}
-
 ensure_mkcert() {
 	if command -v mkcert >/dev/null 2>&1; then
 		ok "mkcert deja disponible"
@@ -131,7 +69,6 @@ ensure_mkcert() {
 	fi
 
 	ensure_linuxbrew
-	ensure_brew_shellenv_in_rc
 	ensure_shellenv_loaded
 
 	log "Installation de mkcert via Homebrew"
@@ -140,26 +77,22 @@ ensure_mkcert() {
 }
 
 ensure_mkcert_ca() {
-	local caroot root_ca install_output
+	local caroot root_ca
 
 	ensure_mkcert
 	caroot="$(mkcert -CAROOT)"
 	root_ca="${caroot}/rootCA.pem"
 
-	log "Installation ou verification de l'autorite locale mkcert"
-	if install_output="$(mkcert -install 2>&1)"; then
-		ok "Autorite locale mkcert installee et approuvee"
-		return 0
-	fi
-
 	if [ -s "$root_ca" ]; then
-		warn "Le trust systeme n'a pas pu etre configure automatiquement sur cette machine."
-		warn "Le projet continuera avec la CA locale mkcert. Les scripts internes utilisent deja certs/mkcert-rootCA.pem."
-		printf '%s\n' "$install_output" >&2
+		ok "Autorite locale mkcert deja installee"
 		return 0
 	fi
 
-	fail "mkcert n'a pas pu preparer la CA locale. Sortie:\n${install_output}"
+	log "Installation de l'autorite locale mkcert"
+	if ! mkcert -install; then
+		fail "mkcert -install a echoue. Sur Fedora, verifie que les outils NSS du poste sont disponibles."
+	fi
+	ok "Autorite locale mkcert installee"
 }
 
 ensure_nodocker_marker() {
@@ -191,23 +124,12 @@ ensure_compose_runtime() {
 }
 
 main() {
-	ensure_mkcert_ca
-}
-
-main_full() {
+	if [ -x "$HOME/.linuxbrew/bin/brew" ]; then
+		eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"
+	fi
 	ensure_mkcert_ca
 	ensure_nodocker_marker
 	ensure_compose_runtime
 }
 
-case "${1:-}" in
-	--tls-only)
-		main
-		;;
-	"")
-		main_full
-		;;
-	*)
-		fail "Option inconnue: $1"
-		;;
-esac
+main "$@"
