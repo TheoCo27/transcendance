@@ -15,7 +15,6 @@ import {
 } from "../services/scores";
 import {
   connectWs,
-  disconnectWs,
   emitWs,
   offWs,
   onWs,
@@ -105,21 +104,6 @@ export default function QuizRoomPage() {
   useEffect(() => {
     void loadQuizPage();
   }, [quizId]);
-
-  useEffect(() => {
-    if (isSessionLoading) {
-      return;
-    }
-
-    if (user) {
-      void connectWs().catch(() => {
-        // The page surfaces action-level errors when an actual room action is attempted.
-      });
-      return;
-    }
-
-    disconnectWs();
-  }, [isSessionLoading, user]);
 
   useEffect(() => {
     if (!user || !Number.isFinite(quizId) || quizId <= 0) {
