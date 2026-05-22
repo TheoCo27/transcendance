@@ -17,6 +17,10 @@ import { RealtimeGameRuntimeService } from "./services/realtime-game-runtime.ser
 import { RealtimePresenceService } from "./services/realtime-presence.service";
 import { RealtimeResponseService } from "./services/realtime-response.service";
 import { RealtimeRoomEventsService } from "./services/realtime-room-events.service";
+import { UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { WsThrottlerGuard } from '@/common/guards/ws-throttler.guard';
+
 
 @WebSocketGateway({
   namespace: "/ws",
@@ -157,6 +161,8 @@ export class RealtimeGateway
   }
 
   // Traite l'envoi d'un message de chat temps reel.
+  @UseGuards(WsThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 30000}})
   @SubscribeMessage("chat:message")
   async handleChatMessage(
     @MessageBody() payload: unknown,
