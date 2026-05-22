@@ -179,6 +179,9 @@ export default {
     this.ToastMessage = "";
     this.validWord = true;
     this.endedByTimeout = false;
+    this.start_time = -1;
+    this.total_time = -1;
+    this.rulePannelClosed = false;
   },
 
   submitGuess() {
@@ -203,15 +206,30 @@ export default {
   },
 
   checkTimeUp() {
-    if (this.timeStatus) {
-      if (this.guesses[this.currentGuess].length === this.nbr_letters)
-        this.toast_validWord(this.guesses[this.currentGuess]);
-      else this.toast_x_letters();
+    if (this.start_time < 0 || this.won || this.lost) {
+      return;
+    }
 
+    const now = Math.floor(Date.now() / 1000);
+    const elapsed = now - Math.floor(this.start_time);
+    const missedTurns = Math.floor(elapsed / this.time_per_word);
+
+    if (missedTurns <= 0) {
+      return;
+    }
+
+    let turnsToConsume = missedTurns;
+    while (turnsToConsume > 0 && !this.won && !this.lost) {
       this.currentGuess++;
-      this.start_time = Date.now() / 1000; //RESET TIMER (takes current time)
-      if (this.currentGuess === this.maxAttempts)
-        this.won ? this.toast_won() : this.toast_timeup();
+      turnsToConsume--;
+    }
+
+    const remainder = elapsed % this.time_per_word;
+    this.start_time = now - remainder;
+
+    if (this.currentGuess >= this.maxAttempts) {
+      this.currentGuess = this.maxAttempts;
+      this.toast_timeup();
     }
   },
 

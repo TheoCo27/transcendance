@@ -86,6 +86,55 @@ type TimerPayload = {
   remainingMs: number;
 };
 
+type PersistedWordleState = {
+  sharedWord: string;
+  wordLength: number;
+  maxAttempts: number;
+  guesses: string[];
+  currentGuess: number;
+  startTime: number;
+  totalTime: number;
+  rulePanelClosed: boolean;
+  endedByTimeout: boolean;
+};
+
+function buildWordleStorageKey(roomId: number, userId: number): string {
+  return `wordle:${roomId}:user:${userId}`;
+}
+
+function loadPersistedWordleState(
+  roomId: number,
+  userId: number,
+): PersistedWordleState | null {
+  try {
+    const rawValue = window.localStorage.getItem(
+      buildWordleStorageKey(roomId, userId),
+    );
+    if (!rawValue) {
+      return null;
+    }
+
+    return JSON.parse(rawValue) as PersistedWordleState;
+  } catch {
+    return null;
+  }
+}
+
+function persistWordleState(
+  roomId: number,
+  userId: number,
+  snapshot: PersistedWordleState,
+): void {
+  window.localStorage.setItem(
+    buildWordleStorageKey(roomId, userId),
+    JSON.stringify(snapshot),
+  );
+}
+
+function clearPersistedWordleState(roomId: number, userId: number): void {
+  window.localStorage.removeItem(buildWordleStorageKey(roomId, userId));
+}
+
 function GamesPage() {
   const { roomId: roomIdParam } = useParams();
   const navigate = useNavigate();
@@ -108,6 +157,7 @@ function GamesPage() {
   const [isRulesOpen, setRulesOpen] = useState(true);
   const [isPlayerReady, setPlayerReady] = useState(false);
   const hasFinishedWordleRef = useRef(false);
+  const lastHydratedWordleKeyRef = useRef<string | null>(null);
 
   const store = useLocalObservable(() => PuzzleStore);
   const toast = useToast();
@@ -405,28 +455,123 @@ function GamesPage() {
       const configuredLength = roomGameConfig?.wordLength ?? store.nbr_letters;
       const configuredMaxAttempts =
         roomGameConfig?.maxAttempts ?? store.maxAttempts;
-      const shouldInit =
-        typeof sharedWord === "string" &&
-        (store.word !== sharedWord ||
-          store.nbr_letters !== configuredLength ||
-          store.maxAttempts !== configuredMaxAttempts ||
-          store.guesses.length !== configuredMaxAttempts);
+      const userId = user?.id;
+      const hydrationKey =
+        typeof sharedWord === "string" && typeof userId === "number"
+          ? `${room.id}:${userId}:${sharedWord}:${configuredLength}:${configuredMaxAttempts}`
+          : null;
+
+      if (typeof sharedWord !== "string" || typeof userId !== "number") {
+        return;
+      }
 
       store.nbr_letters = configuredLength;
       store.maxAttempts = configuredMaxAttempts;
 
-      if (shouldInit) {
-        store.init(sharedWord);
-        hasFinishedWordleRef.current = false;
+      if (lastHydratedWordleKeyRef.current === hydrationKey) {
+        return;
       }
+
+      const persistedState = loadPersistedWordleState(room.id, userId);
+      const canRestore =
+        persistedState?.sharedWord === sharedWord &&
+        persistedState.wordLength === configuredLength &&
+        persistedState.maxAttempts === configuredMaxAttempts &&
+        Array.isArray(persistedState.guesses) &&
+        persistedState.guesses.length === configuredMaxAttempts;
+
+      if (canRestore && persistedState) {
+        store.init(sharedWord);
+        store.word = sharedWord;
+        store.guesses = [...persistedState.guesses];
+        store.currentGuess = Math.min(
+          configuredMaxAttempts,
+          Math.max(0, persistedState.currentGuess),
+        );
+        store.start_time = persistedState.startTime;
+        store.total_time = persistedState.totalTime;
+        store.rulePannelClosed = persistedState.rulePanelClosed;
+        store.endedByTimeout = persistedState.endedByTimeout;
+        setRulesOpen(!persistedState.rulePanelClosed);
+      } else {
+        store.init(sharedWord);
+        setRulesOpen(true);
+        setPlayerReady(false);
+        clearPersistedWordleState(room.id, userId);
+      }
+
+      store.checkTimeUp();
+      hasFinishedWordleRef.current = false;
+      lastHydratedWordleKeyRef.current = hydrationKey;
     }
   }, [
+    room?.id,
     room?.gameType,
     roomGameConfig?.wordLength,
     roomGameConfig?.maxAttempts,
     sharedWord,
     store,
+    user?.id,
   ]);
+
+  useEffect(() => {
+    if (
+      room?.gameType !== "wordle" ||
+      typeof room.id !== "number" ||
+      typeof user?.id !== "number" ||
+      typeof sharedWord !== "string"
+    ) {
+      return;
+    }
+
+    if (room.status !== "playing" || gameState?.status === "finished") {
+      clearPersistedWordleState(room.id, user.id);
+      return;
+    }
+
+    persistWordleState(room.id, user.id, {
+      sharedWord,
+      wordLength: store.nbr_letters,
+      maxAttempts: store.maxAttempts,
+      guesses: [...store.guesses],
+      currentGuess: store.currentGuess,
+      startTime: store.start_time,
+      totalTime: store.total_time,
+      rulePanelClosed: store.rulePannelClosed && !isRulesOpen,
+      endedByTimeout: store.endedByTimeout,
+    });
+  }, [
+    gameState?.status,
+    isRulesOpen,
+    room?.gameType,
+    room?.id,
+    room?.status,
+    sharedWord,
+    store.currentGuess,
+    store.endedByTimeout,
+    store.guesses.join("|"),
+    store.maxAttempts,
+    store.nbr_letters,
+    store.rulePannelClosed,
+    store.start_time,
+    store.total_time,
+    user?.id,
+  ]);
+
+  useEffect(() => {
+    if (
+      room?.gameType !== "wordle" ||
+      typeof room?.id !== "number" ||
+      typeof user?.id !== "number"
+    ) {
+      return;
+    }
+
+    if (room.status === "waiting" || gameState?.status === "finished") {
+      clearPersistedWordleState(room.id, user.id);
+      lastHydratedWordleKeyRef.current = null;
+    }
+  }, [gameState?.status, room?.gameType, room?.id, room?.status, user?.id]);
 
   const playerNamesById = useMemo(() => playerNames, [playerNames]);
 
