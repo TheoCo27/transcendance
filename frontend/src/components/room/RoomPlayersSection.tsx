@@ -15,7 +15,7 @@ export default function RoomPlayersSection({
   playerNames,
 }: RoomPlayersSectionProps) {
   return (
-    <RoomSection className="rounded-4xl border border-white/10 bg-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+    <RoomSection>
       <RoomSectionLabel className="text-slate-400">
         Joueurs de la room
       </RoomSectionLabel>

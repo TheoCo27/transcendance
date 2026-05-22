@@ -75,12 +75,12 @@ export default function RoomChatSection({
   }, [entries.length]);
 
   return (
-    <RoomSection>
+    <RoomSection className="flex-1 min-h-0">
       <RoomSectionLabel className="text-slate-400">Chat room</RoomSectionLabel>
       <RoomSectionHeader>Discussion en direct</RoomSectionHeader>
 
       <div
-        className="mt-6 max-h-90 overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-bg p-4"
+        className="mt-6 max-h-100 overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-bg p-4"
         onScroll={handleChatScroll}
         ref={chatContainerRef}
       >
@@ -202,8 +202,8 @@ export default function RoomChatSection({
 
       {hasReachedChatLimit ? (
         <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Attention : le message a ete tronque. Maximum{" "}
-          {ROOM_CHAT_MESSAGE_MAX_LENGTH} caracteres.
+          Attention : le message a été tronqué. Maximum{" "}
+          {ROOM_CHAT_MESSAGE_MAX_LENGTH} caractères.
         </p>
       ) : null}
 
