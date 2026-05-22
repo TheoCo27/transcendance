@@ -114,15 +114,11 @@ export default function RoomConfigSection({
             className="rounded-xl border border-white/10 bg-bg px-4 py-3 outline-none placeholder:text-text/40"
             value={form.gameType}
             onChange={(event) => {
-              const gameType = event.target.value as
-                | "wordle"
-                | "memory"
-                | "quiz";
+              const gameType = event.target.value as "wordle" | "quiz";
               setForm((previous) => ({ ...previous, gameType }));
             }}
           >
             <option value="wordle">Wordle</option>
-            <option value="memory">Memory</option>
             <option value="quiz">Quiz</option>
           </select>
         </label>
@@ -281,23 +277,7 @@ export default function RoomConfigSection({
               />
             </label>
           </>
-        ) : (
-          <label className="flex flex-col gap-2 md:col-span-2">
-            <span className="text-sm font-medium">Nombre de paires (2-20)</span>
-            <Input
-              type="number"
-              min={2}
-              max={20}
-              value={form.memoryPairsCount}
-              onChange={(event) => {
-                setForm((previous) => ({
-                  ...previous,
-                  memoryPairsCount: Number(event.target.value),
-                }));
-              }}
-            />
-          </label>
-        )}
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">

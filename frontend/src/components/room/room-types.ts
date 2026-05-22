@@ -1,10 +1,9 @@
 export type RoomConfigForm = {
   name: string;
   quizId: number | null;
-  gameType: "wordle" | "memory" | "quiz";
+  gameType: "wordle" | "quiz";
   wordleWordLength: number;
   wordleMaxAttempts: number;
-  memoryPairsCount: number;
 };
 
 export type LeaderboardEntry = {

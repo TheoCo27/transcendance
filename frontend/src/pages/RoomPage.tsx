@@ -119,11 +119,7 @@ export default function RoomPage() {
       );
     }
 
-    return (
-      Number.isInteger(form.memoryPairsCount) &&
-      form.memoryPairsCount >= 2 &&
-      form.memoryPairsCount <= 20
-    );
+    return false;
   }, [form, room, user]);
 
   const isQuizSelectionSaved = useMemo(() => {
@@ -204,7 +200,11 @@ export default function RoomPage() {
           <section className="grid gap-8 rounded-[2.75rem] border border-white/10 bg-surface text-text px-6 py-8 shadow-[0_40px_110px_rgba(15,23,42,0.08)] backdrop-blur md:px-10 md:py-10 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
               <span className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-700">
-                {room.gameType ?? "mini-game"}
+                {room.gameType === "wordle"
+                  ? "wordle"
+                  : room.gameType === "quiz"
+                    ? "quiz"
+                    : "mini-game"}
               </span>
 
               <h1 className="mt-6 text-4xl font-semibold md:text-5xl text-text-muted">
@@ -226,9 +226,7 @@ export default function RoomPage() {
                 <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
                   {room.gameType === "wordle"
                     ? "Wordle"
-                    : room.gameType === "memory"
-                      ? "Memory"
-                      : room.gameType === "quiz"
+                    : room.gameType === "quiz"
                         ? "Quiz"
                         : "A configurer"}
                 </span>

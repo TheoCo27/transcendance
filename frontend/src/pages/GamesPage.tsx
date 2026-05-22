@@ -36,10 +36,6 @@ function formatGameType(room: Room | null): string {
     return "Wordle";
   }
 
-  if (room.gameType === "memory") {
-    return "Memory";
-  }
-
   return "Quiz";
 }
 
@@ -661,7 +657,10 @@ function GamesPage() {
       ) : (
         <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
           <SectionLabel className="text-slate-400">Jeux</SectionLabel>
-          <SectionHeader>{room.gameType}</SectionHeader>
+          <SectionHeader>Jeu indisponible</SectionHeader>
+          <p className="mt-3 text-sm leading-7 text-white/70">
+            Cette room utilise un mode qui n'est plus pris en charge.
+          </p>
         </section>
       )}
     </main>

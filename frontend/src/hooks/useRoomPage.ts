@@ -77,7 +77,6 @@ const DEFAULT_FORM: RoomConfigForm = {
   gameType: "wordle",
   wordleWordLength: 5,
   wordleMaxAttempts: 6,
-  memoryPairsCount: 8,
 };
 
 type UseRoomPageOptions = {
@@ -626,11 +625,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
             wordLength: form.wordleWordLength,
             maxAttempts: form.wordleMaxAttempts,
           }
-        : form.gameType === "memory"
-          ? {
-              pairsCount: form.memoryPairsCount,
-            }
-          : undefined;
+        : undefined;
 
     const updatedRoom = await updateRoom(room.id, {
       name: form.name.trim(),
@@ -756,8 +751,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
           persistedForm.gameType !== form.gameType ||
           persistedForm.quizId !== form.quizId ||
           persistedForm.wordleWordLength !== form.wordleWordLength ||
-          persistedForm.wordleMaxAttempts !== form.wordleMaxAttempts ||
-          persistedForm.memoryPairsCount !== form.memoryPairsCount;
+          persistedForm.wordleMaxAttempts !== form.wordleMaxAttempts;
 
         if (hasUnsavedChanges) {
           setIsSaving(true);
@@ -916,7 +910,14 @@ function getRoomClosedReasonMessage(reason: string): string {
 }
 
 function buildFormFromRoom(room: Room): RoomConfigForm {
-  const gameType = room.gameType ?? (room.quizId ? "quiz" : "wordle");
+  const gameType =
+    room.gameType === "quiz"
+      ? "quiz"
+      : room.gameType === "wordle"
+        ? "wordle"
+        : room.quizId
+          ? "quiz"
+          : "wordle";
   const config =
     room.gameConfig && typeof room.gameConfig === "object"
       ? room.gameConfig
@@ -924,7 +925,6 @@ function buildFormFromRoom(room: Room): RoomConfigForm {
 
   const wordLengthRaw = (config as { wordLength?: unknown }).wordLength;
   const maxAttemptsRaw = (config as { maxAttempts?: unknown }).maxAttempts;
-  const pairsCountRaw = (config as { pairsCount?: unknown }).pairsCount;
 
   const wordleWordLength =
     typeof wordLengthRaw === "number" && Number.isInteger(wordLengthRaw)
@@ -934,10 +934,6 @@ function buildFormFromRoom(room: Room): RoomConfigForm {
     typeof maxAttemptsRaw === "number" && Number.isInteger(maxAttemptsRaw)
       ? maxAttemptsRaw
       : 6;
-  const memoryPairsCount =
-    typeof pairsCountRaw === "number" && Number.isInteger(pairsCountRaw)
-      ? pairsCountRaw
-      : 8;
 
   return {
     name: room.name,
@@ -945,6 +941,5 @@ function buildFormFromRoom(room: Room): RoomConfigForm {
     gameType,
     wordleWordLength,
     wordleMaxAttempts,
-    memoryPairsCount,
   };
 }

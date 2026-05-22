@@ -32,7 +32,7 @@ export type Room = {
   ownerUserId: number;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
-  gameType: "wordle" | "memory" | "quiz" | null;
+  gameType: "wordle" | "quiz" | null;
   gameConfig: Record<string, unknown> | null;
   quizId: number | null;
   rounds: number;
@@ -674,7 +674,10 @@ export class RoomsService {
       name: room.name,
       ownerUserId: room.ownerId,
       status: room.status,
-      gameType: room.gameType,
+      gameType:
+        room.gameType === "wordle" || room.gameType === "quiz"
+          ? room.gameType
+          : null,
       gameConfig: this.toObjectRecord(room.gameConfig),
       isPrivate: room.isPrivate,
       quizId: transientConfig?.quizId ?? room.games[0]?.quizId ?? null,
@@ -749,17 +752,7 @@ export class RoomsService {
       return;
     }
 
-    const pairsCount = gameConfig.pairsCount;
-    if (
-      typeof pairsCount !== "number" ||
-      !Number.isInteger(pairsCount) ||
-      pairsCount < 2 ||
-      pairsCount > 20
-    ) {
-      throw new ConflictException(
-        "La configuration de Memory necessite un nombre de paires entre 2 et 20",
-      );
-    }
+    throw new ConflictException("Ce type de jeu n'est plus pris en charge");
   }
 
   // Convertit un JSON Prisma en objet exploitable.
