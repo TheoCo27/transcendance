@@ -1,33 +1,28 @@
+import Section from "../section";
+import SectionHeader from "../section-header";
+import SectionLabel from "../section-label";
+
 type QuizRulesCardProps = {
   value: 10 | 30 | "unlimited";
   onChange: (value: 10 | 30 | "unlimited") => void;
 };
 
-export default function QuizRulesCard({
-  value,
-  onChange,
-}: QuizRulesCardProps) {
+export default function QuizRulesCard({ value, onChange }: QuizRulesCardProps) {
   return (
-    <section className="rounded-[2rem] border border-slate-900/10 bg-white/80 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">
-        Regles du quiz
-      </p>
-      <h2 className="mt-3 text-2xl font-semibold text-slate-950">
-        Temps par question
-      </h2>
-      <p className="mt-2 text-sm text-slate-600">
-        Ce choix sera repris automatiquement sur la room de jeu liee au quiz.
+    <Section>
+      <SectionLabel className="text-slate-400">Regles du quiz</SectionLabel>
+      <SectionHeader>Temps par question</SectionHeader>
+      <p className="mt-2 text-sm">
+        Choisis le temps dont les joueurs disposeront pour répondre à chaque
+        question.
       </p>
 
-      <label
-        className="mt-6 block text-sm font-medium text-slate-700"
-        htmlFor="quiz-duration"
-      >
+      <label className="mt-6 block text-sm font-medium" htmlFor="quiz-duration">
         Temps
       </label>
       <select
         id="quiz-duration"
-        className="mt-2 w-full rounded-[1.25rem] border border-slate-900/10 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-amber-500"
+        className="mt-2 w-full rounded-xl border border-white/10 bg-bg px-4 py-3 placeholder:text-text/40 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         value={value}
         onChange={(event) => {
           const nextValue = event.target.value;
@@ -40,8 +35,8 @@ export default function QuizRulesCard({
       >
         <option value="10">10 sec</option>
         <option value="30">30 sec</option>
-        <option value="unlimited">Illimite</option>
+        <option value="unlimited">Illimité</option>
       </select>
-    </section>
+    </Section>
   );
 }
