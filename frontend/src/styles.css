@@ -56,3 +56,35 @@ select:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+.my-progress::-webkit-progress-value {
+  background-color: #ffffff; /* vert, ou remplace par la couleur voulue */
+}
+.my-progress::-moz-progress-bar {
+  background-color: #ffffff;
+}
+
+/*arrondis barre les deux navigateurs*/
+.my-progress {
+    border: 0;
+    height: 40px;
+    border-radius: 20px;
+}
+/*arrondis barre chromium*/
+.my-progress::-webkit-progress-bar {
+    border-radius: 20px;
+    background-color:lightskyblue;
+}
+
+/*arrondis dans barre chromium*/
+.my-progress::-webkit-progress-value {
+    border-radius: 20px;
+    background-color:white;
+}
+
+/*arrondis dans barre firefox*/
+.my-progress::-moz-progress-bar {
+    border: 0;
+    height: 26px;
+    border-radius: 20px;
+}

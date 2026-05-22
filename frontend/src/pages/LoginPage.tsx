@@ -213,6 +213,25 @@ export default function LoginPage() {
             S'inscrire
           </Link>
         </p>
+
+        <p className="mt-4 text-center text-xs leading-6 text-text/60">
+          Les informations sur l'utilisation du service sont disponibles dans
+          nos{" "}
+          <Link
+            className="font-semibold underline underline-offset-4"
+            to="/conditions-utilisation"
+          >
+            conditions d'utilisation
+          </Link>{" "}
+          et notre{" "}
+          <Link
+            className="font-semibold underline underline-offset-4"
+            to="/politique-confidentialite"
+          >
+            politique de confidentialite
+          </Link>
+          .
+        </p>
       </Card>
     </main>
   );

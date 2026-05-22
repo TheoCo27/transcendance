@@ -19,6 +19,12 @@ const Guess = memo(function Guess({ checkerValidWord, lettersCount, flag, word, 
 	7: "grid-cols-7",
 	}[lettersCount] || "grid-cols-5";
 
+	const case_width = {
+	5: "w-[min(92vw,22rem)]",
+	6: "w-[min(92vw,26rem)]",
+	7: "w-[min(92vw,30rem)]",
+	}[lettersCount] || "w-[min(92vw,22rem)]";
+
 	// Pre-calculate colors for all positions
 	const colors: string[] = new Array(lettersCount).fill('bg-gray-500');
 
@@ -60,7 +66,7 @@ const Guess = memo(function Guess({ checkerValidWord, lettersCount, flag, word, 
 		colors.fill('bg-black'); //if neither, color is black
 
   return (
-  <div className={`grid ${gridColsClass} gap-1.5 mb-1.25 flex w-[min(92vw,22rem)]`}>
+  <div className={`grid ${gridColsClass} gap-1.5 mb-1.25 flex ${case_width}`}>
 	{new Array(lettersCount).fill(0).map((_, i) => {
 
 		const bgColor = colors[i];

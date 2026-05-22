@@ -19,7 +19,6 @@ import { getRoomById, type Room } from "../services/rooms";
 import { getUserById } from "../services/users";
 import {
   connectWs,
-  disconnectWs,
   emitWs,
   offWs,
   onWs,
@@ -92,7 +91,7 @@ type TimerPayload = {
 function GamesPage() {
   const { roomId: roomIdParam } = useParams();
   const navigate = useNavigate();
-  const { user, isLoading: isSessionLoading } = useAuthSession();
+  const { user } = useAuthSession();
 
   const roomId = Number(roomIdParam);
   const [room, setRoom] = useState<Room | null>(null);
@@ -231,21 +230,6 @@ function GamesPage() {
 
     void loadGamePage();
   }, [roomId]);
-
-  useEffect(() => {
-    if (isSessionLoading) {
-      return;
-    }
-
-    if (user) {
-      void connectWs().catch(() => {
-        // Si le socket n'est pas dispo, la page reste lisible en HTTP.
-      });
-      return;
-    }
-
-    disconnectWs();
-  }, [isSessionLoading, user]);
 
   useEffect(() => {
     if (!Number.isFinite(roomId) || roomId <= 0) {

@@ -62,7 +62,7 @@ wait_for_container() {
 main() {
 	local container_ids
 
-	container_ids="$(compose ps -q "$@")"
+	container_ids="$(compose ps -q)"
 
 	[ -n "$container_ids" ] || fail "Aucun conteneur a attendre. La stack ne semble pas demarree."
 

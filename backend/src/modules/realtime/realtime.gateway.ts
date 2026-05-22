@@ -18,6 +18,8 @@ import { RealtimePresenceService } from "./services/realtime-presence.service";
 import { RealtimeResponseService } from "./services/realtime-response.service";
 import { RealtimeRoomEventsService } from "./services/realtime-room-events.service";
 
+const WS_HEARTBEAT_INTERVAL_MS = 5_000;
+const WS_HEARTBEAT_TIMEOUT_MS = 10_000;
 
 @WebSocketGateway({
   namespace: "/ws",
@@ -25,6 +27,8 @@ import { RealtimeRoomEventsService } from "./services/realtime-room-events.servi
     origin: process.env.FRONTEND_ORIGIN || "https://localhost:3000",
     credentials: true,
   },
+  pingInterval: WS_HEARTBEAT_INTERVAL_MS,
+  pingTimeout: WS_HEARTBEAT_TIMEOUT_MS,
   transports: ["websocket", "polling"],
 })
 export class RealtimeGateway
@@ -50,7 +54,7 @@ export class RealtimeGateway
   async handleConnection(client: Socket): Promise<void> {
     try {
       const userId = await this.auth.authenticateSocket(client);
-      this.presence.bindSocketToUser(client.id, userId);
+      await this.presence.bindSocketToUser(client.id, userId);
       await this.roomEvents.syncSocketRoomMembership(userId, client);
 
       client.emit(
