@@ -41,7 +41,7 @@ help:
 	@echo "  make env-init            -> Create .env from .env.example if missing"
 	@echo "  make env-check           -> Check required variables in .env"
 	@echo "  make tls-cert            -> Generate the shared local TLS certificate"
-	@echo "  make tls-trust           -> Install mkcert local CA into the system trust store"
+	@echo "  make tls-trust           -> Attempt to trust the local mkcert CA without requiring sudo"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
 	@echo "  make shell-db            -> Open a psql session in the db container"
