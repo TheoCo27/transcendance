@@ -11,6 +11,7 @@ import { RealtimeAuthService } from "./services/realtime-auth.service";
 import { RealtimePresenceService } from "./services/realtime-presence.service";
 import { RealtimeResponseService } from "./services/realtime-response.service";
 import { RealtimeRoomEventsService } from "./services/realtime-room-events.service";
+import { RealtimeRateLimitService } from "./services/realtime-rate-limit.service";
 import { RealtimeValidationService } from "./services/realtime-validation.service";
 
 @Module({
@@ -24,6 +25,7 @@ import { RealtimeValidationService } from "./services/realtime-validation.servic
     RealtimeGameRuntimeService,
     RealtimeGameEventsService,
     RealtimeRoomEventsService,
+    RealtimeRateLimitService,
   ],
 })
 export class RealtimeModule {}
