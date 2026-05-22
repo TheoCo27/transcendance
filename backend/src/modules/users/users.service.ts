@@ -1,6 +1,11 @@
 // Ce fichier contient la logique metier du profil utilisateur et du systeme d'amis.
 import { PrismaService } from "@/prisma/prisma.service";
-import { FriendshipStatus, Prisma, User } from "@generated/prisma/client";
+import {
+  FriendshipStatus,
+  Prisma,
+  User,
+  UserStatus,
+} from "@generated/prisma/client";
 import {
   BadRequestException,
   ConflictException,
@@ -111,6 +116,24 @@ export class UsersService {
     return this.prisma.client.user.update({
       data,
       where,
+    });
+  }
+
+  // Met a jour le statut si besoin sans ecrire inutilement la meme valeur.
+  async setUserStatusIfChanged(
+    userId: number,
+    status: UserStatus,
+  ): Promise<void> {
+    await this.prisma.client.user.updateMany({
+      where: {
+        id: userId,
+        status: {
+          not: status,
+        },
+      },
+      data: {
+        status,
+      },
     });
   }
 

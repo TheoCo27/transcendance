@@ -36,7 +36,7 @@ export class RealtimeRoomEventsService {
 
   // Programme le nettoyage d'un utilisateur apres deconnexion.
   async handleDisconnect(clientId: string, server: Server): Promise<void> {
-    const userId = this.presence.unregisterSocket(clientId);
+    const userId = await this.presence.unregisterSocket(clientId);
     if (typeof userId !== "number" || this.presence.hasActiveSockets(userId)) {
       return;
     }

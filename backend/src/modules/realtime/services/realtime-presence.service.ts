@@ -1,5 +1,6 @@
 // Ce fichier suit la presence temps reel en liant les sockets connectes
 // aux utilisateurs authentifies.
+import { UsersService } from "@/modules/users/users.service";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 
 @Injectable()
@@ -7,13 +8,21 @@ export class RealtimePresenceService {
   private readonly socketToUser = new Map<string, number>();
   private readonly userToSockets = new Map<number, Set<string>>();
 
+  constructor(private readonly usersService: UsersService) {}
+
   // Associe un socket connecte a un utilisateur.
-  bindSocketToUser(socketId: string, userId: number): void {
+  async bindSocketToUser(socketId: string, userId: number): Promise<void> {
+    const hadActiveSockets = this.userToSockets.has(userId);
+
     this.socketToUser.set(socketId, userId);
 
     const sockets = this.userToSockets.get(userId) || new Set<string>();
     sockets.add(socketId);
     this.userToSockets.set(userId, sockets);
+
+    if (!hadActiveSockets) {
+      await this.usersService.setUserStatusIfChanged(userId, "online");
+    }
   }
 
   // Recupere l'utilisateur lie au socket et verifie le payload.
@@ -36,7 +45,7 @@ export class RealtimePresenceService {
   }
 
   // Retire un socket du suivi de presence.
-  unregisterSocket(socketId: string): number | undefined {
+  async unregisterSocket(socketId: string): Promise<number | undefined> {
     const userId = this.socketToUser.get(socketId);
     if (typeof userId !== "number") {
       return undefined;
@@ -45,12 +54,17 @@ export class RealtimePresenceService {
     this.socketToUser.delete(socketId);
     const sockets = this.userToSockets.get(userId);
     if (!sockets) {
+      await this.usersService.setUserStatusIfChanged(userId, "offline");
       return userId;
     }
 
     sockets.delete(socketId);
     if (sockets.size === 0) {
       this.userToSockets.delete(userId);
+    }
+
+    if (!this.userToSockets.has(userId)) {
+      await this.usersService.setUserStatusIfChanged(userId, "offline");
     }
 
     return userId;
