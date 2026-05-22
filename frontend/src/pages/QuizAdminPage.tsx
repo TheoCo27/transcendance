@@ -43,6 +43,15 @@ export default function QuizAdminPage() {
       return "Les 4 options de réponse sont obligatoires.";
     }
 
+    // Check for duplicate options
+    const normalizedOptions = draftQuestion.options.map((option) =>
+      option.trim().toLowerCase(),
+    );
+    const uniqueOptions = new Set(normalizedOptions);
+    if (uniqueOptions.size < 4) {
+      return "Les options de réponse doivent être uniques.";
+    }
+
     return null;
   };
 
