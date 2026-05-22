@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { RoomConfigForm } from "../components/room/room-types";
 import { useToast } from "../components/ui/toast";
@@ -130,6 +130,16 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     typeof location.state === "object" &&
     (location.state as { fromWordleTimeout?: boolean }).fromWordleTimeout,
   );
+  const requestedQuizSelectionId = useMemo(() => {
+    const rawQuizId = new URLSearchParams(location.search).get("selectQuizId");
+    const parsedQuizId = Number(rawQuizId);
+
+    if (!Number.isInteger(parsedQuizId) || parsedQuizId <= 0) {
+      return null;
+    }
+
+    return parsedQuizId;
+  }, [location.search]);
 
   const refreshRoom = useCallback(async () => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -583,6 +593,48 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       isCancelled = true;
     };
   }, [room, user]);
+
+  useEffect(() => {
+    if (
+      requestedQuizSelectionId === null ||
+      !user ||
+      !room ||
+      room.ownerUserId !== user.id ||
+      room.status !== "waiting" ||
+      availableQuizzes.length === 0
+    ) {
+      return;
+    }
+
+    const quizExists = availableQuizzes.some(
+      (quiz) => quiz.id === requestedQuizSelectionId,
+    );
+
+    if (!quizExists) {
+      return;
+    }
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      gameType: "quiz",
+      quizId: requestedQuizSelectionId,
+    }));
+
+    navigate(
+      { pathname: location.pathname },
+      { replace: true, state: location.state },
+    );
+    toast.success("Nouveau quiz prêt à être sélectionné");
+  }, [
+    availableQuizzes,
+    location.pathname,
+    location.state,
+    navigate,
+    requestedQuizSelectionId,
+    room,
+    toast,
+    user,
+  ]);
 
   useEffect(() => {
     if (!gameState?.questionEndsAt) {

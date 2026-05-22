@@ -389,6 +389,7 @@ export default function RoomPage() {
 
           {isOwner && room.status === "waiting" ? (
             <RoomConfigSection
+              roomId={room.id}
               form={form}
               setForm={setForm}
               availableQuizzes={availableQuizzes}

@@ -1,4 +1,4 @@
-import { PenLine } from "lucide-react";
+import { PenLine, PlusCircle } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -6,6 +6,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { Link } from "react-router-dom";
 import type { Quiz } from "../../services/quizzes";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
@@ -15,6 +16,7 @@ import RoomSectionHeader from "./room-section-header";
 import RoomSectionLabel from "./room-section-label";
 
 type RoomConfigSectionProps = {
+  roomId: number;
   form: RoomConfigForm;
   setForm: Dispatch<SetStateAction<RoomConfigForm>>;
   availableQuizzes: Quiz[];
@@ -25,6 +27,7 @@ type RoomConfigSectionProps = {
 };
 
 export default function RoomConfigSection({
+  roomId,
   form,
   setForm,
   availableQuizzes,
@@ -87,6 +90,8 @@ export default function RoomConfigSection({
       ? "Sans timer"
       : `${selectedQuiz?.questionDurationSec ?? 0} sec/question`;
 
+  const createQuizPath = `/admin?roomId=${roomId}`;
+
   return (
     <section className="mt-8 rounded-4xl border border-white/10 bg-surface text-text p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
       <RoomSectionLabel className="text-slate-400">Configuration</RoomSectionLabel>
@@ -125,7 +130,22 @@ export default function RoomConfigSection({
 
         {form.gameType === "quiz" ? (
           <div className="md:col-span-2">
-            <p className="text-sm font-medium">Choix du quiz</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">Choix du quiz</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  Sélectionne un quiz existant ou crée le tien pour cette room.
+                </p>
+              </div>
+
+              <Link
+                className="inline-flex items-center gap-2 rounded-md border border-slate-800/15 bg-white/75 px-4 py-2 font-semibold text-slate-900 transition hover:border-slate-900/30 hover:bg-white"
+                to={createQuizPath}
+              >
+                <PlusCircle className="size-4" />
+                <span>Créer son quiz</span>
+              </Link>
+            </div>
 
             {!shouldShowQuizPicker ? (
               <div className="mt-3 rounded-2xl border border-emerald-300/35 bg-emerald-300/10 px-4 py-3">
@@ -190,57 +210,73 @@ export default function RoomConfigSection({
                 Chargement des quiz...
               </p>
             ) : availableQuizzes.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                Aucun quiz disponible pour l'instant. Cree un quiz avant de le
-                selectionner ici.
-              </p>
-            ) : (
-              <div className="mt-3 grid max-h-46 grid-cols-1 gap-2 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
-                {availableQuizzes.map((quiz) => {
-                  const isSelected = form.quizId === quiz.id;
-
-                  return (
-                    <button
-                      key={`quiz-choice-${quiz.id}`}
-                      className={[
-                        "flex items-start justify-between rounded-xl border px-3 py-2.5 text-left transition",
-                        isSelected
-                          ? "border-amber-300 bg-amber-300/12"
-                          : "border-white/10 bg-bg hover:bg-white/5",
-                      ].join(" ")}
-                      type="button"
-                      onClick={() => {
-                        setForm((previous) => ({
-                          ...previous,
-                          quizId: previous.quizId === quiz.id ? null : quiz.id,
-                        }));
-                      }}
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-text-muted">
-                          {quiz.title}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          {quiz.questions.length} question
-                          {quiz.questions.length > 1 ? "s" : ""}
-                        </p>
-                      </div>
-
-                      <span
-                        aria-hidden="true"
-                        className={[
-                          "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-bold",
-                          isSelected
-                            ? "border-amber-300 bg-amber-300/20 text-amber-100"
-                            : "border-white/20 text-transparent",
-                        ].join(" ")}
-                      >
-                        ✓
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
+                <p>
+                  Aucun quiz disponible pour l'instant. Crée un quiz avant de le
+                  sélectionner ici.
+                </p>
+                <Link
+                  className="mt-3 inline-flex items-center gap-2 rounded-md border border-amber-200/40 bg-amber-200/10 px-4 py-2 font-semibold text-amber-50 transition hover:bg-amber-200/20"
+                  to={createQuizPath}
+                >
+                  <PlusCircle className="size-4" />
+                  <span>Créer mon premier quiz</span>
+                </Link>
               </div>
+            ) : (
+              <>
+                <div className="mt-3 grid max-h-46 grid-cols-1 gap-2 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
+                  {availableQuizzes.map((quiz) => {
+                    const isSelected = form.quizId === quiz.id;
+
+                    return (
+                      <button
+                        key={`quiz-choice-${quiz.id}`}
+                        className={[
+                          "flex items-start justify-between rounded-xl border px-3 py-2.5 text-left transition",
+                          isSelected
+                            ? "border-amber-300 bg-amber-300/12"
+                            : "border-white/10 bg-bg hover:bg-white/5",
+                        ].join(" ")}
+                        type="button"
+                        onClick={() => {
+                          setForm((previous) => ({
+                            ...previous,
+                            quizId:
+                              previous.quizId === quiz.id ? null : quiz.id,
+                          }));
+                        }}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-text-muted">
+                            {quiz.title}
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-400">
+                            {quiz.questions.length} question
+                            {quiz.questions.length > 1 ? "s" : ""}
+                          </p>
+                        </div>
+
+                        <span
+                          aria-hidden="true"
+                          className={[
+                            "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-bold",
+                            isSelected
+                              ? "border-amber-300 bg-amber-300/20 text-amber-100"
+                              : "border-white/20 text-transparent",
+                          ].join(" ")}
+                        >
+                          ✓
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-3 text-xs text-slate-400">
+                  Les 3 quiz par défaut et tous les quiz que tu crées apparaissent ici.
+                </p>
+              </>
             )}
           </div>
         ) : form.gameType === "wordle" ? (
