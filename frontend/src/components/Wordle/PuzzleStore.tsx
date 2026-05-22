@@ -123,7 +123,7 @@ export default {
 
   toast_validWord(guess: string) {
     if (!this.all_words_array_json.includes(guess)) {
-      this.ToastMessage = "Ce mot n'est pas dans la liste";
+      this.ToastMessage = "Ce mot ne figure pas dans la liste.";
       this.ToastId++;
       return 0;
     }
@@ -131,25 +131,25 @@ export default {
   },
 
   toast_x_letters() {
-    this.ToastMessage = `Pour valider un mot, vous devez entrer ${this.nbr_letters} lettres`;
+    this.ToastMessage = `Pour valider un mot, vous devez saisir ${this.nbr_letters} lettres.`;
     this.ToastId++;
   },
 
   toast_won() {
     this.endedByTimeout = false;
-    this.ToastMessage = `Vous avez trouvé le bon mot en ${toHHMMSS((Math.floor(Date.now() / 1000) - this.total_time).toString())}`;
+    this.ToastMessage = `Bravo, vous avez trouvé le bon mot en ${toHHMMSS((Math.floor(Date.now() / 1000) - this.total_time).toString())}.`;
     this.ToastId++;
   },
 
   toast_timeup() {
     this.endedByTimeout = true;
-    this.ToastMessage = `Le temps est écoulé, vous n'avez pas trouvé le mot: ${this.word}`;
+    this.ToastMessage = `Le temps est écoulé : vous n'avez pas trouvé le mot ${this.word}.`;
     this.ToastId++;
   },
 
   toast_lost() {
     this.endedByTimeout = false;
-    this.ToastMessage = `Vous n'avez pas trouvé le mot: ${this.word}`;
+    this.ToastMessage = `Vous n'avez pas trouvé le mot ${this.word}.`;
     this.ToastId++;
   },
 

@@ -145,7 +145,7 @@ export default function HomePage() {
       const message =
         getUserFacingServerMessage(
           response.error?.message,
-          "Authentification WebSocket requise",
+          "Authentification temps réel requise.",
         );
       if (message) {
         toast.error(message);
@@ -234,7 +234,7 @@ export default function HomePage() {
 
     const trimmedRoomName = roomName.trim();
     if (!trimmedRoomName) {
-      toast.error("Le nom de la room est obligatoire");
+      toast.error("Le nom de la room est obligatoire.");
       return;
     }
 

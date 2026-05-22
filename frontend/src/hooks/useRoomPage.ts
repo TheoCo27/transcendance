@@ -327,7 +327,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         user &&
         room?.ownerUserId === user.id
       ) {
-        toast.success("Room supprimée");
+        toast.success("La room a bien été supprimée.");
         navigate("/");
         return;
       }
@@ -656,7 +656,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       { pathname: location.pathname },
       { replace: true, state: location.state },
     );
-    toast.success("Nouveau quiz prêt à être sélectionné");
+    toast.success("Le nouveau quiz est prêt à être sélectionné.");
   }, [
     availableQuizzes,
     location.pathname,
@@ -733,7 +733,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
 
     try {
       await saveCurrentForm();
-      toast.success("Configuration enregistrée");
+      toast.success("Configuration enregistrée avec succès.");
     } catch (error) {
       const message = getUserFacingErrorMessage(
         error,

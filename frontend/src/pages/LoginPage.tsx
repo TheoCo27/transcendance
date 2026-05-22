@@ -50,10 +50,12 @@ export default function LoginPage() {
         email: email.trim(),
         password,
       });
-      toast.success("Connecte avec succes");
+      toast.success("Connecté avec succès.");
       navigateAfterAuth();
     } catch (submitError) {
-      setError(getUserFacingErrorMessage(submitError, "Echec de connexion"));
+      setError(
+        getUserFacingErrorMessage(submitError, "Échec de la connexion."),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -68,11 +70,14 @@ export default function LoginPage() {
       await loginAsGuest({
         username: guestUsername.trim(),
       });
-      toast.success("Connexion invite reussie");
+      toast.success("Connexion invité réussie.");
       navigateAfterAuth();
     } catch (submitError) {
       setError(
-        getUserFacingErrorMessage(submitError, "Echec de connexion invite"),
+        getUserFacingErrorMessage(
+          submitError,
+          "Échec de la connexion en invité.",
+        ),
       );
     } finally {
       setIsGuestSubmitting(false);

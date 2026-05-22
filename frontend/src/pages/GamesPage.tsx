@@ -8,7 +8,6 @@ import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useToast } from "../components/ui/toast";
-import { toHHMMSS } from "../components/Wordle/ConvertTime";
 import Guess from "../components/Wordle/Guess";
 import Keyboard from "../components/Wordle/Keyboard";
 import ProgressBar from "../components/Wordle/ProgressBar";
@@ -224,31 +223,17 @@ function GamesPage() {
   }, [room?.gameType, room?.id, store.currentGuess, store.lost, store.won]);
 
   useEffect(() => {
-    if (store.ToastId === 0) return;
+    if (store.ToastId === 0 || store.ToastMessage.trim().length === 0) {
+      return;
+    }
 
-    if (store.ToastMessage === "Ce mot n'est pas dans la liste")
-      toast.error(store.ToastMessage);
-    else if (
-      store.ToastMessage ===
-      `Pour valider un mot, vous devez entrer ${roomGameConfig?.wordLength} lettres`
-    )
-      toast.error(store.ToastMessage);
-    else if (
-      store.ToastMessage ===
-      `Vous avez trouvé le bon mot en ${toHHMMSS((Math.floor(Date.now() / 1000) - store.total_time).toString())}`
-    )
-      //TEMPORAIRE
+    if (store.ToastMessage.startsWith("Bravo,")) {
       toast.success(store.ToastMessage);
-    else if (
-      store.ToastMessage ===
-      `Le temps est écoulé, vous n'avez pas trouvé le mot: ${store.word}`
-    )
-      toast.error(store.ToastMessage);
-    else if (
-      store.ToastMessage === `Vous n'avez pas trouvé le mot: ${store.word}`
-    )
-      toast.error(store.ToastMessage);
-  }, [store.ToastId]);
+      return;
+    }
+
+    toast.error(store.ToastMessage);
+  }, [store.ToastId, store.ToastMessage, toast]);
 
   useEffect(() => {
     const loadGamePage = async () => {
