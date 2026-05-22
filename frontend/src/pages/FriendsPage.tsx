@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import FriendNetworkPanel, {
   type FriendNotice,
@@ -23,6 +23,10 @@ import {
 
 const FRIENDS_POLL_INTERVAL_MS = 12000;
 const CONVERSATION_POLL_INTERVAL_MS = 5000;
+const PRIVATE_MESSAGE_RATE_LIMITS = [
+  { limit: 5, windowMs: 5_000 },
+  { limit: 20, windowMs: 60_000 },
+] as const;
 
 function areMessagesEqual(left: PrivateMessage[], right: PrivateMessage[]) {
   return (
@@ -64,6 +68,8 @@ export default function FriendsPage() {
   const [isConversationLoading, setIsConversationLoading] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const isSendingMessageRef = useRef(false);
+  const privateMessageTimestampsRef = useRef<number[]>([]);
 
   const conversationSummariesByFriendId = useMemo(
     () =>
@@ -349,11 +355,26 @@ export default function FriendsPage() {
       return;
     }
 
+    if (isSendingMessageRef.current) {
+      return;
+    }
+
+    const rateLimitMessage = consumePrivateMessageRateLimit(
+      privateMessageTimestampsRef.current,
+    );
+
+    if (rateLimitMessage) {
+      setConversationError(rateLimitMessage);
+      return;
+    }
+
+    isSendingMessageRef.current = true;
     setIsSendingMessage(true);
 
     try {
       await sendPrivateMessage(selectedFriendId, messageInput.trim());
       setMessageInput("");
+      setConversationError(null);
       await Promise.all([
         refreshConversation(selectedFriendId),
         refreshFriendData(),
@@ -363,6 +384,7 @@ export default function FriendsPage() {
         getUserFacingErrorMessage(error, "Impossible d'envoyer le message"),
       );
     } finally {
+      isSendingMessageRef.current = false;
       setIsSendingMessage(false);
     }
   };
@@ -402,4 +424,34 @@ export default function FriendsPage() {
       </section>
     </main>
   );
+}
+
+function consumePrivateMessageRateLimit(timestamps: number[]): string | null {
+  const now = Date.now();
+  const maxWindowMs = Math.max(
+    ...PRIVATE_MESSAGE_RATE_LIMITS.map((rule) => rule.windowMs),
+  );
+  const retained = timestamps.filter(
+    (timestamp) => now - timestamp < maxWindowMs,
+  );
+
+  for (const rule of PRIVATE_MESSAGE_RATE_LIMITS) {
+    const hitsInWindow = retained.filter(
+      (timestamp) => now - timestamp < rule.windowMs,
+    );
+
+    if (hitsInWindow.length >= rule.limit) {
+      const retryAfterMs = Math.max(
+        0,
+        rule.windowMs - (now - hitsInWindow[0]),
+      );
+
+      timestamps.splice(0, timestamps.length, ...retained);
+      return `Vous avez envoyé trop de messages. Réessayez dans ${Math.ceil(retryAfterMs / 1000)} secondes.`;
+    }
+  }
+
+  retained.push(now);
+  timestamps.splice(0, timestamps.length, ...retained);
+  return null;
 }
