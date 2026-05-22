@@ -1,24 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 import { getRoomByName } from "../../services/rooms";
 import { connectWs, emitWs } from "../../services/ws";
-import { connectRoomErrorMsg } from "../../utils/err-msg";
+import { connectRoomErrorMsg, createRoomErrorMsg } from "../../utils/err-msg";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
 import { useToast } from "../ui/toast";
 
 type HomeHeaderProps = {
   isCreatingRoom: boolean;
-  createRoom: () => void;
+  createRoom: (roomName: string) => void;
+  userName?: string;
   userId?: number;
 };
 
 export default function HomeHeader({
   isCreatingRoom,
   createRoom,
+  userName,
   userId,
 }: HomeHeaderProps) {
   const [inputOpen, setInputOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [roomNameValue, setRoomNameValue] = useState("");
+  const roomNameInputRef = useRef<HTMLInputElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const toast = useToast();
 
@@ -27,6 +42,12 @@ export default function HomeHeader({
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [inputOpen]);
+
+  useEffect(() => {
+    if (createDialogOpen && roomNameInputRef.current) {
+      setTimeout(() => roomNameInputRef.current?.focus(), 0);
+    }
+  }, [createDialogOpen]);
 
   async function onRoomJoined(inputValue: string) {
     const trimmedInput = inputValue.trim();
@@ -95,6 +116,30 @@ export default function HomeHeader({
     setInputOpen((prev) => !prev);
   }
 
+  function openCreateDialog() {
+    if (!userId) {
+      toast.error(createRoomErrorMsg["auth_required"]);
+      return;
+    }
+
+    const defaultRoomName = userName
+      ? `Room de ${userName}`
+      : "Ma nouvelle room";
+    setRoomNameValue(defaultRoomName);
+    setCreateDialogOpen(true);
+  }
+
+  function handleCreateRoomSubmit() {
+    const trimmedRoomName = roomNameValue.trim();
+    if (!trimmedRoomName) {
+      toast.error("Le nom de la room est obligatoire");
+      return;
+    }
+
+    setCreateDialogOpen(false);
+    createRoom(trimmedRoomName);
+  }
+
   function onInputChange(event: React.ChangeEvent<HTMLInputElement>) {
     setInputValue(event.target.value);
   }
@@ -116,7 +161,7 @@ export default function HomeHeader({
         <PrimaryButton
           className="px-5 py-3 text-lg font-semibold tracking-wide"
           disabled={isCreatingRoom}
-          onClick={createRoom}
+          onClick={openCreateDialog}
         >
           {isCreatingRoom ? "Création..." : "Créer une room"}
         </PrimaryButton>
@@ -151,6 +196,39 @@ export default function HomeHeader({
           Rejoindre une room existante
         </button>
       </div>
+
+      <AlertDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nom de la room</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choisis un nom avant de lancer la création. Tu pourras ensuite
+              retrouver ta room depuis la liste.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="mt-6 space-y-3">
+            <label className="flex flex-col space-y-2">
+              <span className="text-sm font-semibold text-white/55">
+                Nom de la room
+              </span>
+              <Input
+                ref={roomNameInputRef}
+                value={roomNameValue}
+                onChange={(event) => setRoomNameValue(event.target.value)}
+                placeholder="Ex: Room de Maxime"
+              />
+            </label>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCreateRoomSubmit}>
+              Créer la room
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
