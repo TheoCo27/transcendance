@@ -1,6 +1,5 @@
 // Ce fichier expose les endpoints HTTP lies au profil utilisateur,
 // au systeme d'amis et aux messages prives.
-import { ThrottlerGuard } from '@nestjs/throttler';
 import { ApiExceptionFilter } from "@/common/http/api-exception.filter";
 import { ok, type ApiResponse } from "@/common/http/api-response";
 import { CurrentUser } from "@/modules/auth/decorators/current-user.decorator";
@@ -151,7 +150,7 @@ export class UsersController {
 
   // Envoie un message prive a un ami.
   @Post("me/friends/messages/:friendId")
-  @UseGuards(AuthGuard, ThrottlerGuard)
+  @UseGuards(AuthGuard)
   async sendPrivateMessage(
     @CurrentUser() auth: AuthPayload,
     @Param("friendId", ParseIntPipe) friendId: number,
