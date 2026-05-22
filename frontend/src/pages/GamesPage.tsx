@@ -2,9 +2,11 @@ import { observer, useLocalObservable } from "mobx-react-lite";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import QuizGameSection from "../components/room/QuizGameSection";
+import Section from "../components/section";
 import SectionHeader from "../components/section-header";
 import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import SecondaryButton from "../components/ui/SecondaryButton";
 import { useToast } from "../components/ui/toast";
 import { toHHMMSS } from "../components/Wordle/ConvertTime";
 import Guess from "../components/Wordle/Guess";
@@ -170,7 +172,7 @@ function GamesPage() {
     };
 
     void finalizeWordle();
-  }, [room?.gameType, room?.id, store.lost, store.won]);
+  }, [navigate, room?.gameType, room?.id, store.timeStatus, store.won]);
 
   useEffect(() => {
     if (store.ToastId === 0) return;
@@ -229,7 +231,7 @@ function GamesPage() {
     };
 
     void loadGamePage();
-  }, [roomId]);
+  }, [navigate, roomId, user?.id]);
 
   useEffect(() => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -310,6 +312,13 @@ function GamesPage() {
             }
           : currentState,
       );
+
+      if (
+        data.reason === "wordle_completed" &&
+        user?.id === data.winnerUserId
+      ) {
+        navigate(`/rooms/${roomId}`, { replace: true });
+      }
     };
 
     onWs("room:state", handleRoomState);
@@ -327,7 +336,7 @@ function GamesPage() {
       offWs("game:state", handleGameState);
       offWs("game:ended", handleGameEnded);
     };
-  }, [roomId]);
+  }, [navigate, roomId, user?.id]);
 
   useEffect(() => {
     if (!gameState?.questionEndsAt) {
@@ -347,14 +356,6 @@ function GamesPage() {
       window.clearInterval(timer);
     };
   }, [gameState?.questionEndsAt]);
-
-  useEffect(() => {
-    if (!room || gameState?.status !== "finished") {
-      return;
-    }
-
-    navigate(`/rooms/${room.id}`, { replace: true });
-  }, [gameState?.status, navigate, room]);
 
   useEffect(() => {
     if (!room) {
@@ -494,6 +495,113 @@ function GamesPage() {
             </Link>
           </div>
         </section>
+      </main>
+    );
+  }
+
+  if (gameState?.status === "finished") {
+    return (
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
+        <Section className="overflow-hidden border-white/12 bg-surface/95 p-0">
+          <div className="border-b border-white/10 px-6 py-5 md:px-8">
+            <SectionLabel className="text-slate-400">
+              Partie terminée
+            </SectionLabel>
+            <SectionHeader className="text-3xl">
+              {gameState.winnerUserId
+                ? `Le gagnant est ${playerNamesById[gameState.winnerUserId] ?? `Joueur #${gameState.winnerUserId}`}`
+                : "La partie est terminée"}
+            </SectionHeader>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-white/70">
+              Voici le classement final. Tu peux revenir à la room pour relancer
+              une nouvelle partie ou repartir à l'accueil.
+            </p>
+          </div>
+
+          <div className="grid gap-6 px-6 py-6 md:px-8 lg:grid-cols-[1fr_0.9fr]">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
+                Résultat
+              </p>
+              <div className="mt-4 space-y-4">
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-bg/70 px-4 py-3">
+                  <span className="text-sm text-white/65">Joueurs classés</span>
+                  <span className="text-lg font-semibold text-white">
+                    {gameState.leaderboard.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-bg/70 px-4 py-3">
+                  <span className="text-sm text-white/65">Statut</span>
+                  <span className="text-sm font-semibold text-emerald-300">
+                    Terminé
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-bg/70 px-4 py-3">
+                  <span className="text-sm text-white/65">Mode</span>
+                  <span className="text-sm font-semibold text-white">
+                    {room?.gameType === "wordle"
+                      ? "Wordle"
+                      : formatGameType(room)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
+                  Classement
+                </p>
+                <span className="rounded-full border border-white/10 bg-bg/80 px-3 py-1 text-xs font-semibold text-white/70">
+                  {gameState.leaderboard.length} joueur
+                  {gameState.leaderboard.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <ol className="mt-4 space-y-3">
+                {gameState.leaderboard.map((entry, index) => {
+                  const isCurrentUser = entry.userId === user?.id;
+                  const rankTone =
+                    isCurrentUser && index !== 0
+                      ? "border-amber-300/50 bg-amber-400/10"
+                      : "border-slate-200/15 bg-white/6";
+
+                  return (
+                    <li
+                      key={entry.userId}
+                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${rankTone}`}
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-bg/80 text-sm font-semibold text-white">
+                        #{index + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">
+                          {playerNamesById[entry.userId] ??
+                            `Joueur #${entry.userId}`}
+                        </p>
+                        <p className="text-xs text-white/55">
+                          {index === 0 ? "Premier" : `Position ${index + 1}`}
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-bg/70 px-3 py-1 text-sm font-semibold text-white/80">
+                        {entry.score} point{entry.score !== 1 ? "s" : ""}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 border-t border-white/10 px-6 py-5 md:px-8">
+            <Link to={room ? `/rooms/${room.id}` : "/"}>
+              <PrimaryButton>Revenir à la room</PrimaryButton>
+            </Link>
+            <Link to="/">
+              <SecondaryButton>Retour à l'accueil</SecondaryButton>
+            </Link>
+          </div>
+        </Section>
       </main>
     );
   }

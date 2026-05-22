@@ -17,7 +17,7 @@ export default function QuizSetupCard({
       <SectionLabel className="text-slate-400">Setup Quiz</SectionLabel>
       <SectionHeader>Nom du quiz</SectionHeader>
       <p className="mt-2 max-w-2xl text-sm ">
-        Donne une identite claire a la room. Ce titre servira aussi de repere
+        Donne une identité claire à la room. Ce titre servira aussi de repère
         sur la page de jeu.
       </p>
 

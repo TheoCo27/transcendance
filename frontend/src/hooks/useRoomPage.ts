@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { RoomConfigForm } from "../components/room/room-types";
 import { useToast } from "../components/ui/toast";
 import {
@@ -12,6 +12,7 @@ import { getRoomById, updateRoom, type Room } from "../services/rooms";
 import { getUserById } from "../services/users";
 import {
   connectWs,
+  disconnectWs,
   emitWs,
   offWs,
   onWs,
@@ -86,6 +87,7 @@ type UseRoomPageOptions = {
 export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   const roomId = Number(roomIdParam);
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { user, isLoading: isSessionLoading } = useAuthSession();
 
@@ -117,6 +119,16 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   const [availableQuizzes, setAvailableQuizzes] = useState<Quiz[]>([]);
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
   const roomLinkCopiedTimeoutRef = useRef<number | null>(null);
+  const cameFromWordleResult = Boolean(
+    location.state &&
+    typeof location.state === "object" &&
+    (location.state as { fromWordleResult?: boolean }).fromWordleResult,
+  );
+  const cameFromWordleTimeout = Boolean(
+    location.state &&
+    typeof location.state === "object" &&
+    (location.state as { fromWordleTimeout?: boolean }).fromWordleTimeout,
+  );
 
   const refreshRoom = useCallback(async () => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -133,7 +145,10 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setGameState(await getGameState(roomId));
     } catch (error) {
       setPageError(
-        getUserFacingErrorMessage(error, "Impossible de rafraichir cette room."),
+        getUserFacingErrorMessage(
+          error,
+          "Impossible de rafraichir cette room.",
+        ),
       );
     }
   }, [roomId]);
@@ -175,10 +190,37 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   }, [roomId]);
 
   useEffect(() => {
-    if (room?.status === "playing" && Number.isFinite(roomId) && roomId > 0) {
+    if (isSessionLoading) {
+      return;
+    }
+
+    if (user) {
+      void connectWs().catch(() => {
+        // Action-level flows already surface feedback.
+      });
+      return;
+    }
+
+    disconnectWs();
+  }, [isSessionLoading, user]);
+
+  useEffect(() => {
+    if (
+      room?.status === "playing" &&
+      Number.isFinite(roomId) &&
+      roomId > 0 &&
+      !cameFromWordleResult &&
+      !cameFromWordleTimeout
+    ) {
       navigate(`/games/${roomId}`);
     }
-  }, [navigate, room?.status, roomId]);
+  }, [
+    cameFromWordleResult,
+    cameFromWordleTimeout,
+    navigate,
+    room?.status,
+    roomId,
+  ]);
 
   useEffect(() => {
     if (!Number.isFinite(roomId) || roomId <= 0) {

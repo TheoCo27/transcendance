@@ -124,13 +124,13 @@ export default function QuizGameSection({
       {roomStatus === "finished" ? (
         <section className="rounded-4xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-950">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
-            Partie terminee
+            Partie terminée
           </p>
           <h2 className="mt-3 text-3xl font-semibold">
-            La room a termine sa partie.
+            La room a terminé sa partie.
           </h2>
           <p className="mt-3 text-sm leading-7 text-emerald-800/85">
-            Le classement final reste visible ici. Tu peux revenir a l'accueil
+            Le classement final reste visible ici. Tu peux revenir à l'accueil
             pour ouvrir une nouvelle room partageable.
           </p>
         </section>
