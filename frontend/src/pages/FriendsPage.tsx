@@ -447,7 +447,7 @@ function consumePrivateMessageRateLimit(timestamps: number[]): string | null {
       );
 
       timestamps.splice(0, timestamps.length, ...retained);
-      return `Vous avez envoyé trop de messages. Réessayez dans ${Math.ceil(retryAfterMs / 1000)} secondes.`;
+      return `Vous avez envoye trop de messages. Reessayez dans ${Math.ceil(retryAfterMs / 1000)} secondes.`;
     }
   }
 
