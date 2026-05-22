@@ -1,0 +1,38 @@
+let count = 0;
+const maxMessages = 100;
+
+const textarea = document.getElementById('private-message');
+const allButtons = Array.from(document.querySelectorAll('button'));
+const sendBtn = allButtons.find(btn => btn.innerText.includes('Envoyer le message'));
+
+if (!sendBtn || !textarea) {
+    console.error("❌ Bouton ou Textarea introuvable.");
+} else {
+    console.log("🚀 Début du spam (Contournement de React en cours)...");
+    
+    // L'arme secrète : on récupère la vraie fonction de modification du navigateur
+    const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+    
+    const spammer = setInterval(() => {
+        if (count >= maxMessages) {
+            clearInterval(spammer);
+            console.log("✅ Fin du spam.");
+            return;
+        }
+
+        // 1. On injecte le texte de force avec le Native Setter
+        nativeTextAreaValueSetter.call(textarea, "Test spam " + count);
+        
+        // 2. On prévient React qu'il y a eu un changement
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // 3. On attend un millième de seconde pour que React débloque le bouton, puis on clique !
+        setTimeout(() => {
+            sendBtn.click();
+        }, 10);
+        
+        count++;
+        if (count % 10 === 0) console.log(`Envoyés: ${count}`);
+        
+    }, 50); // 100ms = 10 messages par seconde. C'est largement suffisant pour déclencher une protection anti-spam.
+}
