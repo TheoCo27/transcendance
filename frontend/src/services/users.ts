@@ -28,6 +28,10 @@ export type FriendActionResult = {
   friendshipStatus: "pending" | "accepted" | "declined";
 };
 
+export type FriendRemovalResult = {
+  message: string;
+};
+
 export type PrivateConversationSummary = {
   friendId: number;
   lastMessagePreview: string | null;
@@ -75,6 +79,12 @@ export function respondToFriendRequest(
   return apiRequest<FriendActionResult>(`/users/me/friends/requests/${requestId}`, {
     method: "PATCH",
     body: JSON.stringify({ action }),
+  });
+}
+
+export function removeFriend(friendId: number): Promise<FriendRemovalResult> {
+  return apiRequest<FriendRemovalResult>(`/users/me/friends/${friendId}`, {
+    method: "DELETE",
   });
 }
 

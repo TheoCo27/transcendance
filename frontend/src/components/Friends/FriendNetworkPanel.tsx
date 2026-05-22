@@ -30,6 +30,8 @@ type FriendNetworkPanelProps = {
     requestId: number,
     action: "accepted" | "declined",
   ) => void;
+  pendingRemovalFriendId: number | null;
+  onFriendRemoval: (friendId: number) => void;
   selectedFriendId: number | null;
   onSelectFriend: (friendId: number) => void;
   conversationSummariesByFriendId: Record<number, PrivateConversationSummary>;
@@ -64,6 +66,8 @@ export default function FriendNetworkPanel({
   isSendingRequest,
   pendingActionId,
   onFriendRequestAction,
+  pendingRemovalFriendId,
+  onFriendRemoval,
   selectedFriendId,
   onSelectFriend,
   conversationSummariesByFriendId,
@@ -125,67 +129,81 @@ export default function FriendNetworkPanel({
               {friendOverview?.friends.map((friend) => {
                 const summary = conversationSummariesByFriendId[friend.id];
                 const isSelected = selectedFriendId === friend.id;
+                const isRemoving = pendingRemovalFriendId === friend.id;
 
                 return (
-                  <button
+                  <div
                     key={friend.id}
                     className={`w-full rounded-3xl border px-5 py-4 text-left transition ${
                       isSelected
                         ? "border-white/35 bg-white/16"
                         : "border-white/10 bg-white/8 hover:bg-white/12"
                     }`}
-                    type="button"
-                    onClick={() => onSelectFriend(friend.id)}
                   >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                      <div className="flex items-center gap-4">
-                        <Avatar
-                          alt={`Photo de profil de ${friend.username}`}
-                          avatarUrl={friend.avatar_url}
-                          className="h-12 w-12"
-                          fallbackClassName="text-lg"
-                          username={friend.username}
-                        />
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-lg font-semibold text-white">
-                              {friend.username}
+                    <button
+                      className="w-full text-left"
+                      type="button"
+                      onClick={() => onSelectFriend(friend.id)}
+                    >
+                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-center gap-4">
+                          <Avatar
+                            alt={`Photo de profil de ${friend.username}`}
+                            avatarUrl={friend.avatar_url}
+                            className="h-12 w-12"
+                            fallbackClassName="text-lg"
+                            username={friend.username}
+                          />
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-lg font-semibold text-white">
+                                {friend.username}
+                              </p>
+                              {summary?.unreadCount ? (
+                                <span className="rounded-full bg-amber-300 px-2.5 py-1 text-xs font-semibold text-slate-950">
+                                  {summary.unreadCount} nouveau
+                                  {summary.unreadCount > 1 ? "x" : ""}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 text-sm text-white/65">
+                              {formatStatus(friend.status)} • inscrit le{" "}
+                              {formatDate(friend.createdAt)}
                             </p>
-                            {summary?.unreadCount ? (
-                              <span className="rounded-full bg-amber-300 px-2.5 py-1 text-xs font-semibold text-slate-950">
-                                {summary.unreadCount} nouveau
-                                {summary.unreadCount > 1 ? "x" : ""}
-                              </span>
-                            ) : null}
+                            <p className="mt-2 text-sm text-white/70">
+                              {summary?.lastMessagePreview ??
+                                "Aucun message prive echange pour le moment."}
+                            </p>
                           </div>
-                          <p className="mt-1 text-sm text-white/65">
-                            {formatStatus(friend.status)} • inscrit le{" "}
-                            {formatDate(friend.createdAt)}
-                          </p>
-                          <p className="mt-2 text-sm text-white/70">
-                            {summary?.lastMessagePreview ??
-                              "Aucun message prive echange pour le moment."}
-                          </p>
+                        </div>
+                        <div className="flex flex-col items-start gap-2 md:items-end">
+                          <span
+                            className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-medium ${
+                              friend.status === "online"
+                                ? "bg-emerald-400/15 text-emerald-200"
+                                : "bg-white/10 text-white/75"
+                            }`}
+                          >
+                            {formatStatus(friend.status)}
+                          </span>
+                          <span className="text-sm text-white/65">
+                            {summary?.lastMessageAt
+                              ? `Dernier message le ${formatDate(summary.lastMessageAt)}`
+                              : "Conversation vide"}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-start gap-2 md:items-end">
-                        <span
-                          className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-medium ${
-                            friend.status === "online"
-                              ? "bg-emerald-400/15 text-emerald-200"
-                              : "bg-white/10 text-white/75"
-                          }`}
-                        >
-                          {formatStatus(friend.status)}
-                        </span>
-                        <span className="text-sm text-white/65">
-                          {summary?.lastMessageAt
-                            ? `Dernier message le ${formatDate(summary.lastMessageAt)}`
-                            : "Conversation vide"}
-                        </span>
-                      </div>
+                    </button>
+                    <div className="mt-4 flex justify-end">
+                      <SecondaryButton
+                        className="border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100"
+                        disabled={isRemoving}
+                        onClick={() => void onFriendRemoval(friend.id)}
+                      >
+                        {isRemoving ? "Retrait..." : "Retirer"}
+                      </SecondaryButton>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>

@@ -13,6 +13,7 @@ import {
   getConversationSummaries,
   getMyFriendOverview,
   getPrivateConversation,
+  removeFriend,
   respondToFriendRequest,
   sendFriendRequest,
   sendPrivateMessage,
@@ -60,6 +61,9 @@ export default function FriendsPage() {
   const [friendNotice, setFriendNotice] = useState<FriendNotice | null>(null);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
+  const [pendingRemovalFriendId, setPendingRemovalFriendId] = useState<
+    number | null
+  >(null);
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [conversationError, setConversationError] = useState<string | null>(
@@ -348,6 +352,33 @@ export default function FriendsPage() {
     }
   };
 
+  const handleFriendRemoval = async (friendId: number) => {
+    setFriendNotice(null);
+    setPendingRemovalFriendId(friendId);
+
+    try {
+      const result = await removeFriend(friendId);
+      setFriendNotice({
+        kind: "success",
+        message: result.message,
+      });
+      await refreshFriendData();
+    } catch (error) {
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible de retirer cet ami",
+      );
+      if (message) {
+        setFriendNotice({
+          kind: "error",
+          message,
+        });
+      }
+    } finally {
+      setPendingRemovalFriendId(null);
+    }
+  };
+
   const handleMessageSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -404,6 +435,8 @@ export default function FriendsPage() {
           isSendingRequest={isSendingRequest}
           pendingActionId={pendingActionId}
           onFriendRequestAction={handleFriendRequestAction}
+          pendingRemovalFriendId={pendingRemovalFriendId}
+          onFriendRemoval={handleFriendRemoval}
           selectedFriendId={selectedFriendId}
           onSelectFriend={setSelectedFriendId}
           conversationSummariesByFriendId={conversationSummariesByFriendId}
