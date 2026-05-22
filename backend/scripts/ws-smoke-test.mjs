@@ -14,6 +14,8 @@ const BACKEND_HOST = process.env.BACKEND_HOST || "localhost";
 const WS_BASE_URL =
   process.env.WS_BASE_URL || `https://${BACKEND_HOST}:${BACKEND_PORT}`;
 const WS_NAMESPACE_URL = `${WS_BASE_URL}/ws`;
+const PRESENCE_TIMEOUT_MS = 20_000;
+const PRESENCE_POLL_INTERVAL_MS = 500;
 
 function section(title) {
   console.log(`\n== ${title} ==`);
@@ -99,6 +101,11 @@ async function run() {
 
     section("test websocket room persistence");
     await assertDisconnectUpdatesRoomState(owner, guest, roomId);
+    await assertDisconnectUpdatesPresenceStatus(
+      WS_BASE_URL,
+      outsiderSession,
+      owner.userId,
+    );
     const waitingRoomId = await createRoomWithOwner(
       guest,
       guestSession.cookieHeader,
@@ -617,6 +624,54 @@ async function assertDisconnectUpdatesRoomState(owner, guest, roomId) {
   safeDisconnect(owner.socket);
   await roomStatePromise;
   pass("Disconnect owner -> room mise a jour");
+}
+
+async function assertDisconnectUpdatesPresenceStatus(
+  baseUrl,
+  friendSession,
+  disconnectedUserId,
+) {
+  await waitForCondition(
+    async () => {
+      const friendOverviewPayload = await requestAuthenticatedJson(
+        baseUrl,
+        `/users/me/friends`,
+        {
+          method: "GET",
+          cookieHeader: friendSession.cookieHeader,
+        },
+        "Friend overview endpoint for presence status",
+      );
+
+      const disconnectedFriend = friendOverviewPayload?.data?.friends?.find(
+        (friend) => friend?.id === disconnectedUserId,
+      );
+
+      return disconnectedFriend?.status === "offline";
+    },
+    "Timed out waiting for the disconnected user to become offline",
+  );
+
+  pass("Disconnect owner -> statut offline visible pour les amis");
+}
+
+async function waitForCondition(
+  predicate,
+  failureMessage,
+  timeoutMs = PRESENCE_TIMEOUT_MS,
+  pollIntervalMs = PRESENCE_POLL_INTERVAL_MS,
+) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    if (await predicate()) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+
+  fail(failureMessage);
 }
 
 async function assertWaitingRoomPersistsAfterLastDisconnect(

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import FriendNetworkPanel, {
   type FriendNotice,
@@ -8,6 +8,7 @@ import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
+import { getUserFacingErrorMessage } from "../services/api";
 import {
   getConversationSummaries,
   getMyFriendOverview,
@@ -22,6 +23,10 @@ import {
 
 const FRIENDS_POLL_INTERVAL_MS = 12000;
 const CONVERSATION_POLL_INTERVAL_MS = 5000;
+const PRIVATE_MESSAGE_RATE_LIMITS = [
+  { limit: 5, windowMs: 5_000 },
+  { limit: 20, windowMs: 60_000 },
+] as const;
 
 function areMessagesEqual(left: PrivateMessage[], right: PrivateMessage[]) {
   return (
@@ -63,6 +68,8 @@ export default function FriendsPage() {
   const [isConversationLoading, setIsConversationLoading] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const isSendingMessageRef = useRef(false);
+  const privateMessageTimestampsRef = useRef<number[]>([]);
 
   const conversationSummariesByFriendId = useMemo(
     () =>
@@ -137,9 +144,10 @@ export default function FriendsPage() {
       } catch (error) {
         if (!cancelled) {
           setFriendsError(
-            error instanceof Error
-              ? error.message
-              : "Impossible de charger la page amis",
+            getUserFacingErrorMessage(
+              error,
+              "Impossible de charger la page amis",
+            ),
           );
         }
       } finally {
@@ -221,9 +229,10 @@ export default function FriendsPage() {
       } catch (error) {
         if (!cancelled) {
           setConversationError(
-            error instanceof Error
-              ? error.message
-              : "Impossible de charger cette conversation",
+            getUserFacingErrorMessage(
+              error,
+              "Impossible de charger cette conversation",
+            ),
           );
         }
       } finally {
@@ -294,13 +303,16 @@ export default function FriendsPage() {
       });
       await refreshFriendData();
     } catch (error) {
-      setFriendNotice({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Impossible d'ajouter cet ami",
-      });
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible d'ajouter cet ami",
+      );
+      if (message) {
+        setFriendNotice({
+          kind: "error",
+          message,
+        });
+      }
     } finally {
       setIsSendingRequest(false);
     }
@@ -321,13 +333,16 @@ export default function FriendsPage() {
       });
       await refreshFriendData();
     } catch (error) {
-      setFriendNotice({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Impossible de mettre a jour la demande",
-      });
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible de mettre a jour la demande",
+      );
+      if (message) {
+        setFriendNotice({
+          kind: "error",
+          message,
+        });
+      }
     } finally {
       setPendingActionId(null);
     }
@@ -340,22 +355,36 @@ export default function FriendsPage() {
       return;
     }
 
+    if (isSendingMessageRef.current) {
+      return;
+    }
+
+    const rateLimitMessage = consumePrivateMessageRateLimit(
+      privateMessageTimestampsRef.current,
+    );
+
+    if (rateLimitMessage) {
+      setConversationError(rateLimitMessage);
+      return;
+    }
+
+    isSendingMessageRef.current = true;
     setIsSendingMessage(true);
 
     try {
       await sendPrivateMessage(selectedFriendId, messageInput.trim());
       setMessageInput("");
+      setConversationError(null);
       await Promise.all([
         refreshConversation(selectedFriendId),
         refreshFriendData(),
       ]);
     } catch (error) {
       setConversationError(
-        error instanceof Error
-          ? error.message
-          : "Impossible d'envoyer le message",
+        getUserFacingErrorMessage(error, "Impossible d'envoyer le message"),
       );
     } finally {
+      isSendingMessageRef.current = false;
       setIsSendingMessage(false);
     }
   };
@@ -395,4 +424,34 @@ export default function FriendsPage() {
       </section>
     </main>
   );
+}
+
+function consumePrivateMessageRateLimit(timestamps: number[]): string | null {
+  const now = Date.now();
+  const maxWindowMs = Math.max(
+    ...PRIVATE_MESSAGE_RATE_LIMITS.map((rule) => rule.windowMs),
+  );
+  const retained = timestamps.filter(
+    (timestamp) => now - timestamp < maxWindowMs,
+  );
+
+  for (const rule of PRIVATE_MESSAGE_RATE_LIMITS) {
+    const hitsInWindow = retained.filter(
+      (timestamp) => now - timestamp < rule.windowMs,
+    );
+
+    if (hitsInWindow.length >= rule.limit) {
+      const retryAfterMs = Math.max(
+        0,
+        rule.windowMs - (now - hitsInWindow[0]),
+      );
+
+      timestamps.splice(0, timestamps.length, ...retained);
+      return `Vous avez envoye trop de messages. Reessayez dans ${Math.ceil(retryAfterMs / 1000)} secondes.`;
+    }
+  }
+
+  retained.push(now);
+  timestamps.splice(0, timestamps.length, ...retained);
+  return null;
 }

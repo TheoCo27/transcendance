@@ -15,12 +15,12 @@ import ProgressBar from "../components/Wordle/ProgressBar";
 import PuzzleStore from "../components/Wordle/PuzzleStore";
 import RulesPanel from "../components/Wordle/RulesPanel";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { getUserFacingErrorMessage } from "../services/api";
 import { getGameState, type GameState } from "../services/game";
 import { getRoomById, type Room } from "../services/rooms";
 import { getUserById } from "../services/users";
 import {
   connectWs,
-  disconnectWs,
   emitWs,
   offWs,
   onWs,
@@ -93,7 +93,7 @@ type TimerPayload = {
 function GamesPage() {
   const { roomId: roomIdParam } = useParams();
   const navigate = useNavigate();
-  const { user, isLoading: isSessionLoading } = useAuthSession();
+  const { user } = useAuthSession();
 
   const roomId = Number(roomIdParam);
   const [room, setRoom] = useState<Room | null>(null);
@@ -163,9 +163,10 @@ function GamesPage() {
       } catch (error) {
         hasFinishedWordleRef.current = false;
         setPageError(
-          error instanceof Error
-            ? error.message
-            : "Impossible de finaliser la partie Wordle.",
+          getUserFacingErrorMessage(
+            error,
+            "Impossible de finaliser la partie Wordle.",
+          ),
         );
       }
     };
@@ -222,9 +223,7 @@ function GamesPage() {
         setGameState(fetchedGameState);
       } catch (error) {
         setPageError(
-          error instanceof Error
-            ? error.message
-            : "Impossible de charger cette room.",
+          getUserFacingErrorMessage(error, "Impossible de charger cette room."),
         );
       } finally {
         setIsLoadingPage(false);
@@ -233,21 +232,6 @@ function GamesPage() {
 
     void loadGamePage();
   }, [navigate, roomId, user?.id]);
-
-  useEffect(() => {
-    if (isSessionLoading) {
-      return;
-    }
-
-    if (user) {
-      void connectWs().catch(() => {
-        // Si le socket n'est pas dispo, la page reste lisible en HTTP.
-      });
-      return;
-    }
-
-    disconnectWs();
-  }, [isSessionLoading, user]);
 
   useEffect(() => {
     if (!Number.isFinite(roomId) || roomId <= 0) {

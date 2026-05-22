@@ -199,6 +199,7 @@ Backend:
 - `backend/src/modules/realtime/services/realtime-presence.service.ts`
 - `backend/src/modules/realtime/services/realtime-validation.service.ts`
 - `backend/src/modules/realtime/services/realtime-response.service.ts`
+- `backend/src/modules/realtime/services/realtime-rate-limit.service.ts`
 - `backend/src/modules/realtime/services/realtime-room-events.service.ts`
 - `backend/src/modules/realtime/services/realtime-game-events.service.ts`
 - `backend/src/modules/realtime/services/realtime-game-runtime.service.ts`
@@ -296,6 +297,10 @@ Docs et tests:
   - `syncSocketRoomMembership()` est cle pour les reconnexions.
   - `runDisconnectCleanup()` applique la strategie de nettoyage apres grace period.
 
+- `backend/src/modules/realtime/services/realtime-rate-limit.service.ts`
+  - fournit un rate limiter memoire simple pour les evenements temps reel.
+  - il est utilise par `handleChatMessage()` pour freiner le spam sans bloquer les autres events Socket.IO.
+
 - `backend/src/modules/realtime/services/realtime-game-events.service.ts`
   - `handleGameAnswer()`.
   - valide la reponse, diffuse le resultat et declenche la fermeture de question si tout le monde a repondu.
@@ -324,6 +329,10 @@ Docs et tests:
 - la presence est traquee en memoire pour securiser les evenements;
 - le timer est autoritaire cote serveur, pas cote client;
 - le client ne decide jamais si une reponse est valide ou si une question est terminee.
+- le chat de room est protege contre le spam par une double fenetre de limitation appliquee par utilisateur:
+  - `5` messages sur `5` secondes pour casser les rafales;
+  - `20` messages sur `60` secondes pour couper le flood continu.
+- quand la limite est atteinte, le serveur renvoie `chat:message:error` avec un message francais demandant d'attendre avant de renvoyer un message.
 
 ---
 
@@ -347,6 +356,7 @@ Backend:
 
 - `backend/src/modules/users/users.controller.ts`
 - `backend/src/modules/users/users.service.ts`
+- `backend/src/modules/users/private-message-rate-limit.service.ts`
 - `backend/src/modules/users/private-messages.service.ts`
 - `backend/src/modules/users/dto/send-friend-request.dto.ts`
 - `backend/src/modules/users/dto/friend-request-action.dto.ts`
@@ -530,6 +540,10 @@ Frontend:
   - `sendMessage()` cree un MP.
   - `assertMessagingAllowed()` interdit les MP hors amitie acceptee.
 
+- `backend/src/modules/users/private-message-rate-limit.service.ts`
+  - fournit un rate limiter memoire simple pour l'endpoint HTTP des messages prives.
+  - il est utilise par `sendMessage()` pour limiter les rafales et le flood.
+
 - `backend/src/modules/rooms/rooms.service.ts`
   - `listMessages()` et `createMessage()` couvrent le chat de room.
 
@@ -545,6 +559,10 @@ Frontend:
 - les messages prives sont persistants en base via `PrivateMessage`;
 - le chat de room, lui, est persiste en base dans `Messages`;
 - la messagerie privee est volontairement reservee aux amis acceptes pour simplifier les abus et la moderation.
+- les messages prives sont proteges contre le spam avec la meme politique que le chat de room:
+  - `5` messages sur `5` secondes;
+  - `20` messages sur `60` secondes.
+- quand cette limite est depassee, l'API HTTP des MP renvoie un `429 Too Many Requests` avec un message d'erreur en francais.
 
 ---
 

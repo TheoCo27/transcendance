@@ -6,8 +6,9 @@ import SectionHeader from "../components/section-header";
 import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
-import { useAuthSession } from "../hooks/useAuthSession";
 import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
+import { getUserFacingErrorMessage } from "../services/api";
+import { useAuthSession } from "../hooks/useAuthSession";
 import { updateMyAvatar, updateMyProfile } from "../services/users";
 
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
@@ -160,13 +161,16 @@ export default function ProfilePage() {
         message: "Photo de profil mise a jour.",
       });
     } catch (error) {
-      setAvatarNotice({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Impossible de mettre a jour la photo de profil.",
-      });
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible de mettre a jour la photo de profil.",
+      );
+      if (message) {
+        setAvatarNotice({
+          kind: "error",
+          message,
+        });
+      }
     } finally {
       setIsAvatarSubmitting(false);
       event.target.value = "";
@@ -185,13 +189,16 @@ export default function ProfilePage() {
         message: "Photo de profil supprimee.",
       });
     } catch (error) {
-      setAvatarNotice({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Impossible de supprimer la photo de profil.",
-      });
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible de supprimer la photo de profil.",
+      );
+      if (message) {
+        setAvatarNotice({
+          kind: "error",
+          message,
+        });
+      }
     } finally {
       setIsAvatarSubmitting(false);
     }
@@ -226,13 +233,16 @@ export default function ProfilePage() {
         message: "Profil mis a jour.",
       });
     } catch (error) {
-      setProfileNotice({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Impossible de mettre a jour le profil.",
-      });
+      const message = getUserFacingErrorMessage(
+        error,
+        "Impossible de mettre a jour le profil.",
+      );
+      if (message) {
+        setProfileNotice({
+          kind: "error",
+          message,
+        });
+      }
     } finally {
       setIsProfileSubmitting(false);
     }

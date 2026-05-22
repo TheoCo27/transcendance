@@ -3,9 +3,12 @@ import { PrismaService } from "@/prisma/prisma.service";
 import { UsersService, type FriendUserSummary } from "@/modules/users/users.service";
 import {
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { PrivateMessageRateLimitService } from "./private-message-rate-limit.service";
 
 export type PrivateMessage = {
   id: number;
@@ -23,11 +26,17 @@ export type PrivateConversationSummary = {
   unreadCount: number;
 };
 
+const PRIVATE_MESSAGE_RATE_LIMITS = [
+  { limit: 5, windowMs: 5_000 },
+  { limit: 20, windowMs: 60_000 },
+] as const;
+
 @Injectable()
 export class PrivateMessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly rateLimit: PrivateMessageRateLimitService,
   ) {}
 
   // Resume chaque conversation privee d'un utilisateur.
@@ -190,6 +199,17 @@ export class PrivateMessagesService {
     rawContent: string,
   ): Promise<PrivateMessage> {
     await this.assertMessagingAllowed(senderId, friendId);
+    const limitResult = this.rateLimit.consume(
+      `private-message:${senderId}`,
+      PRIVATE_MESSAGE_RATE_LIMITS,
+    );
+
+    if (!limitResult.allowed) {
+      throw new HttpException(
+        `Vous avez envoye trop de messages. Reessayez dans ${Math.ceil(limitResult.retryAfterMs / 1000)} secondes.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
 
     const message = await this.prisma.client.privateMessage.create({
       data: {
