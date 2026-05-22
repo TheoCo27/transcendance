@@ -9,11 +9,13 @@ import {
   HomePage,
   LoginPage,
   NotFound,
+  PrivacyPolicyPage,
   ProfilePage,
   QuizAdminPage,
   QuizPage,
   RegisterPage,
   RoomPage,
+  TermsOfServicePage,
 } from "./pages";
 import { connectWs, disconnectWs } from "./services/ws";
 
@@ -46,6 +48,14 @@ export default function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/politique-confidentialite"
+            element={<PrivacyPolicyPage />}
+          />
+          <Route
+            path="/conditions-utilisation"
+            element={<TermsOfServicePage />}
+          />
           <Route path="/rooms/:roomId" element={<RoomPage />} />
           <Route path="/games/:roomId" element={<GamesPage />} />
           <Route path="/quiz/:quizId" element={<QuizPage />} />

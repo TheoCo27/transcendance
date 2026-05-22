@@ -128,6 +128,24 @@ export default function RegisterPage() {
             Se connecter
           </Link>
         </p>
+
+        <p className="mt-4 text-center text-xs leading-6 text-text/60">
+          En creant un compte, vous acceptez nos{" "}
+          <Link
+            className="font-semibold underline underline-offset-4"
+            to="/conditions-utilisation"
+          >
+            conditions d'utilisation
+          </Link>{" "}
+          et notre{" "}
+          <Link
+            className="font-semibold underline underline-offset-4"
+            to="/politique-confidentialite"
+          >
+            politique de confidentialite
+          </Link>
+          .
+        </p>
       </Card>
     </main>
   );
