@@ -103,7 +103,6 @@ export function getUserFacingServerMessage(
 ): string | null {
   if (typeof message === "string" && message.trim().length > 0) {
     if (INTERNAL_SERVER_ERROR_PATTERN.test(message.trim())) {
-      console.error("Suppressed backend error message:", message);
       return null;
     }
 
@@ -119,7 +118,6 @@ export function getUserFacingErrorMessage(
 ): string | null {
   if (error instanceof Error) {
     if (INTERNAL_SERVER_ERROR_PATTERN.test(error.message.trim())) {
-      console.error("Suppressed backend error:", error);
       return null;
     }
 
@@ -135,6 +133,43 @@ export async function apiRequest<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  const { response, json } = await performApiRequest<T>(path, init);
+
+  if (!response.ok) {
+    throw new Error(json?.error?.message ?? `Request failed (${response.status})`);
+  }
+
+  if (!json || !json.success || json.data === null) {
+    throw new Error("Invalid server response");
+  }
+
+  return json.data;
+}
+
+export async function apiRequestNullable<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T | null> {
+  const { response, json } = await performApiRequest<T>(path, init);
+
+  if (!response.ok) {
+    throw new Error(json?.error?.message ?? `Request failed (${response.status})`);
+  }
+
+  if (!json || !json.success) {
+    throw new Error("Invalid server response");
+  }
+
+  return json.data;
+}
+
+async function performApiRequest<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<{
+  response: Response;
+  json: ApiResponse<T> | null;
+}> {
   const response = await fetch(path, {
     ...init,
     credentials: "include",
@@ -151,13 +186,8 @@ export async function apiRequest<T>(
     json = null;
   }
 
-  if (!response.ok) {
-    throw new Error(json?.error?.message ?? `Request failed (${response.status})`);
-  }
-
-  if (!json || !json.success || json.data === null) {
-    throw new Error("Invalid server response");
-  }
-
-  return json.data;
+  return {
+    response,
+    json,
+  };
 }

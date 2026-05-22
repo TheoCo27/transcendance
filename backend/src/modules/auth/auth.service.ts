@@ -444,6 +444,33 @@ export class AuthService {
     res.clearCookie("access_token", this.getAuthCookieOptions());
   }
 
+  // Retourne la session courante sans echouer pour les visiteurs anonymes.
+  async getOptionalSessionUser(
+    req: Request,
+    res: Response,
+  ): Promise<SafeUser | null> {
+    const token = req.cookies?.access_token;
+
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const auth = await this.jwtService.verifyAsync<AuthPayload>(token);
+      const user = await this.usersService.findUser({ id: auth.sub });
+
+      if (!user) {
+        res.clearCookie("access_token", this.getAuthCookieOptions());
+        return null;
+      }
+
+      return this.sanitizeUser(user);
+    } catch {
+      res.clearCookie("access_token", this.getAuthCookieOptions());
+      return null;
+    }
+  }
+
   // Retire immediatement l'utilisateur de toutes ses rooms au logout.
   private async cleanupUserRoomsOnLogout(userId: number): Promise<boolean> {
     const rooms = await this.roomsService.list();
