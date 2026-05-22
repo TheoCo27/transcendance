@@ -38,6 +38,10 @@ export type FriendActionResult = {
   friendshipStatus: FriendshipStatus;
 };
 
+export type FriendRemovalResult = {
+  message: string;
+};
+
 const SUPPORTED_AVATAR_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -384,6 +388,56 @@ export class UsersService {
           ? `${request.sender.username} has been added to your friends list`
           : `Friend request from ${request.sender.username} declined`,
       friendshipStatus: action,
+    };
+  }
+
+  // Retire un ami en supprimant la relation acceptee active.
+  async removeFriend(
+    userId: number,
+    friendId: number,
+  ): Promise<FriendRemovalResult> {
+    const currentUser = await this.findUser({ id: userId });
+
+    if (!currentUser) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    this.ensureFriendSystemAvailable(currentUser);
+
+    if (userId === friendId) {
+      throw new BadRequestException(
+        "Vous ne pouvez pas vous supprimer vous-meme de votre liste d'amis",
+      );
+    }
+
+    const friend = await this.findUser({ id: friendId });
+
+    if (!friend) {
+      throw new NotFoundException(`User ${friendId} not found`);
+    }
+
+    const deletedRelations = await this.prisma.client.friendRequests.deleteMany({
+      where: {
+        status: "accepted",
+        OR: [
+          {
+            senderId: userId,
+            receiverId: friendId,
+          },
+          {
+            senderId: friendId,
+            receiverId: userId,
+          },
+        ],
+      },
+    });
+
+    if (deletedRelations.count === 0) {
+      throw new NotFoundException("Cet utilisateur n'est pas dans votre liste d'amis");
+    }
+
+    return {
+      message: `${friend.username} a ete retire de votre liste d'amis`,
     };
   }
 

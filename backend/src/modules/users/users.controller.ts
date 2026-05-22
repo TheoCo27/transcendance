@@ -9,6 +9,7 @@ import { User } from "@generated/prisma/client";
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -123,6 +124,16 @@ export class UsersController {
         dto.action,
       ),
     );
+  }
+
+  // Retire un ami de la liste du compte courant.
+  @Delete("me/friends/:friendId")
+  @UseGuards(AuthGuard)
+  async removeFriend(
+    @CurrentUser() auth: AuthPayload,
+    @Param("friendId", ParseIntPipe) friendId: number,
+  ): Promise<ApiResponse<{ message: string }>> {
+    return ok(await this.usersService.removeFriend(auth.sub, friendId));
   }
 
   // Retourne la synthese des conversations privees du compte courant.
