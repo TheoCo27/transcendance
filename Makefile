@@ -13,7 +13,7 @@ BRANCH := $(shell git branch --show-current 2>/dev/null)
 # **************************************************************************** #
 
 all:
-	@$(MAKE) up-run
+	@$(MAKE) up
 
 help:
 	@echo "Usage: Containers"
@@ -78,8 +78,7 @@ compose-check:
 setup-host:
 	bash scripts/setup-host.sh
 
-up: env-check setup-host compose-check
-	@$(MAKE) up-run
+up: up-run
 
 ensure-public-stack: compose-check
 	@$(COMPOSE_DEV) rm -s -f prisma-studio >/dev/null 2>&1 || true
@@ -180,7 +179,7 @@ tls-cert:
 	bash scripts/generate-dev-cert.sh
 
 tls-trust:
-	mkcert -install
+	bash scripts/setup-host.sh --tls-only
 
 shell-back:
 	$(ENGINE) exec -it quiz_backend sh

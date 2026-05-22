@@ -9,11 +9,6 @@ CERT_FILE="${CERT_DIR}/dev-localhost.crt"
 KEY_FILE="${CERT_DIR}/dev-localhost.key"
 CA_FILE="${CERT_DIR}/mkcert-rootCA.pem"
 
-if [ -s "$CERT_FILE" ] && [ -s "$KEY_FILE" ] && [ -s "$CA_FILE" ]; then
-	printf '[OK] Certificat TLS de dev present: %s\n' "$CERT_FILE"
-	exit 0
-fi
-
 ensure_local_brew_shellenv >/dev/null 2>&1 || true
 
 command -v mkcert >/dev/null 2>&1 || {
@@ -31,6 +26,16 @@ ROOT_CA_SOURCE="${CAROOT}/rootCA.pem"
 }
 
 mkdir -p "$CERT_DIR"
+
+if [ -s "$CERT_FILE" ] && [ -s "$KEY_FILE" ] && [ -s "$CA_FILE" ]; then
+	if cmp -s "$ROOT_CA_SOURCE" "$CA_FILE" && openssl verify -CAfile "$CA_FILE" "$CERT_FILE" >/dev/null 2>&1; then
+		printf '[OK] Certificat TLS de dev present et valide pour cette machine: %s\n' "$CERT_FILE"
+		exit 0
+	fi
+
+	printf '[INFO] Certificat TLS existant incompatible avec la CA mkcert locale, regeneration...\n'
+fi
+
 cp "$ROOT_CA_SOURCE" "$CA_FILE"
 
 mkcert \

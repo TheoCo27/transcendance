@@ -15,6 +15,27 @@ COMMENTED_ZSH_BLOCK_START="#if [ -t 1 ]; then"
 COMMENTED_ZSH_BLOCK_EXEC="#exec zsh"
 COMMENTED_ZSH_BLOCK_END="#fi"
 
+detect_linux_distribution() {
+	if [ ! -r /etc/os-release ]; then
+		printf '%s\n' "unknown"
+		return 0
+	fi
+
+	# shellcheck disable=SC1091
+	. /etc/os-release
+	printf '%s\n' "${ID:-unknown}"
+}
+
+run_privileged() {
+	if [ "$(id -u)" -eq 0 ]; then
+		"$@"
+		return 0
+	fi
+
+	command -v sudo >/dev/null 2>&1 || return 1
+	sudo "$@"
+}
+
 log() {
 	printf '[setup] %s\n' "$1"
 }
@@ -139,23 +160,71 @@ ensure_mkcert() {
 	ok "mkcert installe"
 }
 
+ensure_system_trust_tools() {
+	local distro
+
+	distro="$(detect_linux_distribution)"
+
+	case "$distro" in
+		fedora|rhel|centos|rocky|almalinux)
+			if command -v certutil >/dev/null 2>&1 && command -v update-ca-trust >/dev/null 2>&1; then
+				ok "Outils de trust systeme presents"
+				return 0
+			fi
+
+			log "Installation des outils de trust systeme Fedora"
+			run_privileged dnf install -y nss-tools ca-certificates \
+				|| fail "Impossible d'installer nss-tools et ca-certificates automatiquement"
+			ok "Outils de trust systeme Fedora installes"
+			;;
+		debian|ubuntu)
+			if command -v certutil >/dev/null 2>&1 && command -v update-ca-certificates >/dev/null 2>&1; then
+				ok "Outils de trust systeme presents"
+				return 0
+			fi
+
+			log "Installation des outils de trust systeme Debian/Ubuntu"
+			run_privileged apt-get update \
+				|| fail "Impossible de mettre a jour les index APT automatiquement"
+			run_privileged apt-get install -y libnss3-tools ca-certificates \
+				|| fail "Impossible d'installer libnss3-tools et ca-certificates automatiquement"
+			ok "Outils de trust systeme Debian/Ubuntu installes"
+			;;
+		arch|archlinux)
+			if command -v certutil >/dev/null 2>&1 && command -v trust >/dev/null 2>&1; then
+				ok "Outils de trust systeme presents"
+				return 0
+			fi
+
+			log "Installation des outils de trust systeme Arch"
+			run_privileged pacman -Sy --noconfirm nss ca-certificates p11-kit \
+				|| fail "Impossible d'installer les outils de trust systeme automatiquement"
+			ok "Outils de trust systeme Arch installes"
+			;;
+		unknown)
+			warn "Distribution Linux non detectee. Verification du trust systeme laissee a mkcert."
+			;;
+		*)
+			warn "Distribution '${distro}' non geree automatiquement. Verification du trust systeme laissee a mkcert."
+			;;
+	esac
+}
+
 ensure_mkcert_ca() {
 	local caroot root_ca
 
 	ensure_mkcert
+	ensure_system_trust_tools
 	caroot="$(mkcert -CAROOT)"
 	root_ca="${caroot}/rootCA.pem"
 
-	if [ -s "$root_ca" ]; then
-		ok "Autorite locale mkcert deja installee"
-		return 0
+	log "Installation ou verification de l'autorite locale mkcert"
+	if ! mkcert -install; then
+		fail "mkcert -install a echoue apres preparation du trust systeme"
 	fi
 
-	log "Installation de l'autorite locale mkcert"
-	if ! mkcert -install; then
-		fail "mkcert -install a echoue. Sur Fedora, verifie que les outils NSS du poste sont disponibles."
-	fi
-	ok "Autorite locale mkcert installee"
+	[ -s "$root_ca" ] || fail "Autorite locale mkcert absente apres installation"
+	ok "Autorite locale mkcert installee et approuvee"
 }
 
 ensure_nodocker_marker() {
@@ -188,8 +257,22 @@ ensure_compose_runtime() {
 
 main() {
 	ensure_mkcert_ca
+}
+
+main_full() {
+	ensure_mkcert_ca
 	ensure_nodocker_marker
 	ensure_compose_runtime
 }
 
-main "$@"
+case "${1:-}" in
+	--tls-only)
+		main
+		;;
+	"")
+		main_full
+		;;
+	*)
+		fail "Option inconnue: $1"
+		;;
+esac
