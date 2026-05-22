@@ -118,6 +118,7 @@ export default function LoginPage() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             disabled={isSubmitting}
+            autoComplete="email"
             required
           />
 
@@ -136,6 +137,7 @@ export default function LoginPage() {
             onChange={(event) => setPassword(event.target.value)}
             aria-invalid={error ? "true" : "false"}
             disabled={isSubmitting}
+            autoComplete="current-password"
             required
           />
 
@@ -193,6 +195,7 @@ export default function LoginPage() {
             onChange={(event) => setGuestUsername(event.target.value)}
             disabled={isGuestSubmitting}
             minLength={AUTH_USERNAME_MIN_LENGTH}
+            autoComplete="off"
             required
           />
 
