@@ -47,7 +47,7 @@ export type PuzzleStoreType = {
   toast_lost(): void;
   checkTimeUp(): void;
 
-  init(): void;
+  init(sharedWord?: string): void;
   submitGuess(): void;
   handleKeyup(e: KeyboardEvent): void;
   handleKeyboard(key: string): void;
@@ -148,7 +148,7 @@ export default {
     this.ToastId++;
   },
 
-  init() {
+  init(sharedWord?: string) {
     if (this.nbr_letters === 7)
       ((this.words_array_json = seven_words),
         (this.all_words_array_json = all_seven_words));
@@ -157,15 +157,22 @@ export default {
         (this.all_words_array_json = all_six_words));
     else
       ((this.words_array_json = five_words),
-        (this.all_words_array_json = all_five_words),
-        (this.nbr_letters = 5));
+        (this.all_words_array_json = all_five_words));
 
-    this.word =
-      this.words_array_json[
-        Math.floor(Math.random() * this.words_array_json.length)
-      ];
+    const resolvedWord =
+      typeof sharedWord === "string" &&
+      sharedWord.length === this.nbr_letters &&
+      this.all_words_array_json.includes(sharedWord)
+        ? sharedWord
+        : this.words_array_json[
+            Math.floor(Math.random() * this.words_array_json.length)
+          ];
+
+    this.word = resolvedWord;
     this.guesses = new Array(this.maxAttempts).fill(""); //custom dynamic size, depending on rules settings
     this.currentGuess = 0;
+    this.ToastMessage = "";
+    this.validWord = true;
   },
 
   submitGuess() {

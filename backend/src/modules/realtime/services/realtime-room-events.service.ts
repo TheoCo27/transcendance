@@ -125,6 +125,10 @@ export class RealtimeRoomEventsService {
         continue;
       }
 
+      if (await this.gameRuntime.completeWordleIfReady(room.id, server)) {
+        continue;
+      }
+
       server
         .to(this.roomChannel(room.id))
         .emit("room:state", this.response.ok(updatedRoom));
@@ -236,7 +240,9 @@ export class RealtimeRoomEventsService {
       return;
     }
 
-    server.to(channel).emit("room:state", this.response.ok(room));
+    if (!(await this.gameRuntime.completeWordleIfReady(payload.roomId, server))) {
+      server.to(channel).emit("room:state", this.response.ok(room));
+    }
     await this.broadcastRoomList(server);
   }
 

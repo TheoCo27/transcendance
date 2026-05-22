@@ -730,11 +730,11 @@ export class RoomsService {
       if (
         typeof wordLength !== "number" ||
         !Number.isInteger(wordLength) ||
-        wordLength < 4 ||
-        wordLength > 8
+        wordLength < 5 ||
+        wordLength > 7
       ) {
         throw new ConflictException(
-          "La configuration de Wordle necessite un mot de longueur entre 4 et 8 caracteres",
+          "La configuration de Wordle necessite un mot de longueur entre 5 et 7 caracteres",
         );
       }
 
@@ -742,10 +742,10 @@ export class RoomsService {
         typeof maxAttempts !== "number" ||
         !Number.isInteger(maxAttempts) ||
         maxAttempts < 3 ||
-        maxAttempts > 10
+        maxAttempts > 8
       ) {
         throw new ConflictException(
-          "La configuration de Wordle necessite un nombre de tentatives entre 3 et 10",
+          "La configuration de Wordle necessite un nombre de tentatives entre 3 et 8",
         );
       }
 

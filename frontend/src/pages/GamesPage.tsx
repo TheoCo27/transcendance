@@ -118,7 +118,6 @@ function GamesPage() {
   }, [isRulesOpen]);
 
   useEffect(() => {
-    store.init();
     const handleKeyup = (e: KeyboardEvent) => store.handleKeyup(e);
     window.addEventListener("keyup", handleKeyup);
 
@@ -155,7 +154,11 @@ function GamesPage() {
     const finalizeWordle = async () => {
       try {
         await connectWs();
-        emitWs("game:finish", { roomId: room.id });
+        emitWs("game:finish", {
+          roomId: room.id,
+          won: store.won,
+          attemptsUsed: store.currentGuess,
+        });
       } catch (error) {
         hasFinishedWordleRef.current = false;
         setPageError(
@@ -168,7 +171,7 @@ function GamesPage() {
     };
 
     void finalizeWordle();
-  }, [navigate, room?.gameType, room?.id, store.timeStatus, store.won]);
+  }, [room?.gameType, room?.id, store.currentGuess, store.lost, store.won]);
 
   useEffect(() => {
     if (store.ToastId === 0) return;
@@ -308,13 +311,6 @@ function GamesPage() {
             }
           : currentState,
       );
-
-      if (
-        data.reason === "wordle_completed" &&
-        user?.id === data.winnerUserId
-      ) {
-        navigate(`/rooms/${roomId}`, { replace: true });
-      }
     };
 
     onWs("room:state", handleRoomState);
@@ -332,7 +328,7 @@ function GamesPage() {
       offWs("game:state", handleGameState);
       offWs("game:ended", handleGameEnded);
     };
-  }, [navigate, roomId, user?.id]);
+  }, [roomId]);
 
   useEffect(() => {
     if (!gameState?.questionEndsAt) {
@@ -392,6 +388,11 @@ function GamesPage() {
 
     return config as Record<string, number>;
   }, [room?.gameConfig]);
+  const wordleState = gameState?.wordle ?? null;
+  const sharedWord =
+    room?.gameType === "wordle" && typeof wordleState?.sharedWord === "string"
+      ? wordleState.sharedWord
+      : null;
 
   const gameTypeLabel = useMemo(() => formatGameType(room), [room]);
   const roomConfigEntries = useMemo(
@@ -400,27 +401,32 @@ function GamesPage() {
   );
 
   useEffect(() => {
-    // Sync store configuration with room settings for Wordle
     if (room?.gameType === "wordle") {
       const configuredLength = roomGameConfig?.wordLength ?? store.nbr_letters;
       const configuredMaxAttempts =
         roomGameConfig?.maxAttempts ?? store.maxAttempts;
-      let shouldInit = false;
-      if (configuredLength !== store.nbr_letters) {
-        store.nbr_letters = configuredLength;
-        shouldInit = true;
-      }
-      if (configuredMaxAttempts !== store.maxAttempts) {
-        store.maxAttempts = configuredMaxAttempts;
-        shouldInit = true;
-      }
+      const shouldInit =
+        typeof sharedWord === "string" &&
+        (store.word !== sharedWord ||
+          store.nbr_letters !== configuredLength ||
+          store.maxAttempts !== configuredMaxAttempts ||
+          store.guesses.length !== configuredMaxAttempts);
+
+      store.nbr_letters = configuredLength;
+      store.maxAttempts = configuredMaxAttempts;
+
       if (shouldInit) {
-        // Re-init to pick proper word list and reset guesses
-        store.init();
-        store.start_time = Math.floor(Date.now() / 1000);
+        store.init(sharedWord);
+        hasFinishedWordleRef.current = false;
       }
     }
-  }, [room?.gameType, roomGameConfig?.wordLength, roomGameConfig?.maxAttempts]);
+  }, [
+    room?.gameType,
+    roomGameConfig?.wordLength,
+    roomGameConfig?.maxAttempts,
+    sharedWord,
+    store,
+  ]);
 
   const playerNamesById = useMemo(() => playerNames, [playerNames]);
 
@@ -619,7 +625,15 @@ function GamesPage() {
           onSubmitAnswer={handleSubmitAnswer}
         />
       ) : room.gameType === "wordle" ? (
-        isRulesOpen ? (
+        !sharedWord ? (
+          <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+            <SectionLabel className="text-slate-400">Wordle</SectionLabel>
+            <SectionHeader>Synchronisation en cours</SectionHeader>
+            <p className="mt-3 text-sm leading-7 text-white/70">
+              Le mot partagé de la partie est en cours de chargement.
+            </p>
+          </section>
+        ) : isRulesOpen ? (
           <div className="flex items-center justify-center">
             <RulesPanel
               onClose={() => setRulesOpen(false)}
@@ -632,7 +646,19 @@ function GamesPage() {
           </div>
         ) : (
           <section className="flex flex-1 flex-col py-1 items-center justify-center">
-            {store.word}
+            <div className="mb-4 rounded-full border border-white/10 bg-surface px-4 py-2 text-sm text-white/75">
+              {wordleState
+                ? `${wordleState.playersCompleted}/${wordleState.totalPlayers} joueurs ont terminé`
+                : "Partie Wordle en cours"}
+            </div>
+
+            {store.won || store.lost ? (
+              <p className="mb-4 text-center text-sm text-white/70">
+                Ta manche est terminée. Tu restes connecté jusqu'à ce que tous
+                les joueurs aient fini.
+              </p>
+            ) : null}
+
             <ProgressBar start_time={store.start_time} store={store} />
 
             <div>

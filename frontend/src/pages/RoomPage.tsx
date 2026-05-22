@@ -111,11 +111,11 @@ export default function RoomPage() {
     if (form.gameType === "wordle") {
       return (
         Number.isInteger(form.wordleWordLength) &&
-        form.wordleWordLength >= 4 &&
-        form.wordleWordLength <= 8 &&
+        form.wordleWordLength >= 5 &&
+        form.wordleWordLength <= 7 &&
         Number.isInteger(form.wordleMaxAttempts) &&
         form.wordleMaxAttempts >= 3 &&
-        form.wordleMaxAttempts <= 10
+        form.wordleMaxAttempts <= 8
       );
     }
 

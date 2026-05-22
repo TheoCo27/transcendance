@@ -14,7 +14,6 @@ export default observer(function ProgressBar({
   useEffect(() => {
     const interval = setInterval(() => {
       if (store.currentGuess === store.maxAttempts || store.won) {
-        console.log("barre finie");
         clearInterval(interval);
       }
       setNow(Math.floor(Date.now() / 1000));
