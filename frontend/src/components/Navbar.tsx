@@ -17,6 +17,14 @@ export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      navigate("/", { replace: true });
+    }
+  };
+
   useEffect(() => {
     if (!isUserMenuOpen) {
       return;
@@ -124,7 +132,7 @@ export default function Navbar() {
                       type="button"
                       onClick={() => {
                         setIsUserMenuOpen(false);
-                        void logout();
+                        void handleLogout();
                       }}
                     >
                       <LogOut className="size-5 text-rose-300" />

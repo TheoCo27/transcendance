@@ -150,6 +150,12 @@ export class RealtimeGameRuntimeService {
     return payload;
   }
 
+  // Arrete immediatement tous les etats runtime associes a une room.
+  disposeRoomRuntime(roomId: number): void {
+    this.stopRoomTimer(roomId);
+    this.gameService.clearRoomState(roomId);
+  }
+
   // Demarre le timer et l'etat d'une nouvelle question.
   private async startQuestionTimer(
     roomId: number,

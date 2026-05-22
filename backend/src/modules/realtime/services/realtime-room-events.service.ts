@@ -2,6 +2,7 @@
 // et au chat temps reel.
 import { ChatMessageDto } from "@/modules/realtime/dto/chat-message.dto";
 import { RoomCreateEventDto } from "@/modules/realtime/dto/room-create-event.dto";
+import { RoomDeleteDto } from "@/modules/realtime/dto/room-delete.dto";
 import { RoomJoinEventDto } from "@/modules/realtime/dto/room-join-event.dto";
 import { RoomLeaveDto } from "@/modules/realtime/dto/room-leave.dto";
 import { RoomStartDto } from "@/modules/realtime/dto/room-start.dto";
@@ -118,6 +119,12 @@ export class RealtimeRoomEventsService {
 
       const updatedRoom = await this.roomsService.leave(room.id, userId);
       hasRoomStateChanged = true;
+
+      if (updatedRoom.players.length === 0 && updatedRoom.status !== "waiting") {
+        await this.gameRuntime.closeRoom(room.id, "room_empty", server);
+        continue;
+      }
+
       server
         .to(this.roomChannel(room.id))
         .emit("room:state", this.response.ok(updatedRoom));
@@ -230,6 +237,40 @@ export class RealtimeRoomEventsService {
     }
 
     server.to(channel).emit("room:state", this.response.ok(room));
+    await this.broadcastRoomList(server);
+  }
+
+  // Supprime une room sur demande explicite de son proprietaire.
+  async handleRoomDelete(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
+    const payload = this.validation.validatePayload(RoomDeleteDto, rawPayload);
+    const requesterUserId = this.presence.resolveSocketUser(
+      client.id,
+      payload.userId,
+      "room:delete requires a bound userId on this socket",
+    );
+    const channel = this.roomChannel(payload.roomId);
+    const room = await this.roomsService.getById(payload.roomId);
+
+    if (room.ownerUserId !== requesterUserId) {
+      throw new UnauthorizedException(
+        "Seul le proprietaire de la room peut la supprimer",
+      );
+    }
+
+    this.gameRuntime.disposeRoomRuntime(payload.roomId);
+    await this.roomsService.delete(payload.roomId, requesterUserId);
+
+    const closedPayload = {
+      roomId: payload.roomId,
+      reason: "deleted_by_owner",
+    };
+
+    server.to(channel).emit("room:closed", this.response.ok(closedPayload));
+    client.emit("room:deleted", this.response.ok(closedPayload));
     await this.broadcastRoomList(server);
   }
 

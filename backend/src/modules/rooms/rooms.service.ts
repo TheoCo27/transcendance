@@ -572,6 +572,13 @@ export class RoomsService {
       );
     }
 
+    return this.closeIfEmpty(roomId);
+  }
+
+  // Supprime une room vide, meme si elle etait encore marquee comme active.
+  async closeIfEmpty(roomId: number): Promise<{ roomId: number }> {
+    await this.findRoomOrThrow(roomId);
+
     const playerCount = await this.prisma.client.roomPlayer.count({
       where: { roomId },
     });
@@ -581,8 +588,26 @@ export class RoomsService {
       );
     }
 
-    await this.prisma.client.room.delete({
-      where: { id: roomId },
+    await this.prisma.client.$transaction(async (tx) => {
+      await this.deleteRoomGraph(tx, roomId);
+    });
+    this.transientConfigs.delete(roomId);
+
+    return { roomId };
+  }
+
+  // Supprime une room sur demande explicite de son proprietaire.
+  async delete(roomId: number, requesterUserId: number): Promise<{ roomId: number }> {
+    const room = await this.findRoomOrThrow(roomId);
+
+    if (room.ownerId !== requesterUserId) {
+      throw new UnauthorizedException(
+        "Seul le proprietaire de la room peut la supprimer",
+      );
+    }
+
+    await this.prisma.client.$transaction(async (tx) => {
+      await this.deleteRoomGraph(tx, roomId);
     });
     this.transientConfigs.delete(roomId);
 
@@ -746,5 +771,54 @@ export class RoomsService {
     }
 
     return null;
+  }
+
+  // Supprime les donnees rattachees a une room avant sa suppression finale.
+  private async deleteRoomGraph(
+    tx: Prisma.TransactionClient,
+    roomId: number,
+  ): Promise<void> {
+    const games = await tx.game.findMany({
+      where: { roomId },
+      select: { id: true },
+    });
+    const gameIds = games.map((game) => game.id);
+
+    if (gameIds.length > 0) {
+      await tx.playerAnswer.deleteMany({
+        where: {
+          gameId: {
+            in: gameIds,
+          },
+        },
+      });
+      await tx.leaderboard.deleteMany({
+        where: {
+          gameId: {
+            in: gameIds,
+          },
+        },
+      });
+      await tx.gameQuestion.deleteMany({
+        where: {
+          gameId: {
+            in: gameIds,
+          },
+        },
+      });
+      await tx.game.deleteMany({
+        where: { roomId },
+      });
+    }
+
+    await tx.messages.deleteMany({
+      where: { roomId },
+    });
+    await tx.roomPlayer.deleteMany({
+      where: { roomId },
+    });
+    await tx.room.delete({
+      where: { id: roomId },
+    });
   }
 }

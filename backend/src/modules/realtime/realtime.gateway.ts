@@ -4,6 +4,7 @@ import { Logger, OnModuleDestroy } from "@nestjs/common";
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
@@ -12,6 +13,7 @@ import {
 } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
 import { RealtimeAuthService } from "./services/realtime-auth.service";
+import { RealtimeBroadcastService } from "./services/realtime-broadcast.service";
 import { RealtimeGameEventsService } from "./services/realtime-game-events.service";
 import { RealtimeGameRuntimeService } from "./services/realtime-game-runtime.service";
 import { RealtimePresenceService } from "./services/realtime-presence.service";
@@ -32,7 +34,11 @@ const WS_HEARTBEAT_TIMEOUT_MS = 10_000;
   transports: ["websocket", "polling"],
 })
 export class RealtimeGateway
-  implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy
+  implements
+    OnGatewayInit,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnModuleDestroy
 {
   // Logger de la gateway pour tracer les connexions/deconnexions.
   private readonly logger = new Logger(RealtimeGateway.name);
@@ -43,12 +49,18 @@ export class RealtimeGateway
 
   constructor(
     private readonly auth: RealtimeAuthService,
+    private readonly broadcast: RealtimeBroadcastService,
     private readonly response: RealtimeResponseService,
     private readonly presence: RealtimePresenceService,
     private readonly roomEvents: RealtimeRoomEventsService,
     private readonly gameEvents: RealtimeGameEventsService,
     private readonly gameRuntime: RealtimeGameRuntimeService,
   ) {}
+
+  // Partage l'instance Socket.IO avec les services hors gateway.
+  afterInit(server: Server): void {
+    this.broadcast.setServer(server);
+  }
 
   // Gere l'ouverture d'un socket: auth, liaison user/socket et synchro des rooms.
   async handleConnection(client: Socket): Promise<void> {
@@ -125,6 +137,17 @@ export class RealtimeGateway
   ): Promise<void> {
     await this.runSafely(client, "room:leave:error", async () => {
       await this.roomEvents.handleRoomLeave(payload, client, this.server);
+    });
+  }
+
+  // Traite la suppression d'une room par son proprietaire.
+  @SubscribeMessage("room:delete")
+  async handleRoomDelete(
+    @MessageBody() payload: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    await this.runSafely(client, "room:delete:error", async () => {
+      await this.roomEvents.handleRoomDelete(payload, client, this.server);
     });
   }
 

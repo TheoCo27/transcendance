@@ -91,3 +91,9 @@ export function updateRoom(
     body: JSON.stringify(payload),
   });
 }
+
+export function deleteRoomById(roomId: number): Promise<{ roomId: number }> {
+  return apiRequest<{ roomId: number }>(`/rooms/${roomId}`, {
+    method: "DELETE",
+  });
+}

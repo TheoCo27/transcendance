@@ -9,6 +9,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -90,5 +91,15 @@ export class RoomsController {
     @Body() dto: UpdateRoomDto,
   ): Promise<ApiResponse<Omit<Room, "password">>> {
     return ok(await this.roomsService.update(roomId, auth.sub, dto));
+  }
+
+  // Supprime une room sur demande explicite de son proprietaire.
+  @Delete(":roomId")
+  @UseGuards(AuthGuard)
+  async delete(
+    @Param("roomId", ParseIntPipe) roomId: number,
+    @CurrentUser() auth: AuthPayload,
+  ): Promise<ApiResponse<{ roomId: number }>> {
+    return ok(await this.roomsService.delete(roomId, auth.sub));
   }
 }
