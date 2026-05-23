@@ -12,13 +12,9 @@ import {
   Query,
   Req,
   Res,
-  UseGuards,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { CurrentUser } from "./decorators/current-user.decorator";
-import { AuthGuard } from "./guards/auth.guard";
 import { AuthService } from "./auth.service";
-import { AuthPayload } from "./types/auth-payload.type";
 import { SafeUser } from "./types/safe-user.type";
 
 @Controller("auth")
@@ -87,10 +83,10 @@ export class AuthController {
 
   // Retourne l'utilisateur associe au cookie de session courant.
   @Get("session")
-  @UseGuards(AuthGuard)
   async session(
-    @CurrentUser() auth: AuthPayload,
-  ): Promise<ApiResponse<SafeUser>> {
-    return ok(await this.authService.getSessionUser(auth.sub));
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ApiResponse<SafeUser | null>> {
+    return ok(await this.authService.getOptionalSessionUser(req, res));
   }
 }

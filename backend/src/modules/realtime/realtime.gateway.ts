@@ -140,6 +140,17 @@ export class RealtimeGateway
     });
   }
 
+  // Recharge l'historique du chat pour une room deja rejointe.
+  @SubscribeMessage("chat:history:request")
+  async handleChatHistoryRequest(
+    @MessageBody() payload: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    await this.runSafely(client, "chat:history:error", async () => {
+      await this.roomEvents.handleChatHistoryRequest(payload, client);
+    });
+  }
+
   // Traite la suppression d'une room par son proprietaire.
   @SubscribeMessage("room:delete")
   async handleRoomDelete(

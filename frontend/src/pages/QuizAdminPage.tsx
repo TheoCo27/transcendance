@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import QuestionComposer from "../components/QuizBuilder/QuestionComposer";
 import QuizRulesCard from "../components/QuizBuilder/QuizRulesCard";
 import QuizSetupCard from "../components/QuizBuilder/QuizSetupCard";
@@ -25,6 +25,7 @@ const EMPTY_DRAFT: DraftQuestion = {
 
 export default function QuizAdminPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isLoading } = useAuthSession();
   const [title, setTitle] = useState("");
   const [rule, setRule] = useState<10 | 30 | "unlimited">(10);
@@ -34,6 +35,9 @@ export default function QuizAdminPage() {
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const roomIdParam = Number(searchParams.get("roomId"));
+  const returnRoomId =
+    Number.isInteger(roomIdParam) && roomIdParam > 0 ? roomIdParam : null;
 
   const validateDraftQuestion = () => {
     if (draftQuestion.questionText.trim().length < 6) {
@@ -120,6 +124,11 @@ export default function QuizAdminPage() {
         })),
       });
 
+      if (returnRoomId !== null) {
+        navigate(`/rooms/${returnRoomId}?selectQuizId=${createdQuiz.id}`);
+        return;
+      }
+
       navigate(`/quiz/${createdQuiz.id}`);
     } catch (error) {
       setSubmitError(
@@ -132,6 +141,24 @@ export default function QuizAdminPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-10 md:px-10">
+      {returnRoomId !== null ? (
+        <section className="mb-6 rounded-4xl border border-emerald-300/35 bg-emerald-300/10 p-5 text-emerald-50 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-100/80">
+            Création depuis une room
+          </p>
+          <p className="mt-2 text-sm leading-7 text-emerald-50/90">
+            Une fois validé, ce quiz sera renvoyé dans les réglages de ta room et
+            présélectionné automatiquement.
+          </p>
+          <Link
+            className="mt-4 inline-flex rounded-md border border-emerald-100/20 bg-emerald-950/25 px-4 py-2 font-semibold text-emerald-50 transition hover:bg-emerald-950/40"
+            to={`/rooms/${returnRoomId}`}
+          >
+            Retour à la room
+          </Link>
+        </section>
+      ) : null}
+
       <section className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
         <QuizSetupCard title={title} onTitleChange={setTitle} />
         <QuizRulesCard value={rule} onChange={setRule} />

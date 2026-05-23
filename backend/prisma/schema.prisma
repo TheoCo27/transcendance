@@ -28,7 +28,6 @@ enum RoomStatus {
 
 enum RoomGameType {
   wordle
-  memory
   quiz
 }
 

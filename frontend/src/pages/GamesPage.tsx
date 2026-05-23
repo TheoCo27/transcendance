@@ -8,7 +8,6 @@ import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useToast } from "../components/ui/toast";
-import { toHHMMSS } from "../components/Wordle/ConvertTime";
 import Guess from "../components/Wordle/Guess";
 import Keyboard from "../components/Wordle/Keyboard";
 import ProgressBar from "../components/Wordle/ProgressBar";
@@ -34,10 +33,6 @@ function formatGameType(room: Room | null): string {
 
   if (room.gameType === "wordle") {
     return "Wordle";
-  }
-
-  if (room.gameType === "memory") {
-    return "Memory";
   }
 
   return "Quiz";
@@ -90,6 +85,55 @@ type TimerPayload = {
   remainingMs: number;
 };
 
+type PersistedWordleState = {
+  sharedWord: string;
+  wordLength: number;
+  maxAttempts: number;
+  guesses: string[];
+  currentGuess: number;
+  startTime: number;
+  totalTime: number;
+  rulePanelClosed: boolean;
+  endedByTimeout: boolean;
+};
+
+function buildWordleStorageKey(roomId: number, userId: number): string {
+  return `wordle:${roomId}:user:${userId}`;
+}
+
+function loadPersistedWordleState(
+  roomId: number,
+  userId: number,
+): PersistedWordleState | null {
+  try {
+    const rawValue = window.localStorage.getItem(
+      buildWordleStorageKey(roomId, userId),
+    );
+    if (!rawValue) {
+      return null;
+    }
+
+    return JSON.parse(rawValue) as PersistedWordleState;
+  } catch {
+    return null;
+  }
+}
+
+function persistWordleState(
+  roomId: number,
+  userId: number,
+  snapshot: PersistedWordleState,
+): void {
+  window.localStorage.setItem(
+    buildWordleStorageKey(roomId, userId),
+    JSON.stringify(snapshot),
+  );
+}
+
+function clearPersistedWordleState(roomId: number, userId: number): void {
+  window.localStorage.removeItem(buildWordleStorageKey(roomId, userId));
+}
+
 function GamesPage() {
   const { roomId: roomIdParam } = useParams();
   const navigate = useNavigate();
@@ -112,6 +156,7 @@ function GamesPage() {
   const [isRulesOpen, setRulesOpen] = useState(true);
   const [isPlayerReady, setPlayerReady] = useState(false);
   const hasFinishedWordleRef = useRef(false);
+  const lastHydratedWordleKeyRef = useRef<string | null>(null);
 
   const store = useLocalObservable(() => PuzzleStore);
   const toast = useToast();
@@ -122,7 +167,6 @@ function GamesPage() {
   }, [isRulesOpen]);
 
   useEffect(() => {
-    store.init();
     const handleKeyup = (e: KeyboardEvent) => store.handleKeyup(e);
     window.addEventListener("keyup", handleKeyup);
 
@@ -159,7 +203,11 @@ function GamesPage() {
     const finalizeWordle = async () => {
       try {
         await connectWs();
-        emitWs("game:finish", { roomId: room.id });
+        emitWs("game:finish", {
+          roomId: room.id,
+          won: store.won,
+          attemptsUsed: store.currentGuess,
+        });
       } catch (error) {
         hasFinishedWordleRef.current = false;
         setPageError(
@@ -172,34 +220,20 @@ function GamesPage() {
     };
 
     void finalizeWordle();
-  }, [navigate, room?.gameType, room?.id, store.timeStatus, store.won]);
+  }, [room?.gameType, room?.id, store.currentGuess, store.lost, store.won]);
 
   useEffect(() => {
-    if (store.ToastId === 0) return;
+    if (store.ToastId === 0 || store.ToastMessage.trim().length === 0) {
+      return;
+    }
 
-    if (store.ToastMessage === "Ce mot n'est pas dans la liste")
-      toast.error(store.ToastMessage);
-    else if (
-      store.ToastMessage ===
-      `Pour valider un mot, vous devez entrer ${roomGameConfig?.wordLength} lettres`
-    )
-      toast.error(store.ToastMessage);
-    else if (
-      store.ToastMessage ===
-      `Vous avez trouvé le bon mot en ${toHHMMSS((Math.floor(Date.now() / 1000) - store.total_time).toString())}`
-    )
-      //TEMPORAIRE
+    if (store.ToastMessage.startsWith("Bravo,")) {
       toast.success(store.ToastMessage);
-    else if (
-      store.ToastMessage ===
-      `Le temps est écoulé, vous n'avez pas trouvé le mot: ${store.word}`
-    )
-      toast.error(store.ToastMessage);
-    else if (
-      store.ToastMessage === `Vous n'avez pas trouvé le mot: ${store.word}`
-    )
-      toast.error(store.ToastMessage);
-  }, [store.ToastId]);
+      return;
+    }
+
+    toast.error(store.ToastMessage);
+  }, [store.ToastId, store.ToastMessage, toast]);
 
   useEffect(() => {
     const loadGamePage = async () => {
@@ -312,13 +346,6 @@ function GamesPage() {
             }
           : currentState,
       );
-
-      if (
-        data.reason === "wordle_completed" &&
-        user?.id === data.winnerUserId
-      ) {
-        navigate(`/rooms/${roomId}`, { replace: true });
-      }
     };
 
     onWs("room:state", handleRoomState);
@@ -336,7 +363,7 @@ function GamesPage() {
       offWs("game:state", handleGameState);
       offWs("game:ended", handleGameEnded);
     };
-  }, [navigate, roomId, user?.id]);
+  }, [roomId]);
 
   useEffect(() => {
     if (!gameState?.questionEndsAt) {
@@ -396,6 +423,11 @@ function GamesPage() {
 
     return config as Record<string, number>;
   }, [room?.gameConfig]);
+  const wordleState = gameState?.wordle ?? null;
+  const sharedWord =
+    room?.gameType === "wordle" && typeof wordleState?.sharedWord === "string"
+      ? wordleState.sharedWord
+      : null;
 
   const gameTypeLabel = useMemo(() => formatGameType(room), [room]);
   const roomConfigEntries = useMemo(
@@ -404,27 +436,127 @@ function GamesPage() {
   );
 
   useEffect(() => {
-    // Sync store configuration with room settings for Wordle
     if (room?.gameType === "wordle") {
       const configuredLength = roomGameConfig?.wordLength ?? store.nbr_letters;
       const configuredMaxAttempts =
         roomGameConfig?.maxAttempts ?? store.maxAttempts;
-      let shouldInit = false;
-      if (configuredLength !== store.nbr_letters) {
-        store.nbr_letters = configuredLength;
-        shouldInit = true;
+      const userId = user?.id;
+      const hydrationKey =
+        typeof sharedWord === "string" && typeof userId === "number"
+          ? `${room.id}:${userId}:${sharedWord}:${configuredLength}:${configuredMaxAttempts}`
+          : null;
+
+      if (typeof sharedWord !== "string" || typeof userId !== "number") {
+        return;
       }
-      if (configuredMaxAttempts !== store.maxAttempts) {
-        store.maxAttempts = configuredMaxAttempts;
-        shouldInit = true;
+
+      store.nbr_letters = configuredLength;
+      store.maxAttempts = configuredMaxAttempts;
+
+      if (lastHydratedWordleKeyRef.current === hydrationKey) {
+        return;
       }
-      if (shouldInit) {
-        // Re-init to pick proper word list and reset guesses
-        store.init();
-        store.start_time = Math.floor(Date.now() / 1000);
+
+      const persistedState = loadPersistedWordleState(room.id, userId);
+      const canRestore =
+        persistedState?.sharedWord === sharedWord &&
+        persistedState.wordLength === configuredLength &&
+        persistedState.maxAttempts === configuredMaxAttempts &&
+        Array.isArray(persistedState.guesses) &&
+        persistedState.guesses.length === configuredMaxAttempts;
+
+      if (canRestore && persistedState) {
+        store.init(sharedWord);
+        store.word = sharedWord;
+        store.guesses = [...persistedState.guesses];
+        store.currentGuess = Math.min(
+          configuredMaxAttempts,
+          Math.max(0, persistedState.currentGuess),
+        );
+        store.start_time = persistedState.startTime;
+        store.total_time = persistedState.totalTime;
+        store.rulePannelClosed = persistedState.rulePanelClosed;
+        store.endedByTimeout = persistedState.endedByTimeout;
+        setRulesOpen(!persistedState.rulePanelClosed);
+      } else {
+        store.init(sharedWord);
+        setRulesOpen(true);
+        setPlayerReady(false);
+        clearPersistedWordleState(room.id, userId);
       }
+
+      store.checkTimeUp();
+      hasFinishedWordleRef.current = false;
+      lastHydratedWordleKeyRef.current = hydrationKey;
     }
-  }, [room?.gameType, roomGameConfig?.wordLength, roomGameConfig?.maxAttempts]);
+  }, [
+    room?.id,
+    room?.gameType,
+    roomGameConfig?.wordLength,
+    roomGameConfig?.maxAttempts,
+    sharedWord,
+    store,
+    user?.id,
+  ]);
+
+  useEffect(() => {
+    if (
+      room?.gameType !== "wordle" ||
+      typeof room.id !== "number" ||
+      typeof user?.id !== "number" ||
+      typeof sharedWord !== "string"
+    ) {
+      return;
+    }
+
+    if (room.status !== "playing" || gameState?.status === "finished") {
+      clearPersistedWordleState(room.id, user.id);
+      return;
+    }
+
+    persistWordleState(room.id, user.id, {
+      sharedWord,
+      wordLength: store.nbr_letters,
+      maxAttempts: store.maxAttempts,
+      guesses: [...store.guesses],
+      currentGuess: store.currentGuess,
+      startTime: store.start_time,
+      totalTime: store.total_time,
+      rulePanelClosed: store.rulePannelClosed && !isRulesOpen,
+      endedByTimeout: store.endedByTimeout,
+    });
+  }, [
+    gameState?.status,
+    isRulesOpen,
+    room?.gameType,
+    room?.id,
+    room?.status,
+    sharedWord,
+    store.currentGuess,
+    store.endedByTimeout,
+    store.guesses.join("|"),
+    store.maxAttempts,
+    store.nbr_letters,
+    store.rulePannelClosed,
+    store.start_time,
+    store.total_time,
+    user?.id,
+  ]);
+
+  useEffect(() => {
+    if (
+      room?.gameType !== "wordle" ||
+      typeof room?.id !== "number" ||
+      typeof user?.id !== "number"
+    ) {
+      return;
+    }
+
+    if (room.status === "waiting" || gameState?.status === "finished") {
+      clearPersistedWordleState(room.id, user.id);
+      lastHydratedWordleKeyRef.current = null;
+    }
+  }, [gameState?.status, room?.gameType, room?.id, room?.status, user?.id]);
 
   const playerNamesById = useMemo(() => playerNames, [playerNames]);
 
@@ -623,7 +755,15 @@ function GamesPage() {
           onSubmitAnswer={handleSubmitAnswer}
         />
       ) : room.gameType === "wordle" ? (
-        isRulesOpen ? (
+        !sharedWord ? (
+          <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
+            <SectionLabel className="text-slate-400">Wordle</SectionLabel>
+            <SectionHeader>Synchronisation en cours</SectionHeader>
+            <p className="mt-3 text-sm leading-7 text-white/70">
+              Le mot partagé de la partie est en cours de chargement.
+            </p>
+          </section>
+        ) : isRulesOpen ? (
           <div className="flex items-center justify-center">
             <RulesPanel
               onClose={() => setRulesOpen(false)}
@@ -636,7 +776,26 @@ function GamesPage() {
           </div>
         ) : (
           <section className="flex flex-1 flex-col py-1 items-center justify-center">
-            {store.word}
+            <div className="mb-4 rounded-full border border-white/10 bg-surface px-4 py-2 text-sm text-white/75">
+              {wordleState
+                ? `${wordleState.playersCompleted}/${wordleState.totalPlayers} joueurs ont terminé`
+                : "Partie Wordle en cours"}
+            </div>
+
+            {store.won || store.lost ? (
+              <div className="mb-4 text-center">
+                <p className="text-sm text-white/70">
+                  Ta manche est terminée. Tu restes connecté jusqu'à ce que
+                  tous les joueurs aient fini.
+                </p>
+                {store.lost && store.endedByTimeout ? (
+                  <p className="mt-2 text-base font-semibold uppercase tracking-[0.14em] text-amber-300">
+                    Le mot à trouver était {store.word}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             <ProgressBar start_time={store.start_time} store={store} />
 
             <div>
@@ -661,7 +820,10 @@ function GamesPage() {
       ) : (
         <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
           <SectionLabel className="text-slate-400">Jeux</SectionLabel>
-          <SectionHeader>{room.gameType}</SectionHeader>
+          <SectionHeader>Jeu indisponible</SectionHeader>
+          <p className="mt-3 text-sm leading-7 text-white/70">
+            Cette room utilise un mode qui n'est plus pris en charge.
+          </p>
         </section>
       )}
     </main>

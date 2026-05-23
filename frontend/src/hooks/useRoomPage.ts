@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { RoomConfigForm } from "../components/room/room-types";
 import { useToast } from "../components/ui/toast";
@@ -77,7 +77,6 @@ const DEFAULT_FORM: RoomConfigForm = {
   gameType: "wordle",
   wordleWordLength: 5,
   wordleMaxAttempts: 6,
-  memoryPairsCount: 8,
 };
 
 type UseRoomPageOptions = {
@@ -121,6 +120,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
   const roomLinkCopiedTimeoutRef = useRef<number | null>(null);
   const previousUserIdRef = useRef<number | null>(null);
+  const requestedChatHistoryKeyRef = useRef<string | null>(null);
   const cameFromWordleResult = Boolean(
     location.state &&
     typeof location.state === "object" &&
@@ -131,6 +131,16 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     typeof location.state === "object" &&
     (location.state as { fromWordleTimeout?: boolean }).fromWordleTimeout,
   );
+  const requestedQuizSelectionId = useMemo(() => {
+    const rawQuizId = new URLSearchParams(location.search).get("selectQuizId");
+    const parsedQuizId = Number(rawQuizId);
+
+    if (!Number.isInteger(parsedQuizId) || parsedQuizId <= 0) {
+      return null;
+    }
+
+    return parsedQuizId;
+  }, [location.search]);
 
   const refreshRoom = useCallback(async () => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -317,7 +327,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         user &&
         room?.ownerUserId === user.id
       ) {
-        toast.success("Room supprimée");
+        toast.success("La room a bien été supprimée.");
         navigate("/");
         return;
       }
@@ -328,6 +338,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setRemainingMs(null);
       setSelectedAnswer(null);
       setHasAnsweredCurrentQuestion(false);
+      requestedChatHistoryKeyRef.current = null;
       setChatMessages([]);
       setChatInput("");
       setChatError(null);
@@ -412,6 +423,8 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         return;
       }
 
+      const historyKey = `${response.data.roomId}:${user?.id ?? "guest"}`;
+      requestedChatHistoryKeyRef.current = historyKey;
       setChatMessages(response.data.messages);
     };
 
@@ -496,6 +509,34 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       offWs("game:ended", handleGameEnded);
     };
   }, [navigate, refreshRoom, room?.ownerUserId, roomId, toast, user]);
+
+  useEffect(() => {
+    if (
+      !user ||
+      !room ||
+      !room.players.some((player) => player.userId === user.id)
+    ) {
+      return;
+    }
+
+    const requestKey = `${room.id}:${user.id}`;
+    if (requestedChatHistoryKeyRef.current === requestKey) {
+      return;
+    }
+
+    requestedChatHistoryKeyRef.current = requestKey;
+
+    void connectWs()
+      .then(() => {
+        emitWs("chat:history:request", {
+          roomId: room.id,
+          userId: user.id,
+        });
+      })
+      .catch(() => {
+        requestedChatHistoryKeyRef.current = null;
+      });
+  }, [room, user]);
 
   useEffect(() => {
     const userIds = new Set<number>();
@@ -586,6 +627,48 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   }, [room, user]);
 
   useEffect(() => {
+    if (
+      requestedQuizSelectionId === null ||
+      !user ||
+      !room ||
+      room.ownerUserId !== user.id ||
+      room.status !== "waiting" ||
+      availableQuizzes.length === 0
+    ) {
+      return;
+    }
+
+    const quizExists = availableQuizzes.some(
+      (quiz) => quiz.id === requestedQuizSelectionId,
+    );
+
+    if (!quizExists) {
+      return;
+    }
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      gameType: "quiz",
+      quizId: requestedQuizSelectionId,
+    }));
+
+    navigate(
+      { pathname: location.pathname },
+      { replace: true, state: location.state },
+    );
+    toast.success("Le nouveau quiz est prêt à être sélectionné.");
+  }, [
+    availableQuizzes,
+    location.pathname,
+    location.state,
+    navigate,
+    requestedQuizSelectionId,
+    room,
+    toast,
+    user,
+  ]);
+
+  useEffect(() => {
     if (!gameState?.questionEndsAt) {
       return;
     }
@@ -626,11 +709,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
             wordLength: form.wordleWordLength,
             maxAttempts: form.wordleMaxAttempts,
           }
-        : form.gameType === "memory"
-          ? {
-              pairsCount: form.memoryPairsCount,
-            }
-          : undefined;
+        : undefined;
 
     const updatedRoom = await updateRoom(room.id, {
       name: form.name.trim(),
@@ -654,7 +733,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
 
     try {
       await saveCurrentForm();
-      toast.success("Configuration enregistrée");
+      toast.success("Configuration enregistrée avec succès.");
     } catch (error) {
       const message = getUserFacingErrorMessage(
         error,
@@ -756,8 +835,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
           persistedForm.gameType !== form.gameType ||
           persistedForm.quizId !== form.quizId ||
           persistedForm.wordleWordLength !== form.wordleWordLength ||
-          persistedForm.wordleMaxAttempts !== form.wordleMaxAttempts ||
-          persistedForm.memoryPairsCount !== form.memoryPairsCount;
+          persistedForm.wordleMaxAttempts !== form.wordleMaxAttempts;
 
         if (hasUnsavedChanges) {
           setIsSaving(true);
@@ -916,7 +994,14 @@ function getRoomClosedReasonMessage(reason: string): string {
 }
 
 function buildFormFromRoom(room: Room): RoomConfigForm {
-  const gameType = room.gameType ?? (room.quizId ? "quiz" : "wordle");
+  const gameType =
+    room.gameType === "quiz"
+      ? "quiz"
+      : room.gameType === "wordle"
+        ? "wordle"
+        : room.quizId
+          ? "quiz"
+          : "wordle";
   const config =
     room.gameConfig && typeof room.gameConfig === "object"
       ? room.gameConfig
@@ -924,7 +1009,6 @@ function buildFormFromRoom(room: Room): RoomConfigForm {
 
   const wordLengthRaw = (config as { wordLength?: unknown }).wordLength;
   const maxAttemptsRaw = (config as { maxAttempts?: unknown }).maxAttempts;
-  const pairsCountRaw = (config as { pairsCount?: unknown }).pairsCount;
 
   const wordleWordLength =
     typeof wordLengthRaw === "number" && Number.isInteger(wordLengthRaw)
@@ -934,10 +1018,6 @@ function buildFormFromRoom(room: Room): RoomConfigForm {
     typeof maxAttemptsRaw === "number" && Number.isInteger(maxAttemptsRaw)
       ? maxAttemptsRaw
       : 6;
-  const memoryPairsCount =
-    typeof pairsCountRaw === "number" && Number.isInteger(pairsCountRaw)
-      ? pairsCountRaw
-      : 8;
 
   return {
     name: room.name,
@@ -945,6 +1025,5 @@ function buildFormFromRoom(room: Room): RoomConfigForm {
     gameType,
     wordleWordLength,
     wordleMaxAttempts,
-    memoryPairsCount,
   };
 }

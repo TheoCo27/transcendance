@@ -3,12 +3,13 @@
 import { PrismaModule } from "@/prisma/prisma.module";
 import { Module } from "@nestjs/common";
 import { QuizzesController } from "./quizzes.controller";
+import { QuizzesBootstrapService } from "./quizzes-bootstrap.service";
 import { QuizzesService } from "./quizzes.service";
 
 @Module({
   imports: [PrismaModule],
   controllers: [QuizzesController],
-  providers: [QuizzesService],
+  providers: [QuizzesService, QuizzesBootstrapService],
   exports: [QuizzesService],
 })
 export class QuizzesModule {}

@@ -50,7 +50,7 @@ function ensurePendingConnectionPromise(): Promise<void> {
     resolvePendingConnection = resolve;
     rejectPendingConnection = reject;
     pendingConnectionTimeout = window.setTimeout(() => {
-      reject(new Error("WebSocket connection timeout"));
+      reject(new Error("Le délai de connexion au temps réel a été dépassé."));
       clearPendingConnection();
     }, WS_CONNECT_TIMEOUT_MS);
   });
@@ -67,7 +67,7 @@ socket.on("ws:connected", () => {
 socket.on("ws:auth:error", (payload?: WsResponse<never>) => {
   isWsAuthenticated = false;
   rejectPendingConnection?.(
-    new Error(payload?.error?.message ?? "WebSocket authentication failed"),
+    new Error(payload?.error?.message ?? "Authentification temps réel impossible."),
   );
   clearPendingConnection();
 });
@@ -80,7 +80,9 @@ socket.on("connect_error", (error: Error) => {
 
 socket.on("disconnect", () => {
   isWsAuthenticated = false;
-  rejectPendingConnection?.(new Error("WebSocket disconnected"));
+  rejectPendingConnection?.(
+    new Error("La connexion temps réel a été interrompue."),
+  );
   clearPendingConnection();
 });
 
@@ -100,7 +102,9 @@ export function connectWs(): Promise<void> {
 
 export function disconnectWs(): void {
   isWsAuthenticated = false;
-  rejectPendingConnection?.(new Error("WebSocket disconnected"));
+  rejectPendingConnection?.(
+    new Error("La connexion temps réel a été interrompue."),
+  );
   clearPendingConnection();
   if (socket.connected) {
     socket.disconnect();

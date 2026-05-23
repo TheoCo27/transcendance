@@ -35,6 +35,7 @@ export type PuzzleStoreType = {
 
   won: boolean;
   lost: boolean;
+  endedByTimeout: boolean;
 
   keyGuessed: string[];
   keyInexact: string[];
@@ -47,7 +48,7 @@ export type PuzzleStoreType = {
   toast_lost(): void;
   checkTimeUp(): void;
 
-  init(): void;
+  init(sharedWord?: string): void;
   submitGuess(): void;
   handleKeyup(e: KeyboardEvent): void;
   handleKeyboard(key: string): void;
@@ -82,6 +83,7 @@ export default {
   get lost() {
     return this.currentGuess === this.maxAttempts;
   },
+  endedByTimeout: false,
 
   get submittedGuesses() {
     return this.guesses
@@ -121,7 +123,7 @@ export default {
 
   toast_validWord(guess: string) {
     if (!this.all_words_array_json.includes(guess)) {
-      this.ToastMessage = "Ce mot n'est pas dans la liste";
+      this.ToastMessage = "Ce mot ne figure pas dans la liste.";
       this.ToastId++;
       return 0;
     }
@@ -129,26 +131,29 @@ export default {
   },
 
   toast_x_letters() {
-    this.ToastMessage = `Pour valider un mot, vous devez entrer ${this.nbr_letters} lettres`;
+    this.ToastMessage = `Pour valider un mot, vous devez saisir ${this.nbr_letters} lettres.`;
     this.ToastId++;
   },
 
   toast_won() {
-    this.ToastMessage = `Vous avez trouvé le bon mot en ${toHHMMSS((Math.floor(Date.now() / 1000) - this.total_time).toString())}`;
+    this.endedByTimeout = false;
+    this.ToastMessage = `Bravo, vous avez trouvé le bon mot en ${toHHMMSS((Math.floor(Date.now() / 1000) - this.total_time).toString())}.`;
     this.ToastId++;
   },
 
   toast_timeup() {
-    this.ToastMessage = `Le temps est écoulé, vous n'avez pas trouvé le mot: ${this.word}`;
+    this.endedByTimeout = true;
+    this.ToastMessage = `Le temps est écoulé : vous n'avez pas trouvé le mot ${this.word}.`;
     this.ToastId++;
   },
 
   toast_lost() {
-    this.ToastMessage = `Vous n'avez pas trouvé le mot: ${this.word}`;
+    this.endedByTimeout = false;
+    this.ToastMessage = `Vous n'avez pas trouvé le mot ${this.word}.`;
     this.ToastId++;
   },
 
-  init() {
+  init(sharedWord?: string) {
     if (this.nbr_letters === 7)
       ((this.words_array_json = seven_words),
         (this.all_words_array_json = all_seven_words));
@@ -157,15 +162,26 @@ export default {
         (this.all_words_array_json = all_six_words));
     else
       ((this.words_array_json = five_words),
-        (this.all_words_array_json = all_five_words),
-        (this.nbr_letters = 5));
+        (this.all_words_array_json = all_five_words));
 
-    this.word =
-      this.words_array_json[
-        Math.floor(Math.random() * this.words_array_json.length)
-      ];
+    const resolvedWord =
+      typeof sharedWord === "string" &&
+      sharedWord.length === this.nbr_letters &&
+      this.all_words_array_json.includes(sharedWord)
+        ? sharedWord
+        : this.words_array_json[
+            Math.floor(Math.random() * this.words_array_json.length)
+          ];
+
+    this.word = resolvedWord;
     this.guesses = new Array(this.maxAttempts).fill(""); //custom dynamic size, depending on rules settings
     this.currentGuess = 0;
+    this.ToastMessage = "";
+    this.validWord = true;
+    this.endedByTimeout = false;
+    this.start_time = -1;
+    this.total_time = -1;
+    this.rulePannelClosed = false;
   },
 
   submitGuess() {
@@ -190,15 +206,30 @@ export default {
   },
 
   checkTimeUp() {
-    if (this.timeStatus) {
-      if (this.guesses[this.currentGuess].length === this.nbr_letters)
-        this.toast_validWord(this.guesses[this.currentGuess]);
-      else this.toast_x_letters();
+    if (this.start_time < 0 || this.won || this.lost) {
+      return;
+    }
 
+    const now = Math.floor(Date.now() / 1000);
+    const elapsed = now - Math.floor(this.start_time);
+    const missedTurns = Math.floor(elapsed / this.time_per_word);
+
+    if (missedTurns <= 0) {
+      return;
+    }
+
+    let turnsToConsume = missedTurns;
+    while (turnsToConsume > 0 && !this.won && !this.lost) {
       this.currentGuess++;
-      this.start_time = Date.now() / 1000; //RESET TIMER (takes current time)
-      if (this.currentGuess === this.maxAttempts)
-        this.won ? this.toast_won() : this.toast_timeup();
+      turnsToConsume--;
+    }
+
+    const remainder = elapsed % this.time_per_word;
+    this.start_time = now - remainder;
+
+    if (this.currentGuess >= this.maxAttempts) {
+      this.currentGuess = this.maxAttempts;
+      this.toast_timeup();
     }
   },
 

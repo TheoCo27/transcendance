@@ -49,6 +49,23 @@ export class RealtimeGameRuntimeService {
   // Lance la boucle complete d'une partie pour une room.
   async startGameLoop(roomId: number, server: Server): Promise<void> {
     const room = await this.roomsService.getById(roomId);
+    if (room.gameType === "wordle") {
+      const gameState = await this.gameService.startWordleGame(roomId);
+
+      server.to(roomChannel(roomId)).emit(
+        "game:started",
+        this.response.ok({
+          roomId,
+          totalQuestions: 1,
+          questionDurationMs: null,
+        }),
+      );
+      server
+        .to(roomChannel(roomId))
+        .emit("game:state", this.response.ok(gameState));
+      return;
+    }
+
     const totalQuestions =
       room.gameType === "quiz"
         ? Math.max(1, await this.gameService.getQuestionCount(roomId))
@@ -148,6 +165,24 @@ export class RealtimeGameRuntimeService {
     server.to(channel).emit("room:closed", this.response.ok(payload));
     await broadcastRoomList(server, this.roomsService, this.response);
     return payload;
+  }
+
+  // Termine une partie Wordle des que tous les joueurs encore presents ont fini.
+  async completeWordleIfReady(
+    roomId: number,
+    server: Server,
+  ): Promise<boolean> {
+    const room = await this.roomsService.getById(roomId);
+    if (room.status !== "playing" || room.gameType !== "wordle") {
+      return false;
+    }
+
+    if (!(await this.gameService.areAllWordlePlayersFinished(roomId))) {
+      return false;
+    }
+
+    await this.endGame(roomId, "wordle_completed", server);
+    return true;
   }
 
   // Arrete immediatement tous les etats runtime associes a une room.

@@ -13,7 +13,7 @@ BRANCH := $(shell git branch --show-current 2>/dev/null)
 # **************************************************************************** #
 
 all:
-	@$(MAKE) up-run
+	@$(MAKE) up
 
 help:
 	@echo "Usage: Containers"
@@ -22,8 +22,9 @@ help:
 	@echo "  make down                -> Stop containers"
 	@echo "  make clean               -> Remove containers and images, keep volumes"
 	@echo "  make fclean              -> Full clean: containers, images and volumes"
+	@echo "  make prune-build-cache   -> Remove unused Docker/Podman build cache"
 	@echo "  make fclean_all          -> Full clean + engine prune on Docker or Podman"
-	@echo "  make re                  -> Full clean then rebuild and start"
+	@echo "  make re                  -> Full clean, prune build cache, then rebuild and start"
 	@echo "  make restart             -> Restart all containers with rebuild"
 	@echo "  make logs                -> Follow all container logs"
 	@echo "  make logs-back           -> Follow backend logs"
@@ -34,6 +35,8 @@ help:
 	@echo "  make page                -> Open the frontend in Firefox"
 	@echo "  make ps                  -> Show running containers"
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
+	@echo "  make test_http           -> Curl all local HTTP endpoints exposed by the stack"
+	@echo "  make test_https          -> Curl all local HTTPS endpoints exposed by the stack"
 	@echo "  make smoke-test          -> Run the general smoke test (dev op, db, websocket api, authentifcation, front end)"
 	@echo "  make smoke-test-ws       -> Run only the backend WebSocket smoke test"
 	@echo "  make setup-host          -> Verify and auto-prepare the machine for Docker/Podman + mkcert"
@@ -77,8 +80,7 @@ compose-check:
 setup-host:
 	bash scripts/setup-host.sh
 
-up: env-check setup-host compose-check
-	@$(MAKE) up-run
+up: up-run
 
 ensure-public-stack: compose-check
 	@$(COMPOSE_DEV) rm -s -f prisma-studio >/dev/null 2>&1 || true
@@ -102,23 +104,29 @@ seed: compose-check
 	$(COMPOSE_DEV) exec backend sh -c "npm run seed"
 
 down: compose-check
-	$(COMPOSE_DEV) down
+	$(COMPOSE_DEV) down --remove-orphans
 
 clean: compose-check
-	$(COMPOSE_DEV) down --rmi all
+	$(COMPOSE_DEV) down --remove-orphans --rmi all
 
 fclean: compose-check
-	$(COMPOSE_DEV) down -v --rmi all
+	$(COMPOSE_DEV) down --remove-orphans -v --rmi all
+
+prune-build-cache: compose-check
+	$(ENGINE) builder prune -af
 
 fclean_all: compose-check
-	$(COMPOSE_DEV) down -v --rmi all
+	$(COMPOSE_DEV) down --remove-orphans -v --rmi all
 	$(ENGINE) system prune -af --volumes
 
-re: fclean up
+re:
+	@$(MAKE) fclean
+	@$(MAKE) prune-build-cache
+	@$(MAKE) up
 
 restart: env-check setup-host compose-check
 	bash scripts/generate-dev-cert.sh
-	$(COMPOSE_DEV) down
+	$(COMPOSE_DEV) down --remove-orphans
 	$(COMPOSE) up --build -d
 	bash scripts/wait-for-containers.sh
 
@@ -152,6 +160,37 @@ test-stack: compose-check
 	@echo "Backend  : https://localhost:$${BACKEND_PORT:-4000}/health"
 	@echo "Database : localhost:$${POSTGRES_PORT:-5432}"
 
+test_http: env-check
+	@set -e; \
+	optional_urls="http://127.0.0.1:$${PRISMA_STUDIO_PORT:-5555}"; \
+	for url in $$optional_urls; do \
+		echo "==> curl $$url"; \
+		if curl -fsS -o /dev/null -w "HTTP %{http_code} | %{url_effective}\n" "$$url"; then \
+			:; \
+		else \
+			echo "skip: $$url indisponible (Prisma Studio est expose uniquement via 'make dev')"; \
+		fi; \
+	done
+
+test_https: env-check
+	@set -e; \
+	required_urls="https://localhost:$${FRONTEND_PORT:-3000} \
+https://localhost:$${FRONTEND_PORT:-3000}/health \
+https://localhost:$${BACKEND_PORT:-4000}/health"; \
+	optional_urls="https://localhost:$${BACKEND_PORT:-4000}/docs"; \
+	for url in $$required_urls; do \
+		echo "==> curl $$url"; \
+		curl -k -fsS -o /dev/null -w "HTTP %{http_code} | %{url_effective}\n" "$$url"; \
+	done; \
+	for url in $$optional_urls; do \
+		echo "==> curl $$url"; \
+		if curl -k -fsS -o /dev/null -w "HTTP %{http_code} | %{url_effective}\n" "$$url"; then \
+			:; \
+		else \
+			echo "skip: $$url indisponible (Swagger est generalement expose via 'make dev')"; \
+		fi; \
+	done
+
 smoke-test: env-check compose-check
 	bash scripts/smoke-test.sh
 
@@ -173,7 +212,7 @@ tls-cert:
 	bash scripts/generate-dev-cert.sh
 
 tls-trust:
-	mkcert -install
+	bash scripts/setup-host.sh
 
 shell-back:
 	$(ENGINE) exec -it quiz_backend sh
@@ -395,6 +434,6 @@ push-file-dev:
 .PHONY: help \
 	all \
 	compose-check \
-	up down clean fclean re restart logs logs-back logs-front logs-db page ps test-stack smoke-test smoke-test-ws \
+	up down clean fclean prune-build-cache fclean_all re restart logs logs-back logs-front logs-db page ps test-stack smoke-test smoke-test-ws \
 	shell-back shell-front shell-db \
 	push push-dev branch branch-create branch-create-push duplicate_branch status pull-dev pull-branch merge-dev rebase-dev push-file-dev

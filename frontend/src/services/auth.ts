@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, apiRequestNullable } from "./api";
 
 export const AUTH_PASSWORD_MIN_LENGTH = 12;
 export const AUTH_USERNAME_MIN_LENGTH = 2;
@@ -59,8 +59,8 @@ export async function loginAsGuest(payload: GuestLoginPayload): Promise<SafeUser
   return user;
 }
 
-export function getSession(): Promise<SafeUser> {
-  return apiRequest<SafeUser>("/auth/session");
+export function getSession(): Promise<SafeUser | null> {
+  return apiRequestNullable<SafeUser>("/auth/session");
 }
 
 export async function logout(): Promise<{ loggedOut: true }> {

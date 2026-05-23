@@ -45,7 +45,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       const id = Date.now() + Math.floor(Math.random() * 1000);
       const toast: ToastItem = {
         id,
-        title: options?.title ?? (variant === "success" ? "Succes" : "Erreur"),
+        title: options?.title ?? (variant === "success" ? "Succès" : "Erreur"),
         description: message,
         variant,
         durationMs: options?.durationMs ?? DEFAULT_DURATION_MS,

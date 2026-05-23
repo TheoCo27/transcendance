@@ -5,6 +5,21 @@ export type GameLeaderboardEntry = {
   score: number;
 };
 
+export type WordlePlayerState = {
+  userId: number;
+  finished: boolean;
+  won: boolean | null;
+  attemptsUsed: number | null;
+  completedAt: string | null;
+};
+
+export type WordleState = {
+  sharedWord: string | null;
+  playersCompleted: number;
+  totalPlayers: number;
+  playerStates: WordlePlayerState[];
+};
+
 export type GameState = {
   roomId: number;
   status: "waiting" | "playing" | "finished";
@@ -20,6 +35,7 @@ export type GameState = {
   winnerUserId: number | null;
   startedAt: string | null;
   endedAt: string | null;
+  wordle: WordleState | null;
   updatedAt: string;
 };
 

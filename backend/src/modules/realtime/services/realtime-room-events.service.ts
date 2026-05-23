@@ -1,6 +1,7 @@
 // Ce fichier gere les evenements WebSocket lies au cycle de vie des rooms
 // et au chat temps reel.
 import { ChatMessageDto } from "@/modules/realtime/dto/chat-message.dto";
+import { ChatHistoryRequestDto } from "@/modules/realtime/dto/chat-history-request.dto";
 import { RoomCreateEventDto } from "@/modules/realtime/dto/room-create-event.dto";
 import { RoomDeleteDto } from "@/modules/realtime/dto/room-delete.dto";
 import { RoomJoinEventDto } from "@/modules/realtime/dto/room-join-event.dto";
@@ -120,8 +121,12 @@ export class RealtimeRoomEventsService {
       const updatedRoom = await this.roomsService.leave(room.id, userId);
       hasRoomStateChanged = true;
 
-      if (updatedRoom.players.length === 0 && updatedRoom.status !== "waiting") {
+      if (updatedRoom.players.length === 0) {
         await this.gameRuntime.closeRoom(room.id, "room_empty", server);
+        continue;
+      }
+
+      if (await this.gameRuntime.completeWordleIfReady(room.id, server)) {
         continue;
       }
 
@@ -206,6 +211,30 @@ export class RealtimeRoomEventsService {
     await this.broadcastRoomList(server);
   }
 
+  // Recharge l'historique de chat pour une room deja rejointe.
+  async handleChatHistoryRequest(
+    rawPayload: unknown,
+    client: Socket,
+  ): Promise<void> {
+    const payload = this.validation.validatePayload(
+      ChatHistoryRequestDto,
+      rawPayload,
+    );
+    const userId = this.presence.resolveSocketUser(client.id, payload.userId);
+    await this.assertUserInRoom(payload.roomId, userId);
+
+    client.emit(
+      "chat:history",
+      this.response.ok({
+        roomId: payload.roomId,
+        messages: await this.roomsService.listMessages(
+          payload.roomId,
+          CHAT_HISTORY_LIMIT,
+        ),
+      }),
+    );
+  }
+
   // Fait quitter une room et gere sa fermeture si besoin.
   async handleRoomLeave(
     rawPayload: unknown,
@@ -236,7 +265,9 @@ export class RealtimeRoomEventsService {
       return;
     }
 
-    server.to(channel).emit("room:state", this.response.ok(room));
+    if (!(await this.gameRuntime.completeWordleIfReady(payload.roomId, server))) {
+      server.to(channel).emit("room:state", this.response.ok(room));
+    }
     await this.broadcastRoomList(server);
   }
 

@@ -157,6 +157,15 @@ Notes:
 }
 ```
 
+### `chat:history:request`
+
+```json
+{
+  "roomId": 1,
+  "userId": 2
+}
+```
+
 ## Server -> Client (outbound)
 
 ### Session
@@ -191,6 +200,23 @@ Notes:
 - `room:list-updated`: `Room[]`
 - `room:created`: `Room`
 - `room:joined`: `Room`
+- `chat:history`:
+
+```json
+{
+  "roomId": 1,
+  "messages": [
+    {
+      "id": 10,
+      "roomId": 1,
+      "userId": 2,
+      "content": "Hello team",
+      "sentAt": "2026-04-08T10:00:00.000Z"
+    }
+  ]
+}
+```
+
 - `room:left`:
 
 ```json

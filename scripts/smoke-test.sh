@@ -343,11 +343,11 @@ bash scripts/cleanup-smoke-artifacts.sh --scope=all >/dev/null 2>&1 || true
 CLEANUP_NEEDED=1
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
-assert_status 401
-assert_body_contains '"success":false'
-assert_body_contains '"code":"UNAUTHORIZED"'
-assert_body_contains '"message":"Authentication required"'
-pass "Session refusee sans cookie"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains '"data":null'
+assert_body_contains '"error":null'
+pass "Session anonyme OK sans cookie"
 
 request_with_curl GET "${BACKEND_BASE_URL}/users/me" "" "$COOKIE_JAR"
 assert_status 401
@@ -357,11 +357,11 @@ assert_body_contains '"message":"Authentication required"'
 pass "/users/me refuse sans cookie"
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "" "Cookie: access_token=invalid-token"
-assert_status 401
-assert_body_contains '"success":false'
-assert_body_contains '"code":"UNAUTHORIZED"'
-assert_body_contains '"message":"Invalid or expired session"'
-pass "Session refusee avec cookie invalide"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains '"data":null'
+assert_body_contains '"error":null'
+pass "Session anonyme OK avec cookie invalide"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$INVALID_REGISTER_PAYLOAD"
 assert_status 400
@@ -415,10 +415,11 @@ assert_equals "offline" "$TEST_USER_STATUS"
 pass "Status offline apres logout"
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
-assert_status 401
-assert_body_contains '"success":false'
-assert_body_contains '"code":"UNAUTHORIZED"'
-pass "Session invalidee apres logout"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains '"data":null'
+assert_body_contains '"error":null'
+pass "Session anonyme apres logout"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$DUPLICATE_REGISTER_PAYLOAD"
 assert_status 409
@@ -484,10 +485,11 @@ assert_equals "offline" "$TEST_USER_STATUS"
 pass "Status offline apres logout final"
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$COOKIE_JAR"
-assert_status 401
-assert_body_contains '"success":false'
-assert_body_contains '"code":"UNAUTHORIZED"'
-pass "Session invalidee apres logout final"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains '"data":null'
+assert_body_contains '"error":null'
+pass "Session anonyme apres logout final"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/register" "$GHOST_REGISTER_PAYLOAD"
 assert_status 201
@@ -502,11 +504,11 @@ assert_not_empty "$GHOST_USER_ID" "ghost user id"
 cleanup_user "$GHOST_EMAIL"
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$GHOST_COOKIE_JAR"
-assert_status 404
-assert_body_contains '"success":false'
-assert_body_contains '"code":"NOT_FOUND"'
-assert_body_contains "\"message\":\"User ${GHOST_USER_ID} not found\""
-pass "Session renvoie 404 si le user du token n'existe plus"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains '"data":null'
+assert_body_contains '"error":null'
+pass "Session anonyme si le user du token n'existe plus"
 
 request_with_curl POST "${BACKEND_BASE_URL}/auth/guest" "$GUEST_LOGIN_PAYLOAD" "$GUEST_COOKIE_JAR"
 assert_status_any 200 201
@@ -540,10 +542,11 @@ assert_body_contains '"loggedOut":true'
 pass "Logout invite OK"
 
 request_with_curl GET "${BACKEND_BASE_URL}/auth/session" "" "$GUEST_COOKIE_JAR"
-assert_status 401
-assert_body_contains '"success":false'
-assert_body_contains '"code":"UNAUTHORIZED"'
-pass "Session invite invalidee apres logout"
+assert_status 200
+assert_body_contains '"success":true'
+assert_body_contains '"data":null'
+assert_body_contains '"error":null'
+pass "Session invite anonyme apres logout"
 
 section "test websocket api"
 bash scripts/ws-smoke-test.sh

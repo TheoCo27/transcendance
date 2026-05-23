@@ -135,7 +135,7 @@ export default function HomeHeader({
   function handleCreateRoomSubmit() {
     const trimmedRoomName = roomNameValue.trim();
     if (!trimmedRoomName) {
-      toast.error("Le nom de la room est obligatoire");
+      toast.error("Le nom de la room est obligatoire.");
       return;
     }
 

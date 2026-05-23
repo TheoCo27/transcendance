@@ -32,7 +32,7 @@ export type Room = {
   ownerUserId: number;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
-  gameType: "wordle" | "memory" | "quiz" | null;
+  gameType: "wordle" | "quiz" | null;
   gameConfig: Record<string, unknown> | null;
   quizId: number | null;
   rounds: number;
@@ -674,7 +674,10 @@ export class RoomsService {
       name: room.name,
       ownerUserId: room.ownerId,
       status: room.status,
-      gameType: room.gameType,
+      gameType:
+        room.gameType === "wordle" || room.gameType === "quiz"
+          ? room.gameType
+          : null,
       gameConfig: this.toObjectRecord(room.gameConfig),
       isPrivate: room.isPrivate,
       quizId: transientConfig?.quizId ?? room.games[0]?.quizId ?? null,
@@ -727,11 +730,11 @@ export class RoomsService {
       if (
         typeof wordLength !== "number" ||
         !Number.isInteger(wordLength) ||
-        wordLength < 4 ||
-        wordLength > 8
+        wordLength < 5 ||
+        wordLength > 7
       ) {
         throw new ConflictException(
-          "La configuration de Wordle necessite un mot de longueur entre 4 et 8 caracteres",
+          "La configuration de Wordle necessite un mot de longueur entre 5 et 7 caracteres",
         );
       }
 
@@ -739,27 +742,17 @@ export class RoomsService {
         typeof maxAttempts !== "number" ||
         !Number.isInteger(maxAttempts) ||
         maxAttempts < 3 ||
-        maxAttempts > 10
+        maxAttempts > 8
       ) {
         throw new ConflictException(
-          "La configuration de Wordle necessite un nombre de tentatives entre 3 et 10",
+          "La configuration de Wordle necessite un nombre de tentatives entre 3 et 8",
         );
       }
 
       return;
     }
 
-    const pairsCount = gameConfig.pairsCount;
-    if (
-      typeof pairsCount !== "number" ||
-      !Number.isInteger(pairsCount) ||
-      pairsCount < 2 ||
-      pairsCount > 20
-    ) {
-      throw new ConflictException(
-        "La configuration de Memory necessite un nombre de paires entre 2 et 20",
-      );
-    }
+    throw new ConflictException("Ce type de jeu n'est plus pris en charge");
   }
 
   // Convertit un JSON Prisma en objet exploitable.

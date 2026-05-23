@@ -23,10 +23,10 @@ export class UpdateRoomDto {
   name?: string;
 
   // Type de jeu associe a la room.
-  @ApiPropertyOptional({ enum: ["wordle", "memory"], example: "wordle" })
+  @ApiPropertyOptional({ enum: ["wordle", "quiz"], example: "wordle" })
   @IsOptional()
-  @IsIn(["wordle", "memory", "quiz"])
-  gameType?: "wordle" | "memory" | "quiz";
+  @IsIn(["wordle", "quiz"])
+  gameType?: "wordle" | "quiz";
 
   // Configuration libre du mini-jeu choisi.
   @ApiPropertyOptional({

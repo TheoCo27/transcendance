@@ -3,7 +3,6 @@ import { GameFinishEventDto } from "@/modules/realtime/dto/game-finish-event.dto
 import { SubmitAnswerDto } from "@/modules/game/dto/submit-answer.dto";
 import { GameService } from "@/modules/game/game.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
-import { ScoresService } from "@/modules/scores/scores.service";
 import {
   ConflictException,
   Injectable,
@@ -20,7 +19,6 @@ export class RealtimeGameEventsService {
   constructor(
     private readonly roomsService: RoomsService,
     private readonly gameService: GameService,
-    private readonly scoresService: ScoresService,
     private readonly validation: RealtimeValidationService,
     private readonly response: RealtimeResponseService,
     private readonly presence: RealtimePresenceService,
@@ -86,6 +84,9 @@ export class RealtimeGameEventsService {
     const userId = this.presence.resolveSocketUser(client.id);
 
     const room = await this.roomsService.getById(payload.roomId);
+    if (room.gameType !== "wordle") {
+      throw new ConflictException("Cet evenement est reserve aux parties Wordle");
+    }
     if (!room.players.some((player) => player.userId === userId)) {
       throw new UnauthorizedException("User is not in this room");
     }
@@ -93,35 +94,28 @@ export class RealtimeGameEventsService {
     if (room.status === "finished") {
       return;
     }
+    if (room.status !== "playing") {
+      throw new ConflictException("La partie Wordle n'est pas en cours");
+    }
 
-    const leaderboard = await this.gameService.addRoomScore(
-      payload.roomId,
+    const result = await this.gameService.recordWordlePlayerFinish({
+      roomId: payload.roomId,
       userId,
-      100,
-    );
-    const gameState = await this.gameService.finishRoomGame(payload.roomId);
-    const updatedRoom = await this.roomsService.getById(payload.roomId);
+      won: payload.won,
+      attemptsUsed: payload.attemptsUsed,
+    });
     const channel = this.roomChannel(payload.roomId);
 
-    await this.scoresService.recordGameResult(leaderboard, userId);
+    server.to(channel).emit("game:state", this.response.ok(result.gameState));
 
-    gameState.leaderboard = leaderboard;
-    gameState.winnerUserId = userId;
+    if (result.allPlayersFinished) {
+      await this.gameRuntime.completeWordleIfReady(payload.roomId, server);
+      return;
+    }
 
-    server.to(channel).emit("room:state", this.response.ok(updatedRoom));
-    server.to(channel).emit("game:leaderboard", this.response.ok(leaderboard));
-    server.to(channel).emit("game:state", this.response.ok(gameState));
     server
       .to(channel)
-      .emit(
-        "game:ended",
-        this.response.ok({
-          roomId: payload.roomId,
-          reason: "wordle_completed",
-          winnerUserId: gameState.winnerUserId,
-          leaderboard: gameState.leaderboard,
-        }),
-      );
+      .emit("game:leaderboard", this.response.ok(result.leaderboard));
   }
 
   // Genere le nom de canal Socket.IO d'une room.
