@@ -5,3 +5,4 @@ backend/node_modules/
 .env.*
 !.env.example
 certs/
+GEMINI.md

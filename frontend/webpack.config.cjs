@@ -84,8 +84,9 @@ module.exports = {
           }
 
           if (
-            pathname === "/rooms" ||
-            (pathname.startsWith("/rooms/") && req.headers.accept && req.headers.accept.includes("text/html"))
+            (pathname === "/rooms" || pathname.startsWith("/rooms/")) &&
+            req.headers.accept &&
+            req.headers.accept.includes("text/html")
           ) {
             return false;
           }
