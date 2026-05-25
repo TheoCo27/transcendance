@@ -241,14 +241,21 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       !cameFromWordleResult &&
       !cameFromWordleTimeout
     ) {
+      if (isSessionLoading) return;
+      if (!user) {
+        setPageError("Vous devez être connecté pour accéder à une partie en cours.");
+        return;
+      }
       navigate(`/games/${roomId}`);
     }
   }, [
     cameFromWordleResult,
     cameFromWordleTimeout,
+    isSessionLoading,
     navigate,
     room?.status,
     roomId,
+    user,
   ]);
 
   useEffect(() => {
