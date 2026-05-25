@@ -613,6 +613,16 @@ function GamesPage() {
     );
   }
 
+  if (room && !isUserInRoom) {
+    return (
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
+        <div className="rounded-4xl border border-rose-200 bg-rose-50 p-8 text-danger">
+          Impossible de rejoindre via un lien direct : la partie est déjà en cours et vous n'y participez pas.
+        </div>
+      </main>
+    );
+  }
+
   if (pageError) {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">

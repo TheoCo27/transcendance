@@ -246,6 +246,13 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         setPageError("Vous devez être connecté pour accéder à une partie en cours.");
         return;
       }
+      
+      const isUserInRoom = room.players.some((player) => player.userId === user.id);
+      if (!isUserInRoom) {
+        setPageError("La partie a déjà commencé. Les nouveaux joueurs ne peuvent plus la rejoindre.");
+        return;
+      }
+
       navigate(`/games/${roomId}`);
     }
   }, [
@@ -253,6 +260,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     cameFromWordleTimeout,
     isSessionLoading,
     navigate,
+    room?.players,
     room?.status,
     roomId,
     user,
