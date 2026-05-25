@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import Input from "../components/ui/input";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useToast } from "../components/ui/toast";
+import { useAuthSession } from "../hooks/useAuthSession";
 import {
   AUTH_USERNAME_MIN_LENGTH,
   login,
@@ -15,6 +16,14 @@ import { oauthErrorMsg } from "../utils/err-msg";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { user, isLoading } = useAuthSession();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate("/");
+    }
+  }, [user, isLoading, navigate]);
+
   const toast = useToast();
   const [searchParams] = useSearchParams();
   const joinRoomParam = searchParams.get("joinRoom");
