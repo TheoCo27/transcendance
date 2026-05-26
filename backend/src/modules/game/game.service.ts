@@ -83,7 +83,7 @@ export class GameService {
   constructor(
     private readonly roomsService: RoomsService,
     private readonly quizzesService: QuizzesService,
-  ) {}
+  ) { }
 
   // Retourne l'etat courant de la partie pour une room.
   async getRoomState(roomId: number): Promise<GameState> {
@@ -506,7 +506,7 @@ export class GameService {
       });
 
       const scoreDelta = params.won
-        ? Math.max(1, maxAttempts - params.attemptsUsed + 1)
+        ? Math.max(1, maxAttempts - params.attemptsUsed + 1) * 100
         : 0;
       if (scoreDelta > 0) {
         runtime.scoresByUser.set(
