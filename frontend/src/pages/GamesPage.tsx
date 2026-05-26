@@ -396,7 +396,12 @@ function GamesPage() {
         room.players.map(async (player) => {
           try {
             const fetchedUser = await getUserById(player.userId);
-            return [player.userId, fetchedUser.username] as const;
+            return [
+              player.userId,
+              fetchedUser.username.startsWith("guest-archived-")
+                ? "Invité déconnecté"
+                : fetchedUser.username,
+            ] as const;
           } catch {
             return [player.userId, `Joueur #${player.userId}`] as const;
           }

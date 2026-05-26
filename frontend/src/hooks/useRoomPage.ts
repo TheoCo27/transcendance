@@ -587,7 +587,12 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setPlayerNames((currentNames) => ({
         ...currentNames,
         ...Object.fromEntries(
-          nextEntries.map((entry) => [entry.userId, entry.username]),
+          nextEntries.map((entry) => [
+            entry.userId,
+            entry.username.startsWith("guest-archived-")
+              ? "Invité déconnecté"
+              : entry.username,
+          ]),
         ),
       }));
 
