@@ -85,6 +85,34 @@ function normalizeUserFacingMessage(message: string): string {
     return "Le message ne peut pas être vide.";
   }
 
+  if (/^nickname too long\.?$/i.test(trimmedMessage)) {
+    return "Le pseudo est trop long.";
+  }
+
+  if (/^email too long\.?$/i.test(trimmedMessage)) {
+    return "L'adresse email est trop longue.";
+  }
+
+  if (/^password too long\.?$/i.test(trimmedMessage)) {
+    return "Le mot de passe est trop long.";
+  }
+
+  if (/must be an email/i.test(trimmedMessage)) {
+    return "L'adresse email est invalide.";
+  }
+
+  if (/must be longer than or equal to 2 characters/i.test(trimmedMessage)) {
+    return "Le pseudo doit faire au moins 2 caractères.";
+  }
+
+  if (/must be longer than or equal to 12 characters/i.test(trimmedMessage)) {
+    return "Le mot de passe doit faire au moins 12 caractères.";
+  }
+
+  if (/should not be empty/i.test(trimmedMessage)) {
+    return "Ce champ ne peut pas être vide.";
+  }
+
   const requestFailedMatch = trimmedMessage.match(REQUEST_FAILED_PATTERN);
   if (requestFailedMatch) {
     return `La requête a échoué (${requestFailedMatch[1]}).`;

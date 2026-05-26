@@ -126,7 +126,9 @@ export default function HomeHeader({
     }
 
     const defaultRoomName = userName
-      ? `Room de ${userName}`
+      ? userName.startsWith("guest-archived-")
+        ? "Room invité"
+        : `Room de ${userName}`
       : "Ma nouvelle room";
     setRoomNameValue(defaultRoomName);
     setCreateDialogOpen(true);

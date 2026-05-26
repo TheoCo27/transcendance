@@ -459,7 +459,7 @@ export class AuthService {
       const auth = await this.jwtService.verifyAsync<AuthPayload>(token);
       const user = await this.usersService.findUser({ id: auth.sub });
 
-      if (!user) {
+      if (!user || user.username.startsWith("guest-archived-")) {
         res.clearCookie("access_token", this.getAuthCookieOptions());
         return null;
       }

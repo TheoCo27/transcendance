@@ -382,7 +382,7 @@ export default function ProfilePage() {
                     </span>
                     <input
                       className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
-                      maxLength={40}
+                      maxLength={20}
                       minLength={AUTH_USERNAME_MIN_LENGTH}
                       onChange={(event) =>
                         setProfileUsername(event.target.value)

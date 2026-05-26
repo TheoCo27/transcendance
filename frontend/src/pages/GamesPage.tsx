@@ -137,7 +137,7 @@ function clearPersistedWordleState(roomId: number, userId: number): void {
 function GamesPage() {
   const { roomId: roomIdParam } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuthSession();
+  const { user, isLoading: isSessionLoading } = useAuthSession();
 
   const roomId = Number(roomIdParam);
   const [room, setRoom] = useState<Room | null>(null);
@@ -396,7 +396,12 @@ function GamesPage() {
         room.players.map(async (player) => {
           try {
             const fetchedUser = await getUserById(player.userId);
-            return [player.userId, fetchedUser.username] as const;
+            return [
+              player.userId,
+              fetchedUser.username.startsWith("guest-archived-")
+                ? "Invité déconnecté"
+                : fetchedUser.username,
+            ] as const;
           } catch {
             return [player.userId, `Joueur #${player.userId}`] as const;
           }
@@ -593,11 +598,31 @@ function GamesPage() {
     }
   };
 
-  if (isLoadingPage) {
+  if (isLoadingPage || isSessionLoading) {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
         <div className="rounded-4xl border border-white/10 bg-bg p-8 text-text">
           Chargement de la partie...
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
+        <div className="rounded-4xl border border-rose-200 bg-rose-50 p-8 text-danger">
+          Vous devez être connecté pour accéder à une partie en cours.
+        </div>
+      </main>
+    );
+  }
+
+  if (room && !isUserInRoom) {
+    return (
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
+        <div className="rounded-4xl border border-rose-200 bg-rose-50 p-8 text-danger">
+          Impossible de rejoindre via un lien direct : la partie est déjà en cours et vous n'y participez pas.
         </div>
       </main>
     );
