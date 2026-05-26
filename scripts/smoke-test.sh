@@ -323,7 +323,7 @@ TEST_PASSWORD="longsecuredpassword123!"
 GHOST_EMAIL="smoke-ghost-$(date +%s)@test.com"
 GHOST_PASSWORD="longsecuredpassword123!"
 GHOST_COOKIE_JAR="${TMP_DIR}/ghost-cookies.txt"
-GUEST_USERNAME="guest-smoke-$(date +%s)"
+GUEST_USERNAME="guest-$(date +%s)"
 GUEST_COOKIE_JAR="${TMP_DIR}/guest-cookies.txt"
 
 REGISTER_PAYLOAD=$(printf '{"email":"%s","password":"%s","username":"smoke"}' "$TEST_EMAIL" "$TEST_PASSWORD")
