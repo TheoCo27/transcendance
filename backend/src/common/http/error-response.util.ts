@@ -9,6 +9,22 @@ export function getExceptionStatus(exception: unknown): number {
     return exception.getStatus();
   }
 
+  if (
+    exception instanceof Error &&
+    "status" in exception &&
+    typeof exception.status === "number"
+  ) {
+    return exception.status;
+  }
+
+  if (
+    exception instanceof Error &&
+    "statusCode" in exception &&
+    typeof exception.statusCode === "number"
+  ) {
+    return exception.statusCode;
+  }
+
   return HttpStatus.INTERNAL_SERVER_ERROR;
 }
 
