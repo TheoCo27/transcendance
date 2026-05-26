@@ -92,6 +92,7 @@ export default function RegisterPage() {
             onChange={(event) => setUsername(event.target.value)}
             disabled={isSubmitting}
             minLength={AUTH_USERNAME_MIN_LENGTH}
+            maxLength={20}
             autoComplete="username"
             required
           />

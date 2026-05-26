@@ -204,6 +204,7 @@ export default function LoginPage() {
             onChange={(event) => setGuestUsername(event.target.value)}
             disabled={isGuestSubmitting}
             minLength={AUTH_USERNAME_MIN_LENGTH}
+            maxLength={20}
             autoComplete="off"
             required
           />
