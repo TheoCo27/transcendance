@@ -339,11 +339,11 @@ function GamesPage() {
       setGameState((currentState) =>
         currentState
           ? {
-              ...currentState,
-              status: "finished",
-              leaderboard: data.leaderboard,
-              winnerUserId: data.winnerUserId,
-            }
+            ...currentState,
+            status: "finished",
+            leaderboard: data.leaderboard,
+            winnerUserId: data.winnerUserId,
+          }
           : currentState,
       );
     };
@@ -737,7 +737,7 @@ function GamesPage() {
                             `Joueur #${entry.userId}`}
                         </p>
                         <p className="text-xs text-white/55">
-                          {index === 0 ? "Premier" : `Position ${index + 1}`}
+                          {index === 0 ? "Premier" : `${index + 1}eme`}
                         </p>
                       </div>
                       <span className="rounded-full border border-white/10 bg-bg/70 px-3 py-1 text-sm font-semibold text-white/80">
