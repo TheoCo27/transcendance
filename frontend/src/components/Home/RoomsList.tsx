@@ -7,6 +7,24 @@ type RoomListProps = {
   joiningRoomId: number | null;
 };
 
+function formatRoomStatus(status: string): string {
+  if (status === "waiting") return "En attente";
+  else if (status === "playing") return "Partie en cours";
+  else return "Terminee";
+}
+
+function getRoomStatusBadgeClass(status: string): string {
+  if (status === "waiting") {
+    return "border-amber-300/30 bg-amber-400/15 text-amber-200";
+  }
+
+  if (status === "playing") {
+    return "border-emerald-300/30 bg-emerald-400/15 text-emerald-200";
+  }
+
+  return "border-slate-300/20 bg-slate-200/10 text-slate-200";
+}
+
 export default function RoomsList({
   rooms,
   onJoin,
@@ -17,7 +35,7 @@ export default function RoomsList({
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold md:text-2xl">Rooms ouvertes</h2>
         <span className="text-sm text-text-muted">
-          {rooms.length} disponibles
+          {rooms.length} disponible{rooms.length > 1 ? "s" : ""}
         </span>
       </div>
 
@@ -30,10 +48,11 @@ export default function RoomsList({
             <div className="mb-3 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold">{room.name}</h3>
-                {/* <p className="text-sm text-text-muted">{room.gameType}</p> */}
               </div>
-              <span className="rounded-full border border-success/60 bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
-                {room.status}
+              <span
+                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${getRoomStatusBadgeClass(room.status)}`}
+              >
+                {formatRoomStatus(room.status)}
               </span>
             </div>
 

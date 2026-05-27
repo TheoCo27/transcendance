@@ -6,9 +6,9 @@ import SectionHeader from "../components/section-header";
 import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
-import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
-import { getUserFacingErrorMessage } from "../services/api";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { getUserFacingErrorMessage } from "../services/api";
+import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
 import { updateMyAvatar, updateMyProfile } from "../services/users";
 
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
@@ -381,7 +381,7 @@ export default function ProfilePage() {
                       Pseudo
                     </span>
                     <input
-                      className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
+                      className="mt-2 w-full rounded-2xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
                       maxLength={20}
                       minLength={AUTH_USERNAME_MIN_LENGTH}
                       onChange={(event) =>
@@ -398,7 +398,7 @@ export default function ProfilePage() {
                       Statut
                     </span>
                     <select
-                      className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
+                      className="mt-2 w-full rounded-2xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
                       onChange={(event) =>
                         setProfileStatus(
                           event.target.value as "online" | "offline",
@@ -445,7 +445,6 @@ export default function ProfilePage() {
               </dd>
             </div>
           </dl>
-
         </Section>
         <Section className="md:col-span-2">
           <SectionLabel className="text-slate-400">Social</SectionLabel>
@@ -458,7 +457,7 @@ export default function ProfilePage() {
             <Link to="/friends">
               <PrimaryButton>Ouvrir la page amis</PrimaryButton>
             </Link>
-            <Link to="/join">
+            <Link to="/">
               <SecondaryButton>Retourner aux rooms</SecondaryButton>
             </Link>
           </div>
