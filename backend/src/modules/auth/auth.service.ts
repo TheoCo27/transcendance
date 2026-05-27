@@ -115,6 +115,47 @@ export class AuthService {
     return safeUser;
   }
 
+    // Essaie de convertir l'avatar Google en data URL pour le rendre accessible a tous les users.
+    // Autre user n'avait pas acces a l'url de l'avatar, maintenant => contient directement les donnees
+    // au lieu de pointer vers une URL
+    private async normalizeGoogleAvatarUrl(
+      avatarUrl: string | undefined,
+    ): Promise<string | null> {
+      if (!avatarUrl) {
+        return null;
+      }
+
+      const normalizedAvatarUrl = avatarUrl.trim();
+      if (normalizedAvatarUrl.length === 0) {
+        return null;
+      }
+
+      if (normalizedAvatarUrl.startsWith("data:")) {
+        return normalizedAvatarUrl;
+      }
+
+      try {
+        const response = await fetch(normalizedAvatarUrl);
+        if (!response.ok) {
+          return normalizedAvatarUrl;
+        }
+
+        const contentType = response.headers.get("content-type")?.split(";")[0]?.trim();
+        if (!contentType?.startsWith("image/")) {
+          return normalizedAvatarUrl;
+        }
+
+        const imageBuffer = Buffer.from(await response.arrayBuffer());
+        if (imageBuffer.length === 0) {
+          return normalizedAvatarUrl;
+        }
+
+        return `data:${contentType};base64,${imageBuffer.toString("base64")}`;
+      } catch {
+        return normalizedAvatarUrl;
+      }
+    }
+
   // Definit les options du cookie de session.
   private getAuthCookieOptions(): CookieOptions {
     const isSecureCookie = process.env.FRONTEND_ORIGIN?.startsWith("https://");
@@ -713,6 +754,10 @@ export class AuthService {
   private async findOrCreateGoogleUser(
     googleUser: VerifiedGoogleIdTokenPayload,
   ): Promise<User> {
+    const normalizedAvatarUrl = await this.normalizeGoogleAvatarUrl(
+      googleUser.picture,
+    );
+
     const existingGoogleUser = await this.usersService.findUser({
       googleId: googleUser.sub,
     });
@@ -734,7 +779,7 @@ export class AuthService {
       return this.usersService.updateUser({
         where: { id: existingGoogleUser.id },
         data: {
-          avatar_url: googleUser.picture ?? existingGoogleUser.avatar_url,
+          avatar_url: normalizedAvatarUrl ?? existingGoogleUser.avatar_url,
           email: nextEmail,
           googleId: googleUser.sub,
         },
@@ -747,7 +792,7 @@ export class AuthService {
       return this.usersService.updateUser({
         where: { id: existingEmailUser.id },
         data: {
-          avatar_url: googleUser.picture ?? existingEmailUser.avatar_url,
+          avatar_url: normalizedAvatarUrl ?? existingEmailUser.avatar_url,
           googleId: googleUser.sub,
         },
       });
@@ -761,7 +806,7 @@ export class AuthService {
     );
 
     return this.usersService.createUser({
-      avatar_url: googleUser.picture ?? null,
+      avatar_url: normalizedAvatarUrl,
       createdAt: new Date(),
       email: googleUser.email,
       googleId: googleUser.sub,
