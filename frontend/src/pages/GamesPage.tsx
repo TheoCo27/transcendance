@@ -253,7 +253,7 @@ function GamesPage() {
     };
 
     void loadGamePage();
-  }, [navigate, roomId, user?.id]);
+  }, [navigate, roomId]);
 
   useEffect(() => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -444,8 +444,7 @@ function GamesPage() {
         return;
       }
 
-      store.nbr_letters = configuredLength;
-      store.maxAttempts = configuredMaxAttempts;
+      store.setConfig(configuredLength, configuredMaxAttempts);
 
       if (lastHydratedWordleKeyRef.current === hydrationKey) {
         return;
@@ -461,16 +460,15 @@ function GamesPage() {
 
       if (canRestore && persistedState) {
         store.init(sharedWord);
-        store.word = sharedWord;
-        store.guesses = [...persistedState.guesses];
-        store.currentGuess = Math.min(
-          configuredMaxAttempts,
-          Math.max(0, persistedState.currentGuess),
+        store.restoreState(
+          sharedWord,
+          persistedState.guesses,
+          persistedState.currentGuess,
+          persistedState.startTime,
+          persistedState.totalTime,
+          persistedState.rulePanelClosed,
+          persistedState.endedByTimeout
         );
-        store.start_time = persistedState.startTime;
-        store.total_time = persistedState.totalTime;
-        store.rulePannelClosed = persistedState.rulePanelClosed;
-        store.endedByTimeout = persistedState.endedByTimeout;
         setRulesOpen(!persistedState.rulePanelClosed);
       } else {
         store.init(sharedWord);
@@ -804,7 +802,7 @@ function GamesPage() {
                   Ta manche est terminée. Tu restes connecté jusqu'à ce que tous
                   les joueurs aient fini.
                 </p>
-                {store.lost && store.endedByTimeout ? (
+                {store.lost ? (
                   <p className="mt-2 text-base font-semibold uppercase tracking-[0.14em] text-amber-300">
                     Le mot à trouver était {store.word}
                   </p>

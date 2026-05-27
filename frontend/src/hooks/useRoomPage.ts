@@ -242,7 +242,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     }
 
     void refreshRoom();
-  }, [isSessionLoading, navigate, refreshRoom, roomId, user?.id]);
+  }, [isSessionLoading, navigate, refreshRoom, roomId]);
 
   useEffect(() => {
     if (

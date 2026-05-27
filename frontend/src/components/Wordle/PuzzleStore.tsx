@@ -45,8 +45,21 @@ export type PuzzleStoreType = {
   toast_x_letters(): void;
   toast_won(): void;
   toast_timeup(): void;
+  startTimer(): void;
   toast_lost(): void;
   checkTimeUp(): void;
+
+  setConfig(wordLength: number, maxAttempts: number): void;
+  restoreState(
+    sharedWord: string,
+    guesses: string[],
+    currentGuess: number,
+    startTime: number,
+    totalTime: number,
+    rulePanelClosed: boolean,
+    endedByTimeout: boolean,
+  ): void;
+  setRulePanelClosed(closed: boolean): void;
 
   init(sharedWord?: string): void;
   submitGuess(): void;
@@ -117,7 +130,7 @@ export default {
   //TIME
   get timeStatus() {
     return (
-      Math.floor(Date.now() / 1000) - this.start_time >= this.time_per_word
+      this.start_time >= 0 && Math.floor(Date.now() / 1000) - this.start_time >= this.time_per_word
     );
   },
 
@@ -145,6 +158,12 @@ export default {
     this.endedByTimeout = true;
     this.ToastMessage = `Le temps est écoulé : vous n'avez pas trouvé le mot ${this.word}.`;
     this.ToastId++;
+  },
+
+  startTimer() {
+    if (this.start_time < 0) {
+      this.start_time = Date.now() / 1000;
+    }
   },
 
   toast_lost() {
@@ -276,6 +295,33 @@ export default {
         this.guesses[this.currentGuess] += e.key.toLocaleLowerCase();
       }
     }
+  },
+
+  setConfig(wordLength: number, maxAttempts: number) {
+    this.nbr_letters = wordLength;
+    this.maxAttempts = maxAttempts;
+  },
+
+  restoreState(
+    sharedWord: string,
+    guesses: string[],
+    currentGuess: number,
+    startTime: number,
+    totalTime: number,
+    rulePanelClosed: boolean,
+    endedByTimeout: boolean,
+  ) {
+    this.word = sharedWord;
+    this.guesses = [...guesses];
+    this.currentGuess = Math.min(this.maxAttempts, Math.max(0, currentGuess));
+    this.start_time = startTime;
+    this.total_time = totalTime;
+    this.rulePannelClosed = rulePanelClosed;
+    this.endedByTimeout = endedByTimeout;
+  },
+
+  setRulePanelClosed(closed: boolean) {
+    this.rulePannelClosed = closed;
   },
 };
 

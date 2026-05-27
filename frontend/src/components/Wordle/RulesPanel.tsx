@@ -94,6 +94,8 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
             className="mt-3 rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
             type="button"
             onClick={() => {
+              store.setRulePanelClosed(true);
+              store.startTimer();
               setReady()
             }}
           >
