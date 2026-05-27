@@ -1,9 +1,4 @@
-import {
-  ChevronDown,
-  LogOut,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
+import { ChevronDown, LogOut, UserRound, UsersRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSession } from "../hooks/useAuthSession";
@@ -66,7 +61,7 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-6 text-sm font-medium md:flex">
-          <Link to="/friends">Amis</Link>
+          <Link to="/admin">Créer un quiz</Link>
         </div>
 
         <div className="flex items-center gap-3">

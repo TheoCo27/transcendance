@@ -40,7 +40,7 @@ export default function QuestionComposer({
         <span className="text-sm font-medium">Question</span>
         <textarea
           id="question-text"
-          className="mt-2 min-h-30 w-full rounded-xl border border-white/10 bg-bg px-4 py-3 placeholder:text-text/40 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+          className="mt-2 min-h-24 max-h-96 w-full rounded-xl border border-white/10 bg-bg px-4 py-3 placeholder:text-text/40 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
           placeholder="Quel studio a crée Journey ?"
           value={questionText}
           onChange={(event) => onQuestionTextChange(event.target.value)}

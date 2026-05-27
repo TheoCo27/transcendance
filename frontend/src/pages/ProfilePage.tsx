@@ -1,9 +1,11 @@
+import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "../components/Avatar";
 import Section from "../components/section";
 import SectionHeader from "../components/section-header";
 import SectionLabel from "../components/section-label";
+import Input from "../components/ui/input";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
@@ -367,48 +369,51 @@ export default function ProfilePage() {
                 {user.isGuest ? "Invite" : user.email}
               </dd>
             </div>
-            <div className="rounded-3xl bg-slate-100/80 px-5 py-4">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <Section className="bg-white/5">
+              <SectionLabel className="text-slate-400">
                 Pseudo et statut
-              </dt>
+              </SectionLabel>
               <dd className="mt-4">
                 <form
                   className="space-y-4"
                   onSubmit={(event) => void handleProfileSubmit(event)}
                 >
                   <label className="block">
-                    <span className="text-sm font-medium text-slate-700">
-                      Pseudo
-                    </span>
-                    <input
-                      className="mt-2 w-full rounded-2xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
+                    <span className="text-sm font-medium">Pseudo</span>
+                    <Input
+                      className="mt-2 w-full"
+                      type="text"
                       maxLength={20}
                       minLength={AUTH_USERNAME_MIN_LENGTH}
                       onChange={(event) =>
                         setProfileUsername(event.target.value)
                       }
-                      placeholder="Ton pseudo"
-                      type="text"
+                      placeholder="Nouveau pseudo"
                       value={profileUsername}
                     />
                   </label>
 
                   <label className="block">
-                    <span className="text-sm font-medium text-slate-700">
-                      Statut
-                    </span>
-                    <select
-                      className="mt-2 w-full rounded-2xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
-                      onChange={(event) =>
-                        setProfileStatus(
-                          event.target.value as "online" | "offline",
-                        )
-                      }
-                      value={profileStatus}
-                    >
-                      <option value="online">online</option>
-                      <option value="offline">offline</option>
-                    </select>
+                    <span className="text-sm font-medium">Statut</span>
+                    <div className="relative w-full mt-2">
+                      <select
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-bg px-4 py-3 pr-11 placeholder:text-text/40 transition-colors duration-200 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        onChange={(event) =>
+                          setProfileStatus(
+                            event.target.value as "online" | "offline",
+                          )
+                        }
+                        value={profileStatus}
+                      >
+                        <option value="online">online</option>
+                        <option value="offline">offline</option>
+                      </select>
+                      <ChevronDown
+                        aria-hidden="true"
+                        strokeWidth={2}
+                        className="pointer-events-none absolute right-4 top-1/2 size-4  -translate-y-1/2 text-white"
+                      />
+                    </div>
                   </label>
 
                   <div className="flex flex-col gap-3 sm:flex-row">
@@ -433,7 +438,7 @@ export default function ProfilePage() {
                     <p
                       className={`text-sm ${
                         profileNotice.kind === "success"
-                          ? "text-emerald-700"
+                          ? "text-emerald-600"
                           : "text-rose-700"
                       }`}
                       role="alert"
@@ -443,7 +448,7 @@ export default function ProfilePage() {
                   ) : null}
                 </form>
               </dd>
-            </div>
+            </Section>
           </dl>
         </Section>
         <Section className="md:col-span-2">

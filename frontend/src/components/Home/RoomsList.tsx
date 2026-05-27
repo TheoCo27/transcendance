@@ -35,7 +35,9 @@ export default function RoomsList({
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold md:text-2xl">Rooms ouvertes</h2>
         <span className="text-sm text-text-muted">
-          {rooms.length} disponible{rooms.length > 1 ? "s" : ""}
+          {rooms.length === 0
+            ? "Aucune room disponible"
+            : `${rooms.length} disponible${rooms.length > 1 ? "s" : ""}`}
         </span>
       </div>
 

@@ -129,7 +129,7 @@ export default function QuizAdminPage() {
         return;
       }
 
-      navigate(`/quiz/${createdQuiz.id}`);
+      navigate("/");
     } catch (error) {
       setSubmitError(
         getUserFacingErrorMessage(error, "Impossible de creer le quiz."),
@@ -147,8 +147,8 @@ export default function QuizAdminPage() {
             Création depuis une room
           </p>
           <p className="mt-2 text-sm leading-7 text-emerald-50/90">
-            Une fois validé, ce quiz sera renvoyé dans les réglages de ta room et
-            présélectionné automatiquement.
+            Une fois validé, ce quiz sera renvoyé dans les réglages de ta room
+            et présélectionné automatiquement.
           </p>
           <Link
             className="mt-4 inline-flex rounded-md border border-emerald-100/20 bg-emerald-950/25 px-4 py-2 font-semibold text-emerald-50 transition hover:bg-emerald-950/40"
@@ -262,7 +262,7 @@ export default function QuizAdminPage() {
 
           <PrimaryButton
             className="mt-6 w-full justify-center"
-            disabled={isLoading || isSubmitting}
+            disabled={isLoading || isSubmitting || questions.length < 1}
             onClick={() => {
               void handleSubmitQuiz();
             }}
