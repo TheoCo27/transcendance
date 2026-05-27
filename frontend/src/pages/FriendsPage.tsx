@@ -332,7 +332,7 @@ export default function FriendsPage() {
     try {
       const result = await respondToFriendRequest(requestId, action);
       setFriendNotice({
-        kind: "success",
+        kind: action === "accepted" ? "success" : "error",
         message: result.message,
       });
       await refreshFriendData();
