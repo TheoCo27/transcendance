@@ -8,5 +8,4 @@ export { default as ProfilePage } from "./ProfilePage";
 export { default as QuizAdminPage } from "./QuizAdminPage";
 export { default as RegisterPage } from "./RegisterPage";
 export { default as RoomPage } from "./RoomPage";
-export { default as QuizPage } from "./QuizPage";
 export { default as TermsOfServicePage } from "./TermsOfServicePage";

@@ -71,6 +71,8 @@ type ChatHistoryPayload = {
   messages: ChatMessagePayload[];
 };
 
+let lastConnectedUserId: number | null = null;
+
 const DEFAULT_FORM: RoomConfigForm = {
   name: "",
   quizId: null,
@@ -207,12 +209,18 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     }
 
     if (user) {
+      if (lastConnectedUserId !== null && lastConnectedUserId !== user.id) {
+        disconnectWs();
+      }
+      lastConnectedUserId = user.id;
+
       void connectWs().catch(() => {
         // Action-level flows already surface feedback.
       });
       return;
     }
 
+    lastConnectedUserId = null;
     disconnectWs();
   }, [isSessionLoading, user]);
 
@@ -462,6 +470,13 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         return;
       }
 
+      if (
+        response.error?.message &&
+        /socket user mismatch/i.test(response.error.message)
+      ) {
+        disconnectWs();
+      }
+
       setChatError(
         getUserFacingServerMessage(
           response.error?.message,
@@ -473,6 +488,13 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     const handleRoomError = (response: WsResponse<never>) => {
       if (response.success) {
         return;
+      }
+
+      if (
+        response.error?.message &&
+        /socket user mismatch/i.test(response.error.message)
+      ) {
+        disconnectWs();
       }
 
       setIsStarting(false);

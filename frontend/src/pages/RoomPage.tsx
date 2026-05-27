@@ -1,15 +1,16 @@
 import { Check, Copy } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import RoomSectionLabel from "../components/room/room-section-label";
+import type { ChatEntry } from "../components/room/room-types";
 import RoomChatSection from "../components/room/RoomChatSection";
 import RoomConfigSection from "../components/room/RoomConfigSection";
 import RoomLeaderboardSection from "../components/room/RoomLeaderboardSection";
 import RoomPlayersSection from "../components/room/RoomPlayersSection";
-import RoomSectionLabel from "../components/room/room-section-label";
-import type { ChatEntry } from "../components/room/room-types";
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -227,8 +228,8 @@ export default function RoomPage() {
                   {room.gameType === "wordle"
                     ? "Wordle"
                     : room.gameType === "quiz"
-                        ? "Quiz"
-                        : "A configurer"}
+                      ? "Quiz"
+                      : "A configurer"}
                 </span>
               </div>
 
@@ -350,12 +351,9 @@ export default function RoomPage() {
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <SecondaryButton
-                                disabled={isDeletingRoom}
-                                onClick={() => setIsDeleteDialogOpen(false)}
-                              >
+                              <AlertDialogCancel disabled={isDeletingRoom}>
                                 Annuler
-                              </SecondaryButton>
+                              </AlertDialogCancel>
                               <AlertDialogAction
                                 className="inline-flex items-center justify-center rounded-md bg-danger px-4 py-2 font-semibold text-white transition hover:bg-danger/85 disabled:cursor-not-allowed disabled:opacity-60"
                                 disabled={isDeletingRoom}

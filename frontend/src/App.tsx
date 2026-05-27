@@ -10,7 +10,6 @@ import {
   PrivacyPolicyPage,
   ProfilePage,
   QuizAdminPage,
-  QuizPage,
   RegisterPage,
   RoomPage,
   TermsOfServicePage,
@@ -38,7 +37,6 @@ export default function App() {
           />
           <Route path="/rooms/:roomId" element={<RoomPage />} />
           <Route path="/games/:roomId" element={<GamesPage />} />
-          <Route path="/quiz/:quizId" element={<QuizPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

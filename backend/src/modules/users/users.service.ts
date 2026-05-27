@@ -269,7 +269,7 @@ export class UsersService {
     const sender = await this.findUser({ id: senderId });
 
     if (!sender) {
-      throw new NotFoundException(`User ${senderId} not found`);
+      throw new NotFoundException(`L'utilisateur ${senderId} n'a pas été trouvé`);
     }
 
     this.ensureFriendSystemAvailable(sender);
@@ -303,12 +303,12 @@ export class UsersService {
     );
 
     if (activeRelation?.status === "accepted") {
-      throw new ConflictException("You are already friends");
+      throw new ConflictException("Vous êtes déjà amis");
     }
 
     if (activeRelation?.status === "pending") {
       if (activeRelation.senderId === senderId) {
-        throw new ConflictException("A friend request is already pending");
+        throw new ConflictException("Vous avez déjà envoyé une demande d'amis à cet utilisateur");
       }
 
       await this.prisma.client.friendRequests.update({
@@ -319,7 +319,7 @@ export class UsersService {
       });
 
       return {
-        message: `${receiver.username} is now in your friends list`,
+        message: `${receiver.username} fais maintenant partie de vos amis`,
         friendshipStatus: "accepted",
       };
     }
@@ -333,7 +333,7 @@ export class UsersService {
     });
 
     return {
-      message: `Friend request sent to ${receiver.username}`,
+      message: `Demande d'amis envoyé à ${receiver.username}`,
       friendshipStatus: "pending",
     };
   }
@@ -347,7 +347,7 @@ export class UsersService {
     const currentUser = await this.findUser({ id: userId });
 
     if (!currentUser) {
-      throw new NotFoundException(`User ${userId} not found`);
+      throw new NotFoundException(`L'utilisateur ${userId} n'existe pas`);
     }
 
     this.ensureFriendSystemAvailable(currentUser);
@@ -368,11 +368,11 @@ export class UsersService {
     }
 
     if (request.status !== "pending") {
-      throw new ConflictException("This friend request is no longer pending");
+      throw new ConflictException("Cette demande d'amis n'est plus active");
     }
 
     if (request.sender.isGuest) {
-      throw new ConflictException("Guest accounts cannot be added as friends");
+      throw new ConflictException("Vous ne pouvez pas ajouter un guest en amis");
     }
 
     await this.prisma.client.friendRequests.update({
@@ -385,8 +385,8 @@ export class UsersService {
     return {
       message:
         action === "accepted"
-          ? `${request.sender.username} has been added to your friends list`
-          : `Friend request from ${request.sender.username} declined`,
+          ? `${request.sender.username} fais maintenant partie de vos amis`
+          : `La demande d'amis de ${request.sender.username} a été refusée`,
       friendshipStatus: action,
     };
   }
@@ -406,7 +406,7 @@ export class UsersService {
 
     if (userId === friendId) {
       throw new BadRequestException(
-        "Vous ne pouvez pas vous supprimer vous-meme de votre liste d'amis",
+        "Vous ne pouvez pas vous supprimer vous-même de votre liste d'amis",
       );
     }
 
@@ -437,7 +437,7 @@ export class UsersService {
     }
 
     return {
-      message: `${friend.username} a ete retire de votre liste d'amis`,
+      message: `${friend.username} a été retiré de votre liste d'amis`,
     };
   }
 
@@ -484,7 +484,7 @@ export class UsersService {
     const existingUser = await this.findUserByUsername(username);
 
     if (existingUser && existingUser.id !== userId) {
-      throw new ConflictException("Username already exists");
+      throw new ConflictException("Ce nom d'utilisateur existe déjà");
     }
 
     return this.updateUser({
@@ -522,7 +522,7 @@ export class UsersService {
   private ensureFriendSystemAvailable(user: User): void {
     if (user.isGuest) {
       throw new ForbiddenException(
-        "The friend system is not available for guest accounts",
+        "Le système d'amis est désactivé pour les compte invité",
       );
     }
   }
@@ -532,7 +532,7 @@ export class UsersService {
     const username = rawUsername.trim();
 
     if (username.length < 2) {
-      throw new BadRequestException("Username must contain at least 2 characters");
+      throw new BadRequestException("Le nom d'utilisateur doit contenir au moins 2 caractères");
     }
 
     return username;
@@ -545,7 +545,7 @@ export class UsersService {
     );
 
     if (!match) {
-      throw new BadRequestException("Avatar must be a valid image file");
+      throw new BadRequestException("Ce type de fichier n'est pas pris en compte");
     }
 
     const mimeType = match[1];
@@ -553,7 +553,7 @@ export class UsersService {
 
     if (!SUPPORTED_AVATAR_MIME_TYPES.has(mimeType)) {
       throw new BadRequestException(
-        "Supported avatar formats are JPG, PNG and WEBP",
+        "Type de fichier pris en compte: JPG, PNG et WEBP",
       );
     }
 
@@ -570,7 +570,7 @@ export class UsersService {
     }
 
     if (estimatedByteSize > MAX_AVATAR_SIZE_BYTES) {
-      throw new BadRequestException("Avatar image must be 2 MB or smaller");
+      throw new BadRequestException("La taille de l'image dépasse les 2Mo");
     }
 
     const decodedImage = Buffer.from(base64Payload, "base64");
