@@ -7,8 +7,8 @@ import PrivateMessagesPanel from "../components/Friends/PrivateMessagesPanel";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useAuthSession } from "../hooks/useAuthSession";
-import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
 import { getUserFacingErrorMessage } from "../services/api";
+import { AUTH_USERNAME_MIN_LENGTH } from "../services/auth";
 import {
   getConversationSummaries,
   getMyFriendOverview,
@@ -22,8 +22,8 @@ import {
   type PrivateMessage,
 } from "../services/users";
 
-const FRIENDS_POLL_INTERVAL_MS = 12000;
-const CONVERSATION_POLL_INTERVAL_MS = 5000;
+const FRIENDS_POLL_INTERVAL_MS = 2000;
+const CONVERSATION_POLL_INTERVAL_MS = 500;
 const PRIVATE_MESSAGE_RATE_LIMITS = [
   { limit: 5, windowMs: 5_000 },
   { limit: 20, windowMs: 60_000 },
@@ -277,8 +277,8 @@ export default function FriendsPage() {
           </p>
           <h1 className="mt-4 text-4xl font-semibold">Connexion requise</h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-amber-900/80">
-            Connecte-toi pour gerer ta liste d'amis et ouvrir des messages
-            prives.
+            Connecte-toi pour gérer ta liste d'amis et ouvrir des messages
+            privés.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link to="/login">
@@ -339,7 +339,7 @@ export default function FriendsPage() {
     } catch (error) {
       const message = getUserFacingErrorMessage(
         error,
-        "Impossible de mettre a jour la demande",
+        "Impossible de mettre à jour la demande",
       );
       if (message) {
         setFriendNotice({
@@ -474,10 +474,7 @@ function consumePrivateMessageRateLimit(timestamps: number[]): string | null {
     );
 
     if (hitsInWindow.length >= rule.limit) {
-      const retryAfterMs = Math.max(
-        0,
-        rule.windowMs - (now - hitsInWindow[0]),
-      );
+      const retryAfterMs = Math.max(0, rule.windowMs - (now - hitsInWindow[0]));
 
       timestamps.splice(0, timestamps.length, ...retained);
       return `Vous avez envoye trop de messages. Reessayez dans ${Math.ceil(retryAfterMs / 1000)} secondes.`;
