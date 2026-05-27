@@ -374,7 +374,7 @@ export class GameService {
     const runtime = this.getRoomRuntime(roomId);
     state.leaderboard = this.buildLeaderboard(runtime);
     
-    let winnerUserId: number | null = existing.leaderboard[0]?.userId ?? null;
+    let winnerUserId: number | null = state.leaderboard[0]?.userId ?? null;
     if (room.gameType === "wordle") {
       const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
       if (!anyoneWon) {
