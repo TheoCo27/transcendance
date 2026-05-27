@@ -1,4 +1,4 @@
-import { PenLine, PlusCircle } from "lucide-react";
+import { ChevronDown, PenLine, PlusCircle } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -11,9 +11,10 @@ import type { Quiz } from "../../services/quizzes";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
-import type { RoomConfigForm } from "./room-types";
+import Select from "../ui/select";
 import RoomSectionHeader from "./room-section-header";
 import RoomSectionLabel from "./room-section-label";
+import type { RoomConfigForm } from "./room-types";
 
 type RoomConfigSectionProps = {
   roomId: number;
@@ -94,10 +95,10 @@ export default function RoomConfigSection({
 
   return (
     <section className="mt-8 rounded-4xl border border-white/10 bg-surface text-text p-6 shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-      <RoomSectionLabel className="text-slate-400">Configuration</RoomSectionLabel>
-      <RoomSectionHeader>
-        Réglages de la room
-      </RoomSectionHeader>
+      <RoomSectionLabel className="text-slate-400">
+        Configuration
+      </RoomSectionLabel>
+      <RoomSectionHeader>Réglages de la room</RoomSectionHeader>
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-2">
@@ -115,17 +116,24 @@ export default function RoomConfigSection({
 
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium">Type de jeu</span>
-          <select
-            className="rounded-xl border border-white/10 bg-bg px-4 py-3 outline-none placeholder:text-text/40"
-            value={form.gameType}
-            onChange={(event) => {
-              const gameType = event.target.value as "wordle" | "quiz";
-              setForm((previous) => ({ ...previous, gameType }));
-            }}
-          >
-            <option value="wordle">Wordle</option>
-            <option value="quiz">Quiz</option>
-          </select>
+          <div className="relative w-full">
+            <select
+              className="w-full appearance-none rounded-xl border border-white/10 bg-bg px-4 py-3 pr-11 placeholder:text-text/40 transition-colors duration-200 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              value={form.gameType}
+              onChange={(event) => {
+                const gameType = event.target.value as "wordle" | "quiz";
+                setForm((previous) => ({ ...previous, gameType }));
+              }}
+            >
+              <option value="wordle">Wordle</option>
+              <option value="quiz">Quiz</option>
+            </select>
+            <ChevronDown
+              aria-hidden="true"
+              strokeWidth={2}
+              className="pointer-events-none absolute right-4 top-1/2 size-4  -translate-y-1/2 text-white"
+            />
+          </div>
         </label>
 
         {form.gameType === "quiz" ? (
@@ -139,7 +147,7 @@ export default function RoomConfigSection({
               </div>
 
               <Link
-                className="inline-flex items-center gap-2 rounded-md border border-slate-800/15 bg-white/75 px-4 py-2 font-semibold text-slate-900 transition hover:border-slate-900/30 hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-bg px-4 py-2 text-text-muted transition hover:border-primary hover:bg-white/5 hover:text-white"
                 to={createQuizPath}
               >
                 <PlusCircle className="size-4" />
@@ -274,7 +282,8 @@ export default function RoomConfigSection({
                 </div>
 
                 <p className="mt-3 text-xs text-slate-400">
-                  Les 3 quiz par défaut et tous les quiz que tu crées apparaissent ici.
+                  Les 3 quiz par défaut et tous les quiz que tu crées
+                  apparaissent ici.
                 </p>
               </>
             )}
@@ -283,11 +292,13 @@ export default function RoomConfigSection({
           <>
             <label className="flex flex-col gap-2">
               <span className="text-sm font-medium">Longueur du mot (5-7)</span>
-              <Input
-                type="number"
+              <Select
+                className="w-full"
+                name="wordle-word-length"
+                id="wordle-word-length"
+                value={form.wordleWordLength}
                 min={5}
                 max={7}
-                value={form.wordleWordLength}
                 onChange={(event) => {
                   setForm((previous) => ({
                     ...previous,
@@ -299,11 +310,13 @@ export default function RoomConfigSection({
 
             <label className="flex flex-col gap-2">
               <span className="text-sm font-medium ">Essais max (3-8)</span>
-              <Input
-                type="number"
+              <Select
+                className="w-full"
+                name="worlde-max-attempts"
+                id="worlde-max-attempts"
+                value={form.wordleMaxAttempts}
                 min={3}
                 max={8}
-                value={form.wordleMaxAttempts}
                 onChange={(event) => {
                   setForm((previous) => ({
                     ...previous,

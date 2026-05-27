@@ -381,7 +381,7 @@ export default function ProfilePage() {
                       Pseudo
                     </span>
                     <input
-                      className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
+                      className="mt-2 w-full rounded-2xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
                       maxLength={20}
                       minLength={AUTH_USERNAME_MIN_LENGTH}
                       onChange={(event) =>
@@ -398,7 +398,7 @@ export default function ProfilePage() {
                       Statut
                     </span>
                     <select
-                      className="mt-2 w-full rounded-[1rem] border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
+                      className="mt-2 w-full rounded-2xl border border-slate-900/10 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-amber-500"
                       onChange={(event) =>
                         setProfileStatus(
                           event.target.value as "online" | "offline",
