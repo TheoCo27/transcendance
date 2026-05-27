@@ -24,6 +24,11 @@ export type GameState = {
   roomId: number;
   status: "waiting" | "playing" | "finished";
   currentQuestionId: number | null;
+  currentQuestion?: {
+    id: number;
+    text: string;
+    options: string[];
+  } | null;
   currentQuestionNumber: number;
   totalQuestions: number;
   questionDurationMs: number | null;

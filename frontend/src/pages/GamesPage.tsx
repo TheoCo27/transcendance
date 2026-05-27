@@ -242,6 +242,7 @@ function GamesPage() {
 
         setRoom(fetchedRoom);
         setGameState(fetchedGameState);
+        setCurrentQuestion(fetchedGameState?.currentQuestion ?? null);
       } catch (error) {
         setPageError(
           getUserFacingErrorMessage(error, "Impossible de charger cette room."),
@@ -313,6 +314,7 @@ function GamesPage() {
       }
 
       setGameState(data);
+      setCurrentQuestion(data.currentQuestion ?? null);
     };
 
     const handleGameEnded = (response: WsResponse<GameEndedPayload>) => {
