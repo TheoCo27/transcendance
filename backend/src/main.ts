@@ -7,6 +7,7 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
 import { existsSync, readFileSync } from "fs";
+import { json, urlencoded } from "express";
 import "reflect-metadata";
 import { AppModule } from "./app.module";
 
@@ -34,6 +35,9 @@ async function bootstrap() {
     credentials: true,
     origin: frontendOrigin,
   });
+
+  app.use(json({ limit: "5mb" }));
+  app.use(urlencoded({ extended: true, limit: "5mb" }));
 
   app.useGlobalPipes(
     new ValidationPipe({
