@@ -41,17 +41,12 @@ function formatGameType(room: Room | null): string {
 export default observer(GamesPage);
 
 function formatConfigValue(value: unknown): string {
-  if (value === null || value === undefined) {
-    return "-";
-  }
+  if (value === null || value === undefined) return "-";
 
-  if (typeof value === "string") {
-    return value;
-  }
+  if (typeof value === "string") return value;
 
-  if (typeof value === "number" || typeof value === "boolean") {
+  if (typeof value === "number" || typeof value === "boolean")
     return String(value);
-  }
 
   return JSON.stringify(value);
 }
@@ -109,9 +104,7 @@ function loadPersistedWordleState(
     const rawValue = window.localStorage.getItem(
       buildWordleStorageKey(roomId, userId),
     );
-    if (!rawValue) {
-      return null;
-    }
+    if (!rawValue) return null;
 
     return JSON.parse(rawValue) as PersistedWordleState;
   } catch {
@@ -186,17 +179,11 @@ function GamesPage() {
   }, []);
 
   useEffect(() => {
-    if (room?.gameType !== "wordle" || !room?.id) {
-      return;
-    }
+    if (room?.gameType !== "wordle" || !room?.id) return;
 
-    if (!store.won && !store.lost) {
-      return;
-    }
+    if (!store.won && !store.lost) return;
 
-    if (hasFinishedWordleRef.current) {
-      return;
-    }
+    if (hasFinishedWordleRef.current) return;
 
     hasFinishedWordleRef.current = true;
 
@@ -622,7 +609,8 @@ function GamesPage() {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8 md:px-10 md:py-12">
         <div className="rounded-4xl border border-rose-200 bg-rose-50 p-8 text-danger">
-          Impossible de rejoindre via un lien direct : la partie est déjà en cours et vous n'y participez pas.
+          Impossible de rejoindre via un lien direct : la partie est déjà en
+          cours et vous n'y participez pas.
         </div>
       </main>
     );
@@ -718,10 +706,9 @@ function GamesPage() {
               <ol className="mt-4 space-y-3">
                 {gameState.leaderboard.map((entry, index) => {
                   const isCurrentUser = entry.userId === user?.id;
-                  const rankTone =
-                    isCurrentUser && index !== 0
-                      ? "border-amber-300/50 bg-amber-400/10"
-                      : "border-slate-200/15 bg-white/6";
+                  const rankTone = isCurrentUser
+                    ? "border-amber-300/50 bg-amber-400/10"
+                    : "border-slate-200/15 bg-white/6";
 
                   return (
                     <li
@@ -737,11 +724,11 @@ function GamesPage() {
                             `Joueur #${entry.userId}`}
                         </p>
                         <p className="text-xs text-white/55">
-                          {index === 0 ? "Premier" : `Position ${index + 1}`}
+                          {index === 0 ? "Premier" : `${index + 1}ème`}
                         </p>
                       </div>
                       <span className="rounded-full border border-white/10 bg-bg/70 px-3 py-1 text-sm font-semibold text-white/80">
-                        {entry.score} point{entry.score !== 1 ? "s" : ""}
+                        {entry.score} point{entry.score > 1 ? "s" : ""}
                       </span>
                     </li>
                   );
@@ -810,8 +797,8 @@ function GamesPage() {
             {store.won || store.lost ? (
               <div className="mb-4 text-center">
                 <p className="text-sm text-white/70">
-                  Ta manche est terminée. Tu restes connecté jusqu'à ce que
-                  tous les joueurs aient fini.
+                  Ta manche est terminée. Tu restes connecté jusqu'à ce que tous
+                  les joueurs aient fini.
                 </p>
                 {store.lost && store.endedByTimeout ? (
                   <p className="mt-2 text-base font-semibold uppercase tracking-[0.14em] text-amber-300">
