@@ -83,7 +83,7 @@ export class GameService {
   constructor(
     private readonly roomsService: RoomsService,
     private readonly quizzesService: QuizzesService,
-  ) {}
+  ) { }
 
   // Retourne l'etat courant de la partie pour une room.
   async getRoomState(roomId: number): Promise<GameState> {
@@ -111,7 +111,7 @@ export class GameService {
         existing.startedAt = existing.startedAt ?? room.startedAt;
         existing.endedAt = existing.endedAt ?? room.finishedAt;
         existing.leaderboard = this.buildLeaderboard(runtime);
-        existing.winnerUserId = existing.leaderboard[0]?.userId ?? null;
+        existing.winnerUserId = this.determineWinner(runtime);
         existing.wordle = wordleState;
         return existing;
       }
@@ -126,7 +126,7 @@ export class GameService {
           : this.buildFrozenLeaderboard(runtime);
       existing.wordle = wordleState;
       if (existing.status === "finished" && existing.winnerUserId === null) {
-        existing.winnerUserId = existing.leaderboard[0]?.userId ?? null;
+        existing.winnerUserId = this.determineWinner(runtime);
       }
       if (existing.status !== "finished") {
         existing.winnerUserId = null;
@@ -151,7 +151,7 @@ export class GameService {
       totalAnswers: runtime.totalAnswers,
       leaderboard,
       winnerUserId:
-        room.status === "finished" ? (leaderboard[0]?.userId ?? null) : null,
+        room.status === "finished" ? this.determineWinner(runtime) : null,
       startedAt: room.startedAt,
       endedAt: room.finishedAt,
       wordle: wordleState,
@@ -348,7 +348,7 @@ export class GameService {
 
     state.status = "finished";
     state.leaderboard = this.buildLeaderboard(this.getRoomRuntime(roomId));
-    state.winnerUserId = state.leaderboard[0]?.userId ?? null;
+    state.winnerUserId = this.determineWinner(this.getRoomRuntime(roomId));
     state.endedAt = room.finishedAt ?? new Date().toISOString();
     state.wordle =
       room.gameType === "wordle"
@@ -599,6 +599,33 @@ export class GameService {
         (left, right) => right.score - left.score || left.userId - right.userId,
       );
   }
+
+  // Recupere l'ID du Winner
+
+  private determineWinner(runtime: RoomRuntime): number | null {
+    let bestUserId: number | null = null;
+    let bestDelta = 0;
+
+    for (const [userId, score] of runtime.scoresByUser.entries()) {
+      const startScore = runtime.scoresAtGameStart.get(userId) ?? 0;
+      const delta = score - startScore;
+
+      if (delta > bestDelta) {
+        bestDelta = delta;
+        bestUserId = userId;
+        continue;
+      }
+
+      if (delta === bestDelta && delta > 0 && bestUserId !== null) {
+        if (userId < bestUserId) {
+          bestUserId = userId;
+        }
+      }
+    }
+
+    return bestDelta > 0 ? bestUserId : null;
+  }
+
 
   // Synchronise la map des scores avec les joueurs presents.
   private syncScoresWithPlayers(

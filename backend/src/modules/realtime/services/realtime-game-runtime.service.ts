@@ -26,7 +26,7 @@ export class RealtimeGameRuntimeService {
     private readonly gameService: GameService,
     private readonly scoresService: ScoresService,
     private readonly response: RealtimeResponseService,
-  ) {}
+  ) { }
 
   // Arrete tous les timers de partie encore actifs.
   stopAllTimers(): void {
@@ -301,9 +301,9 @@ export class RealtimeGameRuntimeService {
   ): Promise<void> {
     this.stopRoomTimer(roomId);
     const leaderboard = await this.gameService.getRoomLeaderboard(roomId);
-    const winnerUserId = leaderboard.length > 0 ? leaderboard[0].userId : null;
     const room = await this.roomsService.resetAfterGame(roomId);
     const gameState = await this.gameService.finishGame(roomId);
+    const winnerUserId = gameState.winnerUserId;
     const channel = roomChannel(roomId);
 
     await this.scoresService.recordGameResult(

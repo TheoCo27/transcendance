@@ -339,11 +339,11 @@ function GamesPage() {
       setGameState((currentState) =>
         currentState
           ? {
-              ...currentState,
-              status: "finished",
-              leaderboard: data.leaderboard,
-              winnerUserId: data.winnerUserId,
-            }
+            ...currentState,
+            status: "finished",
+            leaderboard: data.leaderboard,
+            winnerUserId: data.winnerUserId,
+          }
           : currentState,
       );
     };
@@ -667,7 +667,7 @@ function GamesPage() {
             <SectionHeader className="text-3xl">
               {gameState.winnerUserId
                 ? `Le gagnant est ${playerNamesById[gameState.winnerUserId] ?? `Joueur #${gameState.winnerUserId}`}`
-                : "La partie est terminée"}
+                : "La partie est terminée aucun vainqueur n'a été trouvé"}
             </SectionHeader>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-white/70">
               Voici le classement final. Tu peux revenir à la room pour relancer
