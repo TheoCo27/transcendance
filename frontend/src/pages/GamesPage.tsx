@@ -339,11 +339,11 @@ function GamesPage() {
       setGameState((currentState) =>
         currentState
           ? {
-              ...currentState,
-              status: "finished",
-              leaderboard: data.leaderboard,
-              winnerUserId: data.winnerUserId,
-            }
+            ...currentState,
+            status: "finished",
+            leaderboard: data.leaderboard,
+            winnerUserId: data.winnerUserId,
+          }
           : currentState,
       );
     };
@@ -667,7 +667,9 @@ function GamesPage() {
             <SectionHeader className="text-3xl">
               {gameState.winnerUserId
                 ? `Le gagnant est ${playerNamesById[gameState.winnerUserId] ?? `Joueur #${gameState.winnerUserId}`}`
-                : "La partie est terminée"}
+                : room?.gameType === "wordle"
+                  ? "Aucun Gagnant"
+                  : "La partie est terminée"}
             </SectionHeader>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-white/70">
               Voici le classement final. Tu peux revenir à la room pour relancer
@@ -737,7 +739,7 @@ function GamesPage() {
                             `Joueur #${entry.userId}`}
                         </p>
                         <p className="text-xs text-white/55">
-                          {index === 0 ? "Premier" : `Position ${index + 1}`}
+                          {index === 0 ? "Premier" : `${index + 1}eme`}
                         </p>
                       </div>
                       <span className="rounded-full border border-white/10 bg-bg/70 px-3 py-1 text-sm font-semibold text-white/80">

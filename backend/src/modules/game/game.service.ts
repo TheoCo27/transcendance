@@ -83,7 +83,7 @@ export class GameService {
   constructor(
     private readonly roomsService: RoomsService,
     private readonly quizzesService: QuizzesService,
-  ) {}
+  ) { }
 
   // Retourne l'etat courant de la partie pour une room.
   async getRoomState(roomId: number): Promise<GameState> {
@@ -111,7 +111,16 @@ export class GameService {
         existing.startedAt = existing.startedAt ?? room.startedAt;
         existing.endedAt = existing.endedAt ?? room.finishedAt;
         existing.leaderboard = this.buildLeaderboard(runtime);
-        existing.winnerUserId = existing.leaderboard[0]?.userId ?? null;
+        
+        let winnerUserId: number | null = existing.leaderboard[0]?.userId ?? null;
+        if (room.gameType === "wordle") {
+          const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
+          if (!anyoneWon) {
+            winnerUserId = null;
+          }
+        }
+        existing.winnerUserId = winnerUserId;
+        
         existing.wordle = wordleState;
         return existing;
       }
@@ -126,7 +135,14 @@ export class GameService {
           : this.buildFrozenLeaderboard(runtime);
       existing.wordle = wordleState;
       if (existing.status === "finished" && existing.winnerUserId === null) {
-        existing.winnerUserId = existing.leaderboard[0]?.userId ?? null;
+        let winnerUserId: number | null = existing.leaderboard[0]?.userId ?? null;
+        if (room.gameType === "wordle") {
+          const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
+          if (!anyoneWon) {
+            winnerUserId = null;
+          }
+        }
+        existing.winnerUserId = winnerUserId;
       }
       if (existing.status !== "finished") {
         existing.winnerUserId = null;
@@ -138,6 +154,15 @@ export class GameService {
       room.status === "finished"
         ? this.buildLeaderboard(runtime)
         : this.buildFrozenLeaderboard(runtime);
+
+    let initialWinnerUserId = room.status === "finished" ? (leaderboard[0]?.userId ?? null) : null;
+    if (initialWinnerUserId !== null && room.gameType === "wordle") {
+      const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
+      if (!anyoneWon) {
+        initialWinnerUserId = null;
+      }
+    }
+
     const state: GameState = {
       roomId,
       status: room.status,
@@ -150,8 +175,7 @@ export class GameService {
       answersForCurrentQuestion: 0,
       totalAnswers: runtime.totalAnswers,
       leaderboard,
-      winnerUserId:
-        room.status === "finished" ? (leaderboard[0]?.userId ?? null) : null,
+      winnerUserId: initialWinnerUserId,
       startedAt: room.startedAt,
       endedAt: room.finishedAt,
       wordle: wordleState,
@@ -347,8 +371,18 @@ export class GameService {
     const playerIds = room.players.map((player) => player.userId);
 
     state.status = "finished";
-    state.leaderboard = this.buildLeaderboard(this.getRoomRuntime(roomId));
-    state.winnerUserId = state.leaderboard[0]?.userId ?? null;
+    const runtime = this.getRoomRuntime(roomId);
+    state.leaderboard = this.buildLeaderboard(runtime);
+    
+    let winnerUserId: number | null = state.leaderboard[0]?.userId ?? null;
+    if (room.gameType === "wordle") {
+      const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
+      if (!anyoneWon) {
+        winnerUserId = null;
+      }
+    }
+    state.winnerUserId = winnerUserId;
+    
     state.endedAt = room.finishedAt ?? new Date().toISOString();
     state.wordle =
       room.gameType === "wordle"
@@ -506,7 +540,7 @@ export class GameService {
       });
 
       const scoreDelta = params.won
-        ? Math.max(1, maxAttempts - params.attemptsUsed + 1)
+        ? Math.max(1, maxAttempts - params.attemptsUsed + 1) * 100
         : 0;
       if (scoreDelta > 0) {
         runtime.scoresByUser.set(

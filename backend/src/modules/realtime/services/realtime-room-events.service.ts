@@ -121,6 +121,11 @@ export class RealtimeRoomEventsService {
       const updatedRoom = await this.roomsService.leave(room.id, userId);
       hasRoomStateChanged = true;
 
+      server.to(this.roomChannel(room.id)).emit(
+        "room:left",
+        this.response.ok({ roomId: room.id, userId })
+      );
+
       if (updatedRoom.players.length === 0) {
         await this.gameRuntime.closeRoom(room.id, "room_empty", server);
         continue;
@@ -249,10 +254,9 @@ export class RealtimeRoomEventsService {
     const channel = this.roomChannel(payload.roomId);
 
     client.leave(channel);
-    client.emit(
-      "room:left",
-      this.response.ok({ roomId: payload.roomId, userId }),
-    );
+    const roomLeftPayload = this.response.ok({ roomId: payload.roomId, userId });
+    client.emit("room:left", roomLeftPayload);
+    server.to(channel).emit("room:left", roomLeftPayload);
 
     if (room.players.length === 0) {
       const closed = await this.gameRuntime.closeRoom(
