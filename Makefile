@@ -89,6 +89,8 @@ up-run: env-check setup-host compose-check ensure-public-stack
 	bash scripts/generate-dev-cert.sh
 	$(COMPOSE) up --build -d
 	bash scripts/wait-for-containers.sh
+	@cd backend && npm install
+	@cd frontend && npm install
 # 	make seed
 
 dev: env-check setup-host compose-check
