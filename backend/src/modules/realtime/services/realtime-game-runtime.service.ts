@@ -26,7 +26,7 @@ export class RealtimeGameRuntimeService {
     private readonly gameService: GameService,
     private readonly scoresService: ScoresService,
     private readonly response: RealtimeResponseService,
-  ) {}
+  ) { }
 
   // Arrete tous les timers de partie encore actifs.
   stopAllTimers(): void {

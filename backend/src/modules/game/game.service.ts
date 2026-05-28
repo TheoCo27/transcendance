@@ -111,16 +111,7 @@ export class GameService {
         existing.startedAt = existing.startedAt ?? room.startedAt;
         existing.endedAt = existing.endedAt ?? room.finishedAt;
         existing.leaderboard = this.buildLeaderboard(runtime);
-        
-        let winnerUserId: number | null = existing.leaderboard[0]?.userId ?? null;
-        if (room.gameType === "wordle") {
-          const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
-          if (!anyoneWon) {
-            winnerUserId = null;
-          }
-        }
-        existing.winnerUserId = winnerUserId;
-        
+        existing.winnerUserId = this.determineWinner(runtime);
         existing.wordle = wordleState;
         return existing;
       }
@@ -135,14 +126,7 @@ export class GameService {
           : this.buildFrozenLeaderboard(runtime);
       existing.wordle = wordleState;
       if (existing.status === "finished" && existing.winnerUserId === null) {
-        let winnerUserId: number | null = existing.leaderboard[0]?.userId ?? null;
-        if (room.gameType === "wordle") {
-          const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
-          if (!anyoneWon) {
-            winnerUserId = null;
-          }
-        }
-        existing.winnerUserId = winnerUserId;
+        existing.winnerUserId = this.determineWinner(runtime);
       }
       if (existing.status !== "finished") {
         existing.winnerUserId = null;
@@ -154,14 +138,6 @@ export class GameService {
       room.status === "finished"
         ? this.buildLeaderboard(runtime)
         : this.buildFrozenLeaderboard(runtime);
-
-    let initialWinnerUserId = room.status === "finished" ? (leaderboard[0]?.userId ?? null) : null;
-    if (initialWinnerUserId !== null && room.gameType === "wordle") {
-      const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
-      if (!anyoneWon) {
-        initialWinnerUserId = null;
-      }
-    }
 
     const state: GameState = {
       roomId,
@@ -175,7 +151,8 @@ export class GameService {
       answersForCurrentQuestion: 0,
       totalAnswers: runtime.totalAnswers,
       leaderboard,
-      winnerUserId: initialWinnerUserId,
+  winnerUserId:
+    room.status === "finished" ? this.determineWinner(runtime) : null,
       startedAt: room.startedAt,
       endedAt: room.finishedAt,
       wordle: wordleState,
@@ -373,16 +350,7 @@ export class GameService {
     state.status = "finished";
     const runtime = this.getRoomRuntime(roomId);
     state.leaderboard = this.buildLeaderboard(runtime);
-    
-    let winnerUserId: number | null = state.leaderboard[0]?.userId ?? null;
-    if (room.gameType === "wordle") {
-      const anyoneWon = Array.from(runtime.wordle.playerStates.values()).some((p) => p.won);
-      if (!anyoneWon) {
-        winnerUserId = null;
-      }
-    }
-    state.winnerUserId = winnerUserId;
-    
+    state.winnerUserId = this.determineWinner(runtime);
     state.endedAt = room.finishedAt ?? new Date().toISOString();
     state.wordle =
       room.gameType === "wordle"
@@ -633,6 +601,33 @@ export class GameService {
         (left, right) => right.score - left.score || left.userId - right.userId,
       );
   }
+
+  // Recupere l'ID du Winner
+
+  private determineWinner(runtime: RoomRuntime): number | null {
+    let bestUserId: number | null = null;
+    let bestDelta = 0;
+
+    for (const [userId, score] of runtime.scoresByUser.entries()) {
+      const startScore = runtime.scoresAtGameStart.get(userId) ?? 0;
+      const delta = score - startScore;
+
+      if (delta > bestDelta) {
+        bestDelta = delta;
+        bestUserId = userId;
+        continue;
+      }
+
+      if (delta === bestDelta && delta > 0 && bestUserId !== null) {
+        if (userId < bestUserId) {
+          bestUserId = userId;
+        }
+      }
+    }
+
+    return bestDelta > 0 ? bestUserId : null;
+  }
+
 
   // Synchronise la map des scores avec les joueurs presents.
   private syncScoresWithPlayers(
