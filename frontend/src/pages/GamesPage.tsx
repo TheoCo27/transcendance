@@ -90,6 +90,8 @@ type PersistedWordleState = {
   totalTime: number;
   rulePanelClosed: boolean;
   endedByTimeout: boolean;
+  won: boolean;
+  lost: boolean;
 };
 
 function buildWordleStorageKey(roomId: number, userId: number): string {
@@ -521,7 +523,34 @@ function GamesPage() {
       totalTime: store.total_time,
       rulePanelClosed: store.rulePannelClosed && !isRulesOpen,
       endedByTimeout: store.endedByTimeout,
+      won: store.won,
+      lost: store.lost,
     });
+
+    if (
+      store.start_time < 0 &&
+      !store.won &&
+      !store.lost &&
+      !store.endedByTimeout
+    ) {
+      return;
+    }
+
+    void connectWs()
+      .then(() => {
+        emitWs("game:progress", {
+          roomId: room.id,
+          currentGuess: store.currentGuess,
+          startTime: Math.max(0, Math.floor(store.start_time)),
+          timePerWordSeconds: store.time_per_word,
+          won: store.won,
+          lost: store.lost,
+          endedByTimeout: store.endedByTimeout,
+        });
+      })
+      .catch(() => {
+        // The local snapshot still keeps the latest progress.
+      });
   }, [
     gameState?.status,
     isRulesOpen,

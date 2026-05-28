@@ -97,7 +97,7 @@ export class GameService {
     }
 
     this.syncScoresWithPlayers(playerIds, runtime);
-    this.syncWordlePlayers(playerIds, runtime);
+    this.syncWordlePlayers(playerIds, runtime, room.gameConfig);
     const wordleState =
       room.gameType === "wordle"
         ? this.buildWordleState(runtime, room.players)
@@ -222,6 +222,9 @@ export class GameService {
           won: null,
           attemptsUsed: null,
           completedAt: null,
+          currentGuess: 0,
+          turnStartedAt: null,
+          timePerWordSeconds: this.getWordleTimePerWordSeconds(room.gameConfig),
         } satisfies WordlePlayerState,
       ]),
     );
@@ -487,7 +490,7 @@ export class GameService {
     const runtime = this.getRoomRuntime(params.roomId);
     const playerIds = room.players.map((player) => player.userId);
     this.syncScoresWithPlayers(playerIds, runtime);
-    this.syncWordlePlayers(playerIds, runtime);
+    this.syncWordlePlayers(playerIds, runtime, room.gameConfig);
 
     const existingState = runtime.wordle.playerStates.get(params.userId);
     if (!existingState) {
@@ -506,6 +509,9 @@ export class GameService {
         won: params.won,
         attemptsUsed: params.attemptsUsed,
         completedAt,
+        currentGuess: params.attemptsUsed,
+        turnStartedAt: null,
+        timePerWordSeconds: this.getWordleTimePerWordSeconds(room.gameConfig),
       });
 
       const scoreDelta = params.won
@@ -531,6 +537,69 @@ export class GameService {
     };
   }
 
+  // Enregistre une progression Wordle en cours sans terminer le joueur.
+  async recordWordlePlayerProgress(params: {
+    roomId: number;
+    userId: number;
+    currentGuess: number;
+    turnStartedAt: number;
+    timePerWordSeconds: number;
+  }): Promise<GameState> {
+    const room = await this.roomsService.getById(params.roomId);
+    if (room.gameType !== "wordle") {
+      throw new ConflictException("Cette room n'utilise pas Wordle");
+    }
+
+    if (!Number.isInteger(params.currentGuess) || params.currentGuess < 0) {
+      throw new BadRequestException("Le nombre d'essais courant est invalide");
+    }
+
+    if (!Number.isInteger(params.turnStartedAt) || params.turnStartedAt < 0) {
+      throw new BadRequestException("Le temps de depart Wordle est invalide");
+    }
+
+    if (
+      !Number.isInteger(params.timePerWordSeconds) ||
+      params.timePerWordSeconds <= 0
+    ) {
+      throw new BadRequestException("La duree Wordle est invalide");
+    }
+
+    const runtime = this.getRoomRuntime(params.roomId);
+    const playerIds = room.players.map((player) => player.userId);
+    this.syncScoresWithPlayers(playerIds, runtime);
+    this.syncWordlePlayers(playerIds, runtime, room.gameConfig);
+
+    const existingState = runtime.wordle.playerStates.get(params.userId);
+    if (!existingState) {
+      throw new UnauthorizedException("User is not in this room");
+    }
+
+    if (existingState.finished) {
+      const gameState = await this.getRoomState(params.roomId);
+      gameState.updatedAt = new Date().toISOString();
+      return gameState;
+    }
+
+    const turnStartedAtIso = new Date(params.turnStartedAt * 1000).toISOString();
+    runtime.wordle.playerStates.set(params.userId, {
+      userId: params.userId,
+      finished: false,
+      won: null,
+      attemptsUsed: null,
+      completedAt: null,
+      currentGuess: params.currentGuess,
+      turnStartedAt: turnStartedAtIso,
+      timePerWordSeconds: params.timePerWordSeconds,
+    });
+
+    const gameState = await this.getRoomState(params.roomId);
+    gameState.updatedAt = new Date().toISOString();
+    gameState.wordle = this.buildWordleState(runtime, room.players);
+
+    return gameState;
+  }
+
   // Verifie si tous les joueurs restants d'une room Wordle ont termine.
   async areAllWordlePlayersFinished(roomId: number): Promise<boolean> {
     const room = await this.roomsService.getById(roomId);
@@ -540,7 +609,7 @@ export class GameService {
 
     const runtime = this.getRoomRuntime(roomId);
     const playerIds = room.players.map((player) => player.userId);
-    this.syncWordlePlayers(playerIds, runtime);
+    this.syncWordlePlayers(playerIds, runtime, room.gameConfig);
     return this.haveAllWordlePlayersFinished(runtime, playerIds);
   }
 
@@ -651,7 +720,11 @@ export class GameService {
   }
 
   // Synchronise les etats Wordle avec les joueurs encore presents dans la room.
-  private syncWordlePlayers(playerIds: number[], runtime: RoomRuntime): void {
+  private syncWordlePlayers(
+    playerIds: number[],
+    runtime: RoomRuntime,
+    gameConfig: Record<string, unknown> | null,
+  ): void {
     const playerIdSet = new Set(playerIds);
 
     for (const playerId of playerIds) {
@@ -662,6 +735,9 @@ export class GameService {
           won: null,
           attemptsUsed: null,
           completedAt: null,
+          currentGuess: 0,
+          turnStartedAt: null,
+          timePerWordSeconds: this.getWordleTimePerWordSeconds(gameConfig),
         });
       }
     }
@@ -688,6 +764,9 @@ export class GameService {
             won: null,
             attemptsUsed: null,
             completedAt: null,
+            currentGuess: 0,
+            turnStartedAt: null,
+            timePerWordSeconds: 30,
           },
       )
       .sort((left, right) => left.userId - right.userId);
@@ -699,6 +778,17 @@ export class GameService {
       playersReady: players.filter((player) => player.isReady).length,
       playerStates,
     };
+  }
+
+  // Retourne la duree Wordle en secondes.
+  getWordleTimePerWordSeconds(gameConfig: Record<string, unknown> | null): number {
+    const rawValue = gameConfig && typeof gameConfig === "object" ? (gameConfig as Record<string, unknown>).timePerWordSeconds : null;
+
+    if (typeof rawValue === "number" && Number.isInteger(rawValue) && rawValue > 0) {
+      return rawValue;
+    }
+
+    return 30;
   }
 
   // Lit et valide la configuration Wordle de la room.

@@ -206,6 +206,17 @@ export class RealtimeGateway
     });
   }
 
+  // Traite la progression Wordle pour garder le serveur synchronise.
+  @SubscribeMessage("game:progress")
+  async handleGameProgress(
+    @MessageBody() payload: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    await this.runSafely(client, "game:progress:error", async () => {
+      await this.gameEvents.handleGameProgress(payload, client, this.server);
+    });
+  }
+
   // Traite l'envoi d'un message de chat temps reel.
   @SubscribeMessage("chat:message")
   async handleChatMessage(

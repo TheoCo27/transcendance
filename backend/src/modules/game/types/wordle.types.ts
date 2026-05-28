@@ -4,6 +4,9 @@ export type WordlePlayerState = {
   won: boolean | null;
   attemptsUsed: number | null;
   completedAt: string | null;
+  currentGuess: number;
+  turnStartedAt: string | null;
+  timePerWordSeconds: number;
 };
 
 export type WordleState = {

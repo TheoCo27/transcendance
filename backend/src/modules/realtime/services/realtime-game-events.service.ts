@@ -1,4 +1,5 @@
 // Ce fichier gere les evenements WebSocket lies aux reponses de jeu.
+import { GameProgressEventDto } from "@/modules/realtime/dto/game-progress-event.dto";
 import { GameFinishEventDto } from "@/modules/realtime/dto/game-finish-event.dto";
 import { SubmitAnswerDto } from "@/modules/game/dto/submit-answer.dto";
 import { GameService } from "@/modules/game/game.service";
@@ -116,6 +117,70 @@ export class RealtimeGameEventsService {
     server
       .to(channel)
       .emit("game:leaderboard", this.response.ok(result.leaderboard));
+    await this.gameRuntime.refreshWordleTimeout(payload.roomId, server);
+  }
+
+  // Synchronise la progression Wordle afin de gerer les timeouts cote serveur.
+  async handleGameProgress(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
+    const payload = this.validation.validatePayload(
+      GameProgressEventDto,
+      rawPayload,
+    );
+    const userId = this.presence.resolveSocketUser(client.id);
+
+    const room = await this.roomsService.getById(payload.roomId);
+    if (room.gameType !== "wordle") {
+      throw new ConflictException("Cet evenement est reserve aux parties Wordle");
+    }
+    if (!room.players.some((player) => player.userId === userId)) {
+      throw new UnauthorizedException("User is not in this room");
+    }
+
+    if (room.status === "finished") {
+      return;
+    }
+    if (room.status !== "playing") {
+      throw new ConflictException("La partie Wordle n'est pas en cours");
+    }
+
+    if (payload.won || payload.lost || payload.endedByTimeout) {
+      const result = await this.gameService.recordWordlePlayerFinish({
+        roomId: payload.roomId,
+        userId,
+        won: payload.won,
+        attemptsUsed: Math.max(1, payload.currentGuess),
+      });
+      const channel = this.roomChannel(payload.roomId);
+
+      server.to(channel).emit("game:state", this.response.ok(result.gameState));
+
+      if (result.allPlayersFinished) {
+        await this.gameRuntime.completeWordleIfReady(payload.roomId, server);
+        return;
+      }
+
+      server
+        .to(channel)
+        .emit("game:leaderboard", this.response.ok(result.leaderboard));
+      await this.gameRuntime.refreshWordleTimeout(payload.roomId, server);
+      return;
+    }
+
+    const gameState = await this.gameService.recordWordlePlayerProgress({
+      roomId: payload.roomId,
+      userId,
+      currentGuess: payload.currentGuess,
+      turnStartedAt: payload.startTime,
+      timePerWordSeconds: payload.timePerWordSeconds,
+    });
+    const channel = this.roomChannel(payload.roomId);
+
+    server.to(channel).emit("game:state", this.response.ok(gameState));
+    await this.gameRuntime.refreshWordleTimeout(payload.roomId, server);
   }
 
   // Genere le nom de canal Socket.IO d'une room.
