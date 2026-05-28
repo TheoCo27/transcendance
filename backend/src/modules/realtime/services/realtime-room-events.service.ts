@@ -17,6 +17,9 @@ import { RealtimeResponseService } from "./realtime-response.service";
 import { RealtimeValidationService } from "./realtime-validation.service";
 
 const CHAT_HISTORY_LIMIT = 100;
+// Reduced grace period so clients observe departures faster (in ms).
+// Tradeoff: shorter window makes transient reconnects more likely to be
+// considered permanent disconnects.
 const DISCONNECT_GRACE_PERIOD_MS = 10_000;
 const CHAT_MESSAGE_RATE_LIMITS = [
   { limit: 5, windowMs: 5_000 },

@@ -266,6 +266,13 @@ function GamesPage() {
       }
 
       setRoom(data);
+      void getGameState(roomId)
+        .then((gs) => {
+          setGameState(gs);
+        })
+        .catch(() => {
+          // ignore failures
+        });
     };
 
     const handleRoomClosed = (
@@ -672,15 +679,9 @@ function GamesPage() {
               </p>
               <div className="mt-4 space-y-4">
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-bg/70 px-4 py-3">
-                  <span className="text-sm text-white/65">Joueurs classés</span>
+                  <span className="text-sm text-white/65">Nombre de joueurs</span>
                   <span className="text-lg font-semibold text-white">
                     {gameState.leaderboard.length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-bg/70 px-4 py-3">
-                  <span className="text-sm text-white/65">Statut</span>
-                  <span className="text-sm font-semibold text-emerald-300">
-                    Terminé
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-bg/70 px-4 py-3">
@@ -791,9 +792,11 @@ function GamesPage() {
         ) : (
           <section className="flex flex-1 flex-col py-1 items-center justify-center">
             <div className="mb-4 rounded-full border border-white/10 bg-surface px-4 py-2 text-sm text-white/75">
-              {wordleState
-                ? `${wordleState.playersCompleted}/${wordleState.totalPlayers} joueurs ont terminé`
-                : "Partie Wordle en cours"}
+              {wordleState ? (
+                `${wordleState.playersCompleted}/${room?.players.length ?? wordleState.totalPlayers} joueurs ont terminé`
+              ) : (
+                "Partie Wordle en cours"
+              )}
             </div>
 
             {store.won || store.lost ? (

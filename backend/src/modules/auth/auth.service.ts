@@ -485,10 +485,16 @@ export class AuthService {
         const updatedRoom = await this.roomsService.leave(room.id, userId);
         hasRoomStateChanged = true;
 
+        await this.realtimeBroadcast.broadcastRoomLeft(room.id, userId);
+
         if (updatedRoom.players.length === 0) {
+          await this.realtimeBroadcast.broadcastRoomList();
           this.gameService.clearRoomState(room.id);
           await this.roomsService.closeIfEmpty(room.id);
+          continue;
         }
+
+        await this.realtimeBroadcast.broadcastRoomState(room.id);
       } catch {
         // La room a pu etre supprimee ou mise a jour entre temps.
       }
