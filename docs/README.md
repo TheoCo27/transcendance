@@ -168,18 +168,18 @@ User
 
 | Feature | What It Does | Main Contributors |
 | --- | --- | --- |
-| Classic authentication | Register, log in, log out, restore session with JWT cookie | `mduchauf`, `smgassa` |
+| Classic authentication | Register, log in, log out, restore session with JWT cookie | `hucherea` |
 | Guest access | Lets a user enter the platform quickly with a temporary guest account | `tcohen` |
-| Google OAuth 2.0 | Lets users authenticate through Google when credentials are configured | `tcohen` |
+| Google OAuth 2.0 | Lets users authenticate through Google when credentials are configured | `hucherea` |
 | Profile management | Update username, avatar, and online/offline status | `tcohen` |
 | Friends system | Send requests, accept or decline, and browse friend state | `tcohen` |
 | Private messaging | Exchange direct messages between accepted friends | `tcohen` |
-| Room management | Create, configure, join, leave, and secure public/private rooms | `mduchauf`, `smgassa` |
-| Real-time room chat | Broadcast room messages live to connected players | `mduchauf`, `smgassa` |
-| Quiz creation | Build quizzes with multiple questions and configurable answer timing | `smgassa`, `mduchauf` |
-| Real-time multiplayer quiz | Synchronize question start, timer, answers, and leaderboard updates | `hucherea`, `mduchauf` |
-| Score tracking | Keep global score snapshots and persistent quiz leaderboards | `hucherea`, `mduchauf` |
-| CI and smoke testing | Verify builds, Docker startup, HTTP flows, DB access, and WebSocket flows | `tcohen`, `hucherea` |
+| Room management | Create, configure, join, leave, and secure public/private rooms | `lscheupl` |
+| Real-time room chat | Broadcast room messages live to connected players | `mduchauf` |
+| Quiz creation | Build quizzes with multiple questions and configurable answer timing | `smgassa` |
+| Real-time multiplayer quiz | Synchronize question start, timer, answers, and leaderboard updates | `mduchauf`, `lscheupl` |
+| Score tracking | Keep global score snapshots and persistent quiz leaderboards | `smgassa` |
+| CI and smoke testing | Verify builds, Docker startup, HTTP flows, DB access, and WebSocket flows | `hucherea` |
 
 ## Modules
 
@@ -187,20 +187,20 @@ Total module score: **22 points**
 
 | Module | Type | Points | Why We Chose It | Implementation Summary | Main Contributors |
 | --- | --- | ---: | --- | --- | --- |
-| Use a framework for both frontend and backend | Major | 2 | To keep the project structured end to end | React frontend and NestJS backend, both written in TypeScript and containerized | `mduchauf`, `smgassa`, `tcohen` |
-| Use a frontend framework | Minor | 1 | To build a maintainable SPA | React components, routing, stateful room/game pages, reusable UI blocks | `smgassa`, `mduchauf` |
-| Use a backend framework | Minor | 1 | To organize APIs and real-time logic clearly | NestJS modules, controllers, services, guards, DTO validation, Swagger | `mduchauf`, `hucherea` |
-| Implement real-time features | Major | 2 | Real-time interaction is core to the project | Socket.IO namespace `/ws`, live room state, chat, timers, answer events, leaderboard broadcasts | `hucherea`, `mduchauf` |
-| Allow users to interact with other users | Major | 2 | The platform is social, not only game-driven | Friends, room chat, private messages, room sharing | `tcohen`, `smgassa`, `mduchauf` |
-| Use an ORM | Minor | 1 | To manage a growing relational schema safely | Prisma schema, migrations, typed client, generated models | `mduchauf`, `tcohen` |
-| Support for additional browsers | Minor | 1 | To keep the web app usable beyond a single browser | Standard web APIs, HTTPS local setup, cookie-based auth, Socket.IO transport fallback (`websocket` and `polling`) | Team-wide validation |
-| Standard user management | Major | 2 | Identity and profile flows are essential | Register/login/logout, guest mode, session recovery, avatar, status, friends | `mduchauf`, `tcohen`, `smgassa` |
-| Game statistics and match history | Minor | 1 | To make the game state meaningful over time | `Game`, `Leaderboard`, and `QuizLeaderboard` data with score aggregation | `mduchauf`, `hucherea` |
-| Remote authentication | Minor | 1 | To improve login UX and cover OAuth requirements | Google OAuth 2.0/OpenID Connect login flow with callback handling | `tcohen` |
-| Web-based game | Major | 2 | The project must be playable in the browser | Multiplayer quiz sessions run directly in the web app | `mduchauf`, `smgassa`, `hucherea` |
-| Remote players | Major | 2 | Players must be able to join from separate machines | HTTPS local stack, cookie auth, Socket.IO synchronization, room joins over the network | `hucherea`, `mduchauf` |
-| Multiplayer for more than two players | Major | 2 | The project targets group play, not only duels | Room player lists, answer aggregation, live ranking for multiple participants | `mduchauf`, `hucherea` |
-| Add another game | Major | 2 | To design the platform as a mini-game hub and not a single-use app | Room configuration supports several mini-game presets (`quiz`, `wordle`, `memory`), with quiz mode being the most complete gameplay path at the moment | `mduchauf`, `smgassa` |
+| Use a framework for both frontend and backend | Major | 2 | To keep the project structured end to end | React frontend and NestJS backend, both written in TypeScript and containerized | `mduchauf`, `lscheupl` |
+| Use a frontend framework | Minor | 1 | To build a maintainable SPA | React components, routing, stateful room/game pages, reusable UI blocks | `lscheupl` |
+| Use a backend framework | Minor | 1 | To organize APIs and real-time logic clearly | NestJS modules, controllers, services, guards, DTO validation, Swagger | `mduchauf` |
+| Implement real-time features | Major | 2 | Real-time interaction is core to the project | Socket.IO namespace `/ws`, live room state, chat, timers, answer events, leaderboard broadcasts | `mduchauf` |
+| Allow users to interact with other users | Major | 2 | The platform is social, not only game-driven | Friends, room chat, private messages, room sharing | `tcohen` |
+| Use an ORM | Minor | 1 | To manage a growing relational schema safely | Prisma schema, migrations, typed client, generated models | `hucherea` |
+| Support for additional browsers | Minor | 1 | To keep the web app usable beyond a single browser | Standard web APIs, HTTPS local setup, cookie-based auth, Socket.IO transport fallback (`websocket` and `polling`) | `mduchauf`, `hucherea` |
+| Standard user management | Major | 2 | Identity and profile flows are essential | Register/login/logout, guest mode, session recovery, avatar, status, friends | `tcohen` |
+| Game statistics and match history | Minor | 1 | To make the game state meaningful over time | `Game`, `Leaderboard`, and `QuizLeaderboard` data with score aggregation | `smgassa` |
+| Remote authentication | Minor | 1 | To improve login UX and cover OAuth requirements | Google OAuth 2.0/OpenID Connect login flow with callback handling | `hucherea` |
+| Web-based game | Major | 2 | The project must be playable in the browser | Multiplayer quiz sessions run directly in the web app | `lscheupl` |
+| Remote players | Major | 2 | Players must be able to join from separate machines | HTTPS local stack, cookie auth, Socket.IO synchronization, room joins over the network | `mduchauf` |
+| Multiplayer for more than two players | Major | 2 | The project targets group play, not only duels | Room player lists, answer aggregation, live ranking for multiple participants | `lscheupl` |
+| Add another game | Major | 2 | To design the platform as a mini-game hub and not a single-use app | Room configuration supports several mini-game presets (`quiz`, `wordle`), with quiz mode being the most complete gameplay path at the moment | `smgassa` |
 
 ## Instructions
 
@@ -331,35 +331,32 @@ make fclean
 
 ## Individual Contributions
 
-The breakdown below is based on the declared roles and on the Git history of the repository.
+The breakdown below reflects the current role split used for the project presentation and core module ownership.
 
-### `tcohen`
+### `tcohen` (PM)
 
-- Coordinated project delivery, integration, and CI/dev-environment stability.
-- Implemented or integrated guest login improvements, Google OAuth, profile status updates, avatar-related work, friend system features, notifications, and setup scripts.
-- Worked on Docker, HTTPS, `mkcert`, Fedora/Linux onboarding, `.env` handling, and smoke-test stability.
-- Main challenge: keeping the project easy to run on different machines. This was addressed with Make targets, setup scripts, and repeatable smoke tests.
+- Scope: Allow users to interact with other users + Standard user management.
+- Coverage: profile, avatar, status, friends/friend requests, and chat/private messages.
 
-### `mduchauf`
+### `mduchauf` (Tech Lead)
 
-- Led the technical direction of the application architecture.
-- Implemented core authentication foundations, Prisma-based room persistence, room configuration, room/game refactors, quiz-to-room integration, and several schema migrations.
-- Drove the transition from an early MVP structure toward a more modular and persisted backend.
-- Main challenge: keeping API, room state, and gameplay flows consistent while the data model evolved. This was handled through service refactors and DTO/schema alignment.
+- Scope: Implement real-time features + Remote players.
+- Coverage: WebSocket gateway, presence, live synchronization, event broadcasting, and cross-machine updates.
 
-### `smgassa`
+### `smgassa` (PO)
 
-- Shaped the product-facing experience and early frontend direction.
-- Built authentication pages, initial room/lobby UI, layout components, navigation, cards, rules/game mockups, and frontend integration work around rooms.
-- Helped turn the technical backend features into understandable screens and flows for players.
-- Main challenge: translating feature scope into a coherent user journey. This was handled through mockups, incremental UI iterations, and component extraction.
+- Scope: Game statistics and match history + Add another game.
+- Coverage: gameplay/persistence, quiz flow, scoring, leaderboards, and match history.
 
-### `hucherea`
+### `hucherea` (Developer)
 
-- Worked on backend API consistency and the real-time layer.
-- Implemented or strengthened standardized API responses, logout handling, WebSocket events, real-time gameplay loop, timer handling, live leaderboard updates, and WebSocket smoke tests.
-- Contributed to event contracts and real-time integration documentation.
-- Main challenge: securing and synchronizing live multiplayer behavior. This was addressed through socket authentication, explicit event contracts, and automated protocol checks.
+- Scope: Use an ORM + Remote authentication (OAuth 2.0) + devops scripts/CI.
+- Coverage: Prisma schema/migrations, classic auth plus Google OAuth, session security, and dev/CI pipeline.
+
+### `lscheupl` (Developer)
+
+- Scope: Web-based game + Real-time multiplayer + Multiplayer (>2 players).
+- Coverage: room logic, player management, match start, waiting/playing/finished cycle, and multiplayer coordination.
 
 ## Known Limitations
 
