@@ -152,6 +152,12 @@ function GamesPage() {
   const toast = useToast();
 
   useEffect(() => {
+    return () => {
+      store.resetState();
+    };
+  }, [store]);
+
+  useEffect(() => {
     const handleKeyup = (e: KeyboardEvent) => store.handleKeyup(e);
     window.addEventListener("keyup", handleKeyup);
 
@@ -421,6 +427,11 @@ function GamesPage() {
   );
 
   useEffect(() => {
+    if (room?.gameType !== "wordle") {
+      store.resetState();
+      return;
+    }
+
     if (room?.gameType === "wordle") {
       const configuredLength = roomGameConfig?.wordLength ?? store.nbr_letters;
       const configuredMaxAttempts =

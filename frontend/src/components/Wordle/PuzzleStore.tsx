@@ -48,6 +48,7 @@ export type PuzzleStoreType = {
   startTimer(): void;
   toast_lost(): void;
   checkTimeUp(): void;
+  resetState(): void;
 
   setConfig(wordLength: number, maxAttempts: number): void;
   restoreState(
@@ -134,6 +135,19 @@ const puzzleStore = {
     return (
       this.start_time >= 0 && Math.floor(Date.now() / 1000) - this.start_time >= this.time_per_word
     );
+  },
+
+  resetState() {
+    this.word = "";
+    this.guesses = [];
+    this.currentGuess = 0;
+    this.validWord = true;
+    this.ToastMessage = "";
+    this.ToastId = 0;
+    this.start_time = -1;
+    this.total_time = -1;
+    this.rulePannelClosed = false;
+    this.endedByTimeout = false;
   },
 
   toast_validWord(guess: string) {
