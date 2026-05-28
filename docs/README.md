@@ -37,11 +37,11 @@ The goal of the project is to build a modern web platform where users can:
 
 | Login | Role | Main Responsibilities |
 | --- | --- | --- |
-| `tcohen` | PM | Project coordination, integration follow-up, CI/dev environment, OAuth integration, profile and social feature follow-up |
-| `mduchauf` | Tech Lead | Technical architecture, backend structure, data model evolution, room/game integration, refactoring of core flows |
-| `smgassa` | PO | Product vision, user-facing flows, UI foundations, authentication pages, room and lobby experience |
-| `hucherea` | Developer | API consistency, WebSocket layer, real-time gameplay loop, event contracts, protocol and smoke-test support |
-| `lscheupl` | Developer | Multiplayer gameplay presentation scope, browser game flow follow-up, and group-play feature ownership |
+| `tcohen` | PM | Social and user management: profile, avatar, status, friends/friend requests, private messages |
+| `mduchauf` | Tech Lead | Real-time architecture: WebSocket gateway, presence, live sync, event broadcasting, remote players |
+| `smgassa` | PO | Gameplay and persistence: quiz flow, scoring, leaderboards, match history, additional game |
+| `hucherea` | Developer | Core technical base: Prisma schema/migrations, classic auth + Google OAuth, session security, dev/CI scripts |
+| `lscheupl` | Developer | Rooms and multiplayer: room logic, player management, match lifecycle, multiplayer coordination |
 
 ## Presentation Task Distribution
 
@@ -187,13 +187,13 @@ Total module score: **22 points**
 
 | Module | Type | Points | Why We Chose It | Implementation Summary | Main Contributors |
 | --- | --- | ---: | --- | --- | --- |
-| Use a framework for both frontend and backend | Major | 2 | To keep the project structured end to end | React frontend and NestJS backend, both written in TypeScript and containerized | `mduchauf`, `lscheupl` |
-| Use a frontend framework | Minor | 1 | To build a maintainable SPA | React components, routing, stateful room/game pages, reusable UI blocks | `lscheupl` |
+| Use a framework for both frontend and backend | Major | 2 | To keep the project structured end to end | React frontend and NestJS backend, both written in TypeScript and containerized | `mduchauf`, `smgassa` |
+| Use a frontend framework | Minor | 1 | To build a maintainable SPA | React components, routing, stateful room/game pages, reusable UI blocks | `smgassa` |
 | Use a backend framework | Minor | 1 | To organize APIs and real-time logic clearly | NestJS modules, controllers, services, guards, DTO validation, Swagger | `mduchauf` |
 | Implement real-time features | Major | 2 | Real-time interaction is core to the project | Socket.IO namespace `/ws`, live room state, chat, timers, answer events, leaderboard broadcasts | `mduchauf` |
 | Allow users to interact with other users | Major | 2 | The platform is social, not only game-driven | Friends, room chat, private messages, room sharing | `tcohen` |
 | Use an ORM | Minor | 1 | To manage a growing relational schema safely | Prisma schema, migrations, typed client, generated models | `hucherea` |
-| Support for additional browsers | Minor | 1 | To keep the web app usable beyond a single browser | Standard web APIs, HTTPS local setup, cookie-based auth, Socket.IO transport fallback (`websocket` and `polling`) | `mduchauf`, `hucherea` |
+| Support for additional browsers | Minor | 1 | To keep the web app usable beyond a single browser | Standard web APIs, HTTPS local setup, cookie-based auth, Socket.IO transport fallback (`websocket` and `polling`) | `hucherea` |
 | Standard user management | Major | 2 | Identity and profile flows are essential | Register/login/logout, guest mode, session recovery, avatar, status, friends | `tcohen` |
 | Game statistics and match history | Minor | 1 | To make the game state meaningful over time | `Game`, `Leaderboard`, and `QuizLeaderboard` data with score aggregation | `smgassa` |
 | Remote authentication | Minor | 1 | To improve login UX and cover OAuth requirements | Google OAuth 2.0/OpenID Connect login flow with callback handling | `hucherea` |
