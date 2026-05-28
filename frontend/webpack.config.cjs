@@ -46,6 +46,13 @@ module.exports = {
         test: /\.css$/i,
         use: ["style-loader", "css-loader", "postcss-loader"],
       },
+      {
+        test: /\.(png|jpe?g|gif|svg)$/i,
+        type: "asset/resource",
+        generator: {
+          filename: "static/media/[name].[contenthash][ext]",
+        },
+      },
     ],
   },
   plugins: [
@@ -75,8 +82,9 @@ module.exports = {
           // Match proxy paths only when the pathname equals the prefix
           // or starts with the prefix followed by a '/'. This avoids
           // accidental matches like '/game' matching '/games'.
-          const shouldProxy = proxyPaths.some((prefix) =>
-            pathname === prefix || pathname.startsWith(prefix + "/"),
+          const shouldProxy = proxyPaths.some(
+            (prefix) =>
+              pathname === prefix || pathname.startsWith(prefix + "/"),
           );
 
           if (!shouldProxy) {
