@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import Input from "../components/ui/input";
@@ -6,12 +6,12 @@ import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import { useToast } from "../components/ui/toast";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { getUserFacingErrorMessage } from "../services/api";
 import {
   AUTH_USERNAME_MIN_LENGTH,
   login,
   loginAsGuest,
 } from "../services/auth";
-import { getUserFacingErrorMessage } from "../services/api";
 import { oauthErrorMsg } from "../utils/err-msg";
 
 export default function LoginPage() {
@@ -112,6 +112,7 @@ export default function LoginPage() {
         <form
           aria-busy={isSubmitting}
           onSubmit={(event) => void handleSubmit(event)}
+          autoComplete="on"
         >
           <label
             className="mb-2 block text-sm font-medium text-text/70"
@@ -121,6 +122,7 @@ export default function LoginPage() {
           </label>
           <Input
             className="mb-4 w-full"
+            name="email"
             id="login-email"
             type="email"
             placeholder="email@exemple.com"
@@ -139,6 +141,7 @@ export default function LoginPage() {
           </label>
           <Input
             className="mb-6 w-full"
+            name="password"
             id="login-password"
             type="password"
             placeholder="Mot de passe"
@@ -188,6 +191,7 @@ export default function LoginPage() {
         <form
           aria-busy={isGuestSubmitting}
           onSubmit={(event) => void handleGuestSubmit(event)}
+          autoComplete="off"
         >
           <label
             className="mb-2 block text-sm font-medium text-text/70"
@@ -198,6 +202,7 @@ export default function LoginPage() {
           <Input
             className="mb-4 w-full"
             id="guest-username"
+            name="guest_username"
             type="text"
             placeholder="Pseudo unique"
             value={guestUsername}
