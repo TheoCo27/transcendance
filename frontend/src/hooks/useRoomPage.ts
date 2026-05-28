@@ -156,7 +156,9 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       setRoom(fetchedRoom);
       setForm(buildFormFromRoom(fetchedRoom));
       setRoomClosedReason(null);
-      setGameState(await getGameState(roomId));
+      const newGameState = await getGameState(roomId);
+      setGameState(newGameState);
+      setCurrentQuestion(newGameState?.currentQuestion ?? null);
     } catch (error) {
       setPageError(
         getUserFacingErrorMessage(
@@ -189,6 +191,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         setRoom(fetchedRoom);
         setForm(buildFormFromRoom(fetchedRoom));
         setGameState(fetchedGameState);
+        setCurrentQuestion(fetchedGameState?.currentQuestion ?? null);
       } catch (error) {
         const message = getUserFacingErrorMessage(
           error,
@@ -239,7 +242,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     }
 
     void refreshRoom();
-  }, [isSessionLoading, navigate, refreshRoom, roomId, user?.id]);
+  }, [isSessionLoading, navigate, refreshRoom, roomId]);
 
   useEffect(() => {
     if (
@@ -407,6 +410,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       }
 
       setGameState(response.data);
+      setCurrentQuestion(response.data.currentQuestion ?? null);
     };
 
     const handleGameEnded = (response: WsResponse<GameEndedPayload>) => {

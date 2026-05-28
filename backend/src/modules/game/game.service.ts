@@ -21,6 +21,7 @@ export type GameState = {
   roomId: number;
   status: "waiting" | "playing" | "finished";
   currentQuestionId: number | null;
+  currentQuestion: PublicQuestion | null;
   currentQuestionNumber: number;
   totalQuestions: number;
   questionDurationMs: number | null;
@@ -143,6 +144,7 @@ export class GameService {
       roomId,
       status: room.status,
       currentQuestionId: null,
+      currentQuestion: null,
       currentQuestionNumber: 0,
       totalQuestions: 1,
       questionDurationMs: null,
@@ -183,6 +185,7 @@ export class GameService {
 
     state.status = "playing";
     state.currentQuestionId = null;
+    state.currentQuestion = null;
     state.currentQuestionNumber = 0;
     state.totalQuestions = Math.max(1, totalQuestions);
     state.questionDurationMs = questionDurationMs;
@@ -257,9 +260,15 @@ export class GameService {
     endsAt: string;
   }): Promise<GameState> {
     const state = await this.getRoomState(params.roomId);
+    const question = this.getQuestionEntry(params.roomId, params.questionId);
 
     state.status = "playing";
     state.currentQuestionId = params.questionId;
+    state.currentQuestion = {
+      id: question.id,
+      text: question.text,
+      options: question.options,
+    };
     state.currentQuestionNumber = params.questionNumber;
     state.totalQuestions = params.totalQuestions;
     state.questionDurationMs = params.questionDurationMs;
