@@ -58,6 +58,7 @@ export default function RegisterPage() {
         <form
           aria-busy={isSubmitting}
           onSubmit={(event) => void handleSubmit(event)}
+          autoComplete="on"
         >
           <label
             className="mb-2 block text-sm font-medium text-text/70"
@@ -66,6 +67,7 @@ export default function RegisterPage() {
             Email
           </label>
           <Input
+            name="email"
             className="mb-4 w-full"
             id="register-email"
             type="email"
@@ -84,6 +86,7 @@ export default function RegisterPage() {
             Pseudo
           </label>
           <Input
+            name="username"
             className="mb-4 w-full"
             id="register-username"
             type="text"
@@ -104,6 +107,7 @@ export default function RegisterPage() {
             Mot de passe
           </label>
           <Input
+            name="password"
             className="mb-6 w-full"
             id="register-password"
             type="password"
