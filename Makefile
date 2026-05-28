@@ -39,11 +39,11 @@ help:
 	@echo "  make test_https          -> Curl all local HTTPS endpoints exposed by the stack"
 	@echo "  make smoke-test          -> Run the general smoke test (dev op, db, websocket api, authentifcation, front end)"
 	@echo "  make smoke-test-ws       -> Run only the backend WebSocket smoke test"
-	@echo "  make setup-host          -> Install local host dependencies (Homebrew + mkcert) without sudo"
+	@echo "  make setup-host          -> Verify host prerequisites for local HTTPS with OpenSSL"
 	@echo "  make env-init            -> Create .env from .env.example if missing"
 	@echo "  make env-check           -> Check required variables in .env"
 	@echo "  make tls-cert            -> Generate the shared local TLS certificate"
-	@echo "  make tls-trust           -> Trust the mkcert local CA on the host (may ask sudo)"
+	@echo "  make tls-trust           -> Explain manual trust for the local self-signed OpenSSL certificate"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
 	@echo "  make shell-db            -> Open a psql session in the db container"
@@ -212,7 +212,9 @@ tls-cert:
 	bash scripts/generate-dev-cert.sh
 
 tls-trust:
-	bash scripts/setup-host.sh --trust-ca
+	@echo "Le projet utilise un certificat OpenSSL auto-signe."
+	@echo "HTTPS fonctionne sans sudo ni installation systeme."
+	@echo "Si tu veux supprimer l'alerte navigateur, ajoute manuellement certs/dev-localhost-ca.pem au trust store de ta machine."
 
 shell-back:
 	$(ENGINE) exec -it quiz_backend sh

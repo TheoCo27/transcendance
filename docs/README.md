@@ -30,7 +30,7 @@ The goal of the project is to build a modern web platform where users can:
 - User profile management with avatar and status updates.
 - Friends system with private messaging between accepted friends.
 - Quiz creation workflow and room-based quiz gameplay.
-- Dockerized development stack with HTTPS enabled locally through `mkcert`.
+- Dockerized development stack with local HTTPS enabled through self-signed OpenSSL certificates.
 - Smoke tests, WebSocket smoke tests, and GitHub Actions CI.
 
 ## Team Information
@@ -102,7 +102,7 @@ The team organized the work around a simple but regular delivery process:
 ### Other Significant Tools
 
 - **Docker / Docker Compose or Podman Compose**
-- **mkcert** for locally trusted HTTPS certificates
+- **OpenSSL** for self-signed local HTTPS certificates
 - **GitHub Actions** for CI
 - Custom smoke-test scripts for HTTP, database, and WebSocket checks
 
@@ -212,7 +212,7 @@ To run the project as documented here, you need:
 - a compatible container runtime with Compose support:
   - Docker + Docker Compose, or
   - Podman + Podman Compose
-- `mkcert` for trusted local HTTPS certificates
+- `openssl` for generating local self-signed HTTPS certificates
 - Bash-compatible shell
 
 For contributors who want to build apps outside containers:
@@ -261,14 +261,13 @@ Main variables:
 make env-init
 ```
 
-2. Install local host dependencies without sudo:
+2. Check host prerequisites for local HTTPS:
 
 ```bash
 make setup-host
 ```
 
-3. Optionally trust the local certificate authority once on your machine
-if you want to remove browser warnings:
+3. If you want to understand the browser warning behavior:
 
 ```bash
 make tls-trust
@@ -382,7 +381,7 @@ The breakdown below reflects the current role split used for the project present
 - Socket.IO: <https://socket.io/docs/v4/>
 - PostgreSQL: <https://www.postgresql.org/docs/>
 - Docker Compose: <https://docs.docker.com/compose/>
-- `mkcert`: <https://github.com/FiloSottile/mkcert>
+- OpenSSL: <https://www.openssl.org/>
 - Google OpenID Connect: <https://developers.google.com/identity/openid-connect/openid-connect>
 
 ### Project-Specific Documentation

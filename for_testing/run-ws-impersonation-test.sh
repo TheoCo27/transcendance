@@ -10,5 +10,5 @@ exec docker compose exec -T \
   -e BACKEND_HOST="${BACKEND_HOST:-}" \
   -e BACKEND_PORT="${BACKEND_PORT:-}" \
   backend \
-  sh -lc 'cat > /tmp/ws-impersonation-test.mjs && NODE_EXTRA_CA_CERTS=/certs/mkcert-rootCA.pem node /tmp/ws-impersonation-test.mjs' \
+  sh -lc 'cat > /tmp/ws-impersonation-test.mjs && NODE_EXTRA_CA_CERTS=/certs/dev-localhost-ca.pem node /tmp/ws-impersonation-test.mjs' \
   < for_testing/ws-impersonation-test.mjs

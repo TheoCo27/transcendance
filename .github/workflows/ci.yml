@@ -99,14 +99,6 @@ jobs:
           GAME_QUESTION_DURATION_MS=${GAME_QUESTION_DURATION_MS}
           EOF
 
-      - name: Install mkcert
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mkcert libnss3-tools
-
-      - name: Trust mkcert local CA
-        run: mkcert -install
-
       - name: Generate shared dev TLS certificate
         run: bash scripts/generate-dev-cert.sh
 

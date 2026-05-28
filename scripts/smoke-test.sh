@@ -12,7 +12,7 @@ POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 BACKEND_BASE_URL="https://localhost:${BACKEND_PORT}"
 FRONTEND_BASE_URL="${FRONTEND_ORIGIN:-https://localhost:${FRONTEND_PORT}}"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ft_transcendance_smoke.XXXXXX")"
-MKCERT_CA_FILE="${ROOT_DIR}/certs/mkcert-rootCA.pem"
+TLS_CA_FILE="${ROOT_DIR}/certs/dev-localhost-ca.pem"
 COOKIE_JAR="${TMP_DIR}/cookies.txt"
 LAST_BODY=""
 LAST_HEADERS=""
@@ -74,7 +74,7 @@ check_http_with_curl() {
 	expected="$2"
 
 	if printf '%s' "$url" | grep -Eq '^https://'; then
-		body="$(curl --cacert "$MKCERT_CA_FILE" -fsS "$url")" || return 1
+		body="$(curl --cacert "$TLS_CA_FILE" -fsS "$url")" || return 1
 	else
 		body="$(curl -fsS "$url")" || return 1
 	fi
@@ -89,7 +89,7 @@ check_http_inside_container() {
 	expected="$3"
 
 	if printf '%s' "$url" | grep -Eq '^https://'; then
-		body="$(run_container_engine exec "$container" sh -lc "NODE_EXTRA_CA_CERTS=/certs/mkcert-rootCA.pem node -e \"fetch('${url}').then(async (response) => { if (!response.ok) process.exit(1); process.stdout.write(await response.text()); }).catch(() => process.exit(1))\"")" || return 1
+		body="$(run_container_engine exec "$container" sh -lc "NODE_EXTRA_CA_CERTS=/certs/dev-localhost-ca.pem node -e \"fetch('${url}').then(async (response) => { if (!response.ok) process.exit(1); process.stdout.write(await response.text()); }).catch(() => process.exit(1))\"")" || return 1
 	else
 		body="$(run_container_engine exec "$container" sh -lc "wget -qO- '$url'")" || return 1
 	fi
@@ -152,7 +152,7 @@ request_with_curl() {
 	fi
 
 	if printf '%s' "$url" | grep -Eq '^https://'; then
-		curl_args+=(--cacert "$MKCERT_CA_FILE")
+		curl_args+=(--cacert "$TLS_CA_FILE")
 	fi
 
 	LAST_STATUS="$(curl "${curl_args[@]}")" || return 1
@@ -282,7 +282,7 @@ section "test dev op"
 detect_container_engine >/dev/null 2>&1 || fail "Ni docker ni podman n'est disponible"
 check_command curl
 check_command bash
-[ -s "$MKCERT_CA_FILE" ] || fail "CA mkcert absente: $MKCERT_CA_FILE. Lance 'make tls-cert' et 'make tls-trust'."
+[ -s "$TLS_CA_FILE" ] || fail "Certificat CA local absent: $TLS_CA_FILE. Lance 'make tls-cert'."
 bash ./scripts/check-env.sh .env >/dev/null 2>&1 || fail "Configuration .env invalide. Lance 'make env-check' pour le diagnostic complet."
 pass "Configuration .env valide"
 compose ps >/dev/null 2>&1 || fail "Compose indisponible ou stack non accessible"

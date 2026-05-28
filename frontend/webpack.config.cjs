@@ -8,7 +8,7 @@ const shouldUseHttps = frontendOrigin.startsWith("https://");
 const tlsKeyPath = process.env.TLS_KEY_FILE || "/certs/dev-localhost.key";
 const tlsCertPath = process.env.TLS_CERT_FILE || "/certs/dev-localhost.crt";
 const trustedCaPath =
-  process.env.NODE_EXTRA_CA_CERTS || "/certs/mkcert-rootCA.pem";
+  process.env.NODE_EXTRA_CA_CERTS || "/certs/dev-localhost-ca.pem";
 const hasCustomTlsFiles =
   fs.existsSync(tlsKeyPath) && fs.existsSync(tlsCertPath);
 

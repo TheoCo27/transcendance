@@ -187,8 +187,8 @@ Pour faire fonctionner le projet apres un clone :
 
 - cloner le repo
 - lancer `make env-init`
-- lancer `make setup-host` pour installer Homebrew local et `mkcert` sans sudo
-- lancer `make tls-trust` une fois si tu veux faire confiance a la CA locale `mkcert`
+- lancer `make setup-host` pour verifier OpenSSL et le runtime de conteneurs
+- lancer `make tls-trust` si tu veux le rappel sur le certificat auto-signe local
 - remplir les vraies valeurs dans `.env`
 - lancer `make env-check`
 - lancer `make` ou `make up`

@@ -1367,7 +1367,7 @@ Permettre a des joueurs sur des machines differentes de participer a la meme roo
 
 #### Librairies et outils utilises
 
-- HTTPS local via `mkcert`
+- HTTPS local via OpenSSL self-signed
 - cookies cross-origin avec credentials
 - Socket.IO transports `websocket` + `polling`
 - Docker Compose
@@ -1837,14 +1837,12 @@ Le projet a ete concu pour tourner en HTTPS local.
 
 Ce script:
 
-- installe Homebrew local si necessaire,
-- verifie ou installe `mkcert`,
-- prepare Homebrew si necessaire,
-- genere l'autorite locale `mkcert` si elle n'existe pas encore,
-- n'installe pas la CA dans le trust store pendant `make`,
-- verifie qu'un runtime Compose compatible existe.
+- verifie la presence de `openssl`,
+- verifie qu'un runtime Compose compatible existe,
+- tente de poser le marker Podman `/etc/containers/nodocker`,
+- n'installe rien dans le trust store systeme.
 
-La commande `make tls-trust` appelle ce meme script avec `--trust-ca` pour lancer explicitement `mkcert -install`, ce qui peut demander un mot de passe sur Fedora.
+La commande `make tls-trust` n'installe rien non plus: elle rappelle simplement que le certificat local est auto-signe et peut etre ajoute manuellement au trust store si besoin.
 
 #### `scripts/generate-dev-cert.sh`
 
@@ -1852,8 +1850,8 @@ Ce script:
 
 - cree `certs/dev-localhost.crt`
 - cree `certs/dev-localhost.key`
-- copie la CA dans `certs/mkcert-rootCA.pem`
-- genere un certificat valide pour:
+- copie le certificat public dans `certs/dev-localhost-ca.pem` pour `curl` et `NODE_EXTRA_CA_CERTS`
+- genere un certificat OpenSSL auto-signe valide pour:
   - `localhost`
   - `127.0.0.1`
   - `::1`
@@ -1866,7 +1864,8 @@ Pourquoi c'est important:
 
 - la stack peut tester des cookies `secure`;
 - le websocket tourne dans un contexte HTTPS realiste;
-- l'equipe travaille dans un environnement proche d'une vraie exposition reseau.
+- l'equipe travaille dans un environnement proche d'une vraie exposition reseau,
+- sans exiger `sudo` ni installation de CA locale.
 
 ### Validation du `.env`
 
@@ -2013,15 +2012,13 @@ But:
 Ce job:
 
 1. prepare un `.env` dedie a la CI;
-2. installe `mkcert`;
-3. truste la CA locale;
-4. genere les certificats partages;
-5. lance `docker compose up --build -d`;
-6. attend les healthchecks via `scripts/wait-for-containers.sh`;
-7. execute `scripts/smoke-test.sh`;
-8. execute le smoke test WebSocket dans `quiz_backend`;
-9. affiche les logs en cas d'echec;
-10. detruit completement la stack.
+2. genere les certificats OpenSSL auto-signes partages;
+3. lance `docker compose up --build -d`;
+4. attend les healthchecks via `scripts/wait-for-containers.sh`;
+5. execute `scripts/smoke-test.sh`;
+6. execute le smoke test WebSocket dans `quiz_backend`;
+7. affiche les logs en cas d'echec;
+8. detruit completement la stack.
 
 But:
 
@@ -2056,7 +2053,7 @@ Si on te demande "comment avez-vous gere la partie DevOps ?", la reponse courte 
 
 - "On a unifie le lancement avec Make + Compose."
 - "On a rendu la stack portable entre Docker et Podman."
-- "On a force un HTTPS local propre avec mkcert."
+- "On a force un HTTPS local reproductible avec OpenSSL."
 - "On a separe une stack standard et une stack de developpement grace a un profil Compose et `NODE_ENV=development`."
 - "On a reserve Swagger, `/api` et Prisma Studio au mode dev."
 - "Et on a automatise la verification complete avec une CI qui build puis joue des smoke tests HTTP et WebSocket."

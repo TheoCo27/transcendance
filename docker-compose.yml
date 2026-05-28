@@ -15,8 +15,8 @@ services:
       - .env
     environment:
       BACKEND_TARGET: https://backend:4000
-      NODE_EXTRA_CA_CERTS: /certs/mkcert-rootCA.pem
-      SSL_CERT_FILE: /certs/mkcert-rootCA.pem
+      NODE_EXTRA_CA_CERTS: /certs/dev-localhost-ca.pem
+      SSL_CERT_FILE: /certs/dev-localhost-ca.pem
     depends_on:
       backend:
         condition: service_healthy
@@ -51,8 +51,8 @@ services:
     environment:
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://localhost:3000}
       NODE_ENV: ${NODE_ENV:-}
-      NODE_EXTRA_CA_CERTS: /certs/mkcert-rootCA.pem
-      SSL_CERT_FILE: /certs/mkcert-rootCA.pem
+      NODE_EXTRA_CA_CERTS: /certs/dev-localhost-ca.pem
+      SSL_CERT_FILE: /certs/dev-localhost-ca.pem
     depends_on:
       db:
         condition: service_healthy
