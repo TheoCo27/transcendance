@@ -261,25 +261,32 @@ Main variables:
 make env-init
 ```
 
-2. Trust the local certificate authority once on your machine:
+2. Install local host dependencies without sudo:
+
+```bash
+make setup-host
+```
+
+3. Optionally trust the local certificate authority once on your machine
+if you want to remove browser warnings:
 
 ```bash
 make tls-trust
 ```
 
-3. Check that the `.env` file is complete:
+4. Check that the `.env` file is complete:
 
 ```bash
 make env-check
 ```
 
-4. Start the full stack:
+5. Start the full stack:
 
 ```bash
 make up
 ```
 
-5. Open the application:
+6. Open the application:
 
 - Frontend: `https://localhost:3000`
 - Backend health endpoint: `https://localhost:4000/health`

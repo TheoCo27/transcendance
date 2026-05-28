@@ -1614,7 +1614,8 @@ Comportement:
 - appelle `compose-check`,
 - appelle `ensure-public-stack`,
 - genere les certificats TLS locaux,
-- lance `frontend`, `backend`, `db`.
+- lance `frontend`, `backend`, `db`,
+- attend les healthchecks via `scripts/wait-for-containers.sh`.
 
 #### `make dev`
 
@@ -1836,10 +1837,14 @@ Le projet a ete concu pour tourner en HTTPS local.
 
 Ce script:
 
+- installe Homebrew local si necessaire,
 - verifie ou installe `mkcert`,
 - prepare Homebrew si necessaire,
-- installe la CA locale,
+- genere l'autorite locale `mkcert` si elle n'existe pas encore,
+- n'installe pas la CA dans le trust store pendant `make`,
 - verifie qu'un runtime Compose compatible existe.
+
+La commande `make tls-trust` appelle ce meme script avec `--trust-ca` pour lancer explicitement `mkcert -install`, ce qui peut demander un mot de passe sur Fedora.
 
 #### `scripts/generate-dev-cert.sh`
 
@@ -2011,11 +2016,12 @@ Ce job:
 2. installe `mkcert`;
 3. truste la CA locale;
 4. genere les certificats partages;
-5. lance `docker compose up --build -d --wait`;
-6. execute `scripts/smoke-test.sh`;
-7. execute le smoke test WebSocket dans `quiz_backend`;
-8. affiche les logs en cas d'echec;
-9. detruit completement la stack.
+5. lance `docker compose up --build -d`;
+6. attend les healthchecks via `scripts/wait-for-containers.sh`;
+7. execute `scripts/smoke-test.sh`;
+8. execute le smoke test WebSocket dans `quiz_backend`;
+9. affiche les logs en cas d'echec;
+10. detruit completement la stack.
 
 But:
 

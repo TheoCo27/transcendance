@@ -8,11 +8,8 @@ ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 BREW_ROOT="${HOME}/.linuxbrew/Homebrew"
 BREW_BIN_DIR="${HOME}/.linuxbrew/bin"
 BREW_BIN="${BREW_BIN_DIR}/brew"
-ZSHRC_FILE="${HOME}/.zshrc"
 BREW_SHELLENV_LINE='eval "$($HOME/.linuxbrew/bin/brew shellenv)"'
-COMMENTED_ZSH_BLOCK_START="#if [ -t 1 ]; then"
-COMMENTED_ZSH_BLOCK_EXEC="#exec zsh"
-COMMENTED_ZSH_BLOCK_END="#fi"
+MODE="${1:-setup}"
 
 log() {
 	printf '[setup] %s\n' "$1"
@@ -35,6 +32,18 @@ ensure_shellenv_loaded() {
 	if [ -x "$BREW_BIN" ]; then
 		eval "$("$BREW_BIN" shellenv)"
 	fi
+}
+
+shellenv_persisted() {
+	local rc_file
+
+	for rc_file in "${HOME}/.bashrc" "${HOME}/.zshrc"; do
+		if [ -f "$rc_file" ] && grep -Fqs "$BREW_SHELLENV_LINE" "$rc_file"; then
+			return 0
+		fi
+	done
+
+	return 1
 }
 
 ensure_linuxbrew() {
@@ -76,23 +85,31 @@ ensure_mkcert() {
 	ok "mkcert installe"
 }
 
-ensure_mkcert_ca() {
+ensure_mkcert_ca_file() {
 	local caroot root_ca
-
 	ensure_mkcert
 	caroot="$(mkcert -CAROOT)"
 	root_ca="${caroot}/rootCA.pem"
 
 	if [ -s "$root_ca" ]; then
-		ok "Autorite locale mkcert deja installee"
+		ok "Autorite locale mkcert disponible"
 		return 0
 	fi
 
-	log "Installation de l'autorite locale mkcert"
+	log "Generation de l'autorite locale mkcert"
+	mkcert -cert-file /dev/null -key-file /dev/null localhost >/dev/null 2>&1 || true
+	[ -s "$root_ca" ] || fail "Impossible de generer l'autorite locale mkcert"
+	ok "Autorite locale mkcert generee"
+}
+
+ensure_mkcert_ca_trusted() {
+	ensure_mkcert_ca_file
+
+	log "Installation de l'autorite locale mkcert dans le trust store"
 	if ! mkcert -install; then
-		fail "mkcert -install a echoue. Sur Fedora, verifie que les outils NSS du poste sont disponibles."
+		fail "mkcert -install a echoue. Sur Fedora, lance manuellement 'mkcert -install' apres avoir charge Homebrew dans le shell."
 	fi
-	ok "Autorite locale mkcert installee"
+	ok "Autorite locale mkcert installee dans le trust store"
 }
 
 ensure_nodocker_marker() {
@@ -123,13 +140,53 @@ ensure_compose_runtime() {
 	fail "Aucun runtime compose compatible detecte. Installe Docker Compose ou Podman Compose."
 }
 
-main() {
+print_shellenv_hint() {
+	if command -v brew >/dev/null 2>&1; then
+		if shellenv_persisted; then
+			ok "Homebrew shellenv deja configure dans un fichier rc"
+			return 0
+		fi
+
+		warn "Ajoute Homebrew au PATH pour les prochains terminaux:"
+		warn "echo '${BREW_SHELLENV_LINE}' >> ~/.bashrc"
+		warn "source ~/.bashrc"
+	fi
+}
+
+setup_mode() {
 	if [ -x "$HOME/.linuxbrew/bin/brew" ]; then
 		eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"
 	fi
-	ensure_mkcert_ca
+
+	ensure_mkcert_ca_file
+	print_shellenv_hint
 	ensure_nodocker_marker
 	ensure_compose_runtime
+
+	warn "Le certificat local sera genere automatiquement au lancement."
+	warn "Si tu veux supprimer l'alerte navigateur sur Fedora, lance ensuite: make tls-trust"
+}
+
+trust_mode() {
+	if [ -x "$HOME/.linuxbrew/bin/brew" ]; then
+		eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"
+	fi
+
+	ensure_mkcert_ca_trusted
+}
+
+main() {
+	case "$MODE" in
+		setup)
+			setup_mode
+			;;
+		--trust-ca|trust-ca)
+			trust_mode
+			;;
+		*)
+			fail "Usage: scripts/setup-host.sh [setup|--trust-ca]"
+			;;
+	esac
 }
 
 main "$@"

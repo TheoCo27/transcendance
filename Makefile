@@ -39,11 +39,11 @@ help:
 	@echo "  make test_https          -> Curl all local HTTPS endpoints exposed by the stack"
 	@echo "  make smoke-test          -> Run the general smoke test (dev op, db, websocket api, authentifcation, front end)"
 	@echo "  make smoke-test-ws       -> Run only the backend WebSocket smoke test"
-	@echo "  make setup-host          -> Verify and auto-prepare the machine for Docker/Podman + mkcert"
+	@echo "  make setup-host          -> Install local host dependencies (Homebrew + mkcert) without sudo"
 	@echo "  make env-init            -> Create .env from .env.example if missing"
 	@echo "  make env-check           -> Check required variables in .env"
 	@echo "  make tls-cert            -> Generate the shared local TLS certificate"
-	@echo "  make tls-trust           -> Install mkcert local CA into the system trust store"
+	@echo "  make tls-trust           -> Trust the mkcert local CA on the host (may ask sudo)"
 	@echo "  make shell-back          -> Open shell in backend container"
 	@echo "  make shell-front         -> Open shell in frontend container"
 	@echo "  make shell-db            -> Open a psql session in the db container"
@@ -89,8 +89,6 @@ up-run: env-check setup-host compose-check ensure-public-stack
 	bash scripts/generate-dev-cert.sh
 	$(COMPOSE) up --build -d
 	bash scripts/wait-for-containers.sh
-	@cd backend && npm install
-	@cd frontend && npm install
 # 	make seed
 
 dev: env-check setup-host compose-check
@@ -214,7 +212,7 @@ tls-cert:
 	bash scripts/generate-dev-cert.sh
 
 tls-trust:
-	bash scripts/setup-host.sh
+	bash scripts/setup-host.sh --trust-ca
 
 shell-back:
 	$(ENGINE) exec -it quiz_backend sh
