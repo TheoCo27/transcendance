@@ -1,4 +1,4 @@
-import { observer, useLocalObservable } from "mobx-react-lite";
+import { observer } from "mobx-react-lite";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import QuizGameSection from "../components/room/QuizGameSection";
@@ -12,7 +12,6 @@ import Guess from "../components/Wordle/Guess";
 import Keyboard from "../components/Wordle/Keyboard";
 import ProgressBar from "../components/Wordle/ProgressBar";
 import PuzzleStore from "../components/Wordle/PuzzleStore";
-import RulesPanel from "../components/Wordle/RulesPanel";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getUserFacingErrorMessage } from "../services/api";
 import { getGameState, type GameState } from "../services/game";
@@ -146,18 +145,11 @@ function GamesPage() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [roomClosedReason, setRoomClosedReason] = useState<string | null>(null);
   const [playerNames, setPlayerNames] = useState<Record<number, string>>({});
-  const [isRulesOpen, setRulesOpen] = useState(true);
-  const [isPlayerReady, setPlayerReady] = useState(false);
   const hasFinishedWordleRef = useRef(false);
   const lastHydratedWordleKeyRef = useRef<string | null>(null);
 
-  const store = useLocalObservable(() => PuzzleStore);
+  const store = PuzzleStore;
   const toast = useToast();
-  const isRulesOpenRef = useRef(isRulesOpen); // because useEffect keeps the very first value otherwise
-
-  useEffect(() => {
-    isRulesOpenRef.current = isRulesOpen;
-  }, [isRulesOpen]);
 
   useEffect(() => {
     const handleKeyup = (e: KeyboardEvent) => store.handleKeyup(e);
@@ -165,8 +157,7 @@ function GamesPage() {
 
     // The interval is created here, so only once:
     const intervalId = setInterval(() => {
-      // if all players are ready
-      if (isRulesOpenRef.current === false) store.checkTimeUp();
+      store.checkTimeUp();
       if (store.currentGuess === store.maxAttempts || store.won) {
         clearInterval(intervalId);
       }
@@ -469,11 +460,8 @@ function GamesPage() {
           persistedState.rulePanelClosed,
           persistedState.endedByTimeout
         );
-        setRulesOpen(!persistedState.rulePanelClosed);
       } else {
         store.init(sharedWord);
-        setRulesOpen(true);
-        setPlayerReady(false);
         clearPersistedWordleState(room.id, userId);
       }
 
@@ -514,12 +502,11 @@ function GamesPage() {
       currentGuess: store.currentGuess,
       startTime: store.start_time,
       totalTime: store.total_time,
-      rulePanelClosed: store.rulePannelClosed && !isRulesOpen,
+      rulePanelClosed: store.rulePannelClosed,
       endedByTimeout: store.endedByTimeout,
     });
   }, [
     gameState?.status,
-    isRulesOpen,
     room?.gameType,
     room?.id,
     room?.status,
@@ -777,17 +764,6 @@ function GamesPage() {
               Le mot partagé de la partie est en cours de chargement.
             </p>
           </section>
-        ) : isRulesOpen ? (
-          <div className="flex items-center justify-center">
-            <RulesPanel
-              onClose={() => setRulesOpen(false)}
-              store={store}
-              setReady={() => {
-                setPlayerReady(true);
-              }}
-              readyFlag={isPlayerReady}
-            />
-          </div>
         ) : (
           <section className="flex flex-1 flex-col py-1 items-center justify-center">
             <div className="mb-4 rounded-full border border-white/10 bg-surface px-4 py-2 text-sm text-white/75">
