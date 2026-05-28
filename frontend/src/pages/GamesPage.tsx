@@ -253,6 +253,16 @@ function GamesPage() {
   }, [navigate, roomId]);
 
   useEffect(() => {
+    if (isSessionLoading || !user) {
+      return;
+    }
+
+    void connectWs().catch(() => {
+      // Les erreurs d'action remontent deja via l'UI.
+    });
+  }, [isSessionLoading, user]);
+
+  useEffect(() => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
       return;
     }
