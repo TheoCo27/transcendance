@@ -2,13 +2,14 @@
 // et au chat temps reel.
 import { ChatMessageDto } from "@/modules/realtime/dto/chat-message.dto";
 import { ChatHistoryRequestDto } from "@/modules/realtime/dto/chat-history-request.dto";
+import { RoomReadyDto } from "@/modules/realtime/dto/room-ready.dto";
 import { RoomCreateEventDto } from "@/modules/realtime/dto/room-create-event.dto";
 import { RoomDeleteDto } from "@/modules/realtime/dto/room-delete.dto";
 import { RoomJoinEventDto } from "@/modules/realtime/dto/room-join-event.dto";
 import { RoomLeaveDto } from "@/modules/realtime/dto/room-leave.dto";
 import { RoomStartDto } from "@/modules/realtime/dto/room-start.dto";
 import { RoomsService } from "@/modules/rooms/rooms.service";
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { RealtimeGameRuntimeService } from "./realtime-game-runtime.service";
 import { RealtimePresenceService } from "./realtime-presence.service";
@@ -17,9 +18,8 @@ import { RealtimeResponseService } from "./realtime-response.service";
 import { RealtimeValidationService } from "./realtime-validation.service";
 
 const CHAT_HISTORY_LIMIT = 100;
-// Reduced grace period so clients observe departures faster (in ms).
-// Tradeoff: shorter window makes transient reconnects more likely to be
-// considered permanent disconnects.
+// Keep a long grace window so a page refresh does not drop a player from
+// the room before the websocket reconnects.
 const DISCONNECT_GRACE_PERIOD_MS = 10_000;
 const CHAT_MESSAGE_RATE_LIMITS = [
   { limit: 5, windowMs: 5_000 },
@@ -118,6 +118,10 @@ export class RealtimeRoomEventsService {
     let hasRoomStateChanged = false;
     for (const room of await this.roomsService.list()) {
       if (!room.players.some((player) => player.userId === userId)) {
+        continue;
+      }
+
+      if (room.gameType === "wordle" && room.status === "playing") {
         continue;
       }
 
@@ -276,6 +280,33 @@ export class RealtimeRoomEventsService {
       server.to(channel).emit("room:state", this.response.ok(room));
     }
     await this.broadcastRoomList(server);
+  }
+
+  // Marque le joueur courant comme pret dans une room Wordle.
+  async handleRoomReady(
+    rawPayload: unknown,
+    client: Socket,
+    server: Server,
+  ): Promise<void> {
+    const payload = this.validation.validatePayload(RoomReadyDto, rawPayload);
+    const userId = this.presence.resolveSocketUser(client.id);
+    const room = await this.assertUserInRoom(payload.roomId, userId);
+
+    if (room.gameType !== "wordle" || room.status !== "playing") {
+      throw new ConflictException(
+        "La confirmation de disponibilite est reservee aux parties Wordle en cours",
+      );
+    }
+
+    const updatedRoom = await this.roomsService.setPlayerReady(
+      payload.roomId,
+      userId,
+      true,
+    );
+
+    server
+      .to(this.roomChannel(payload.roomId))
+      .emit("room:state", this.response.ok(updatedRoom));
   }
 
   // Supprime une room sur demande explicite de son proprietaire.

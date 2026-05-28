@@ -232,6 +232,7 @@ model RoomPlayer {
   roomId Int
 
   score    Int      @default(0)
+  isReady  Boolean  @default(false)
   joinedAt DateTime @default(now())
 
   @@id([userId, roomId])

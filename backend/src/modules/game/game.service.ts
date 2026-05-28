@@ -11,6 +11,7 @@ import {
 import { SubmitAnswerDto } from "./dto/submit-answer.dto";
 import { pickWordleWord } from "./wordle-word-bank";
 import { WordlePlayerState, WordleState } from "./types/wordle.types";
+import type { RoomPlayer } from "@/modules/rooms/rooms.service";
 
 export type GameLeaderboardEntry = {
   userId: number;
@@ -99,7 +100,7 @@ export class GameService {
     this.syncWordlePlayers(playerIds, runtime);
     const wordleState =
       room.gameType === "wordle"
-        ? this.buildWordleState(runtime, playerIds)
+        ? this.buildWordleState(runtime, room.players)
         : null;
 
     const existing = this.roomStates.get(roomId);
@@ -240,7 +241,7 @@ export class GameService {
     state.winnerUserId = null;
     state.startedAt = room.startedAt ?? now;
     state.endedAt = null;
-    state.wordle = this.buildWordleState(runtime, playerIds);
+    state.wordle = this.buildWordleState(runtime, room.players);
     state.updatedAt = now;
 
     return state;
@@ -354,7 +355,7 @@ export class GameService {
     state.endedAt = room.finishedAt ?? new Date().toISOString();
     state.wordle =
       room.gameType === "wordle"
-        ? this.buildWordleState(this.getRoomRuntime(roomId), playerIds)
+        ? this.buildWordleState(this.getRoomRuntime(roomId), room.players)
         : null;
     state.updatedAt = state.endedAt;
 
@@ -521,7 +522,7 @@ export class GameService {
     const gameState = await this.getRoomState(params.roomId);
     gameState.updatedAt = new Date().toISOString();
     gameState.leaderboard = this.buildFrozenLeaderboard(runtime);
-    gameState.wordle = this.buildWordleState(runtime, playerIds);
+    gameState.wordle = this.buildWordleState(runtime, room.players);
 
     return {
       gameState,
@@ -675,8 +676,9 @@ export class GameService {
   // Construit l'etat public Wordle visible par les clients.
   private buildWordleState(
     runtime: RoomRuntime,
-    playerIds: number[],
+    players: RoomPlayer[],
   ): WordleState {
+    const playerIds = players.map((player) => player.userId);
     const playerStates = playerIds
       .map(
         (userId) =>
@@ -694,6 +696,7 @@ export class GameService {
       sharedWord: runtime.wordle.sharedWord,
       playersCompleted: playerStates.filter((player) => player.finished).length,
       totalPlayers: playerIds.length,
+      playersReady: players.filter((player) => player.isReady).length,
       playerStates,
     };
   }

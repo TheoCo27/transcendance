@@ -140,6 +140,17 @@ export class RealtimeGateway
     });
   }
 
+  // Traite le clic de disponibilite du joueur courant.
+  @SubscribeMessage("room:ready")
+  async handleRoomReady(
+    @MessageBody() payload: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    await this.runSafely(client, "room:ready:error", async () => {
+      await this.roomEvents.handleRoomReady(payload, client, this.server);
+    });
+  }
+
   // Recharge l'historique du chat pour une room deja rejointe.
   @SubscribeMessage("chat:history:request")
   async handleChatHistoryRequest(

@@ -7,6 +7,7 @@ export const QUIZ_ROOM_ROUNDS_DEFAULT = 5;
 export type RoomPlayer = {
   userId: number;
   joinedAt: string;
+  isReady: boolean;
 };
 
 export type Room = {

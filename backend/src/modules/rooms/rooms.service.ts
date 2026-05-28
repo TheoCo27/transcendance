@@ -16,6 +16,7 @@ import { UpdateRoomDto } from "./dto/update-room.dto";
 export type RoomPlayer = {
   userId: number;
   joinedAt: string;
+  isReady: boolean;
 };
 
 export type RoomMessage = {
@@ -72,6 +73,7 @@ export class RoomsService {
           select: {
             userId: true,
             joinedAt: true,
+            isReady: true,
           },
           orderBy: {
             joinedAt: "asc",
@@ -113,6 +115,7 @@ export class RoomsService {
           select: {
             userId: true,
             joinedAt: true,
+            isReady: true,
           },
           orderBy: {
             joinedAt: "asc",
@@ -166,6 +169,7 @@ export class RoomsService {
             select: {
               userId: true,
               joinedAt: true,
+              isReady: true,
             },
             orderBy: {
               joinedAt: "asc",
@@ -559,6 +563,30 @@ export class RoomsService {
       },
     });
 
+    await this.prisma.client.roomPlayer.updateMany({
+      where: { roomId },
+      data: { isReady: false },
+    });
+
+    return this.getById(roomId);
+  }
+
+  // Marque un joueur comme pret dans une room.
+  async setPlayerReady(
+    roomId: number,
+    userId: number,
+    isReady: boolean,
+  ): Promise<Omit<Room, "password">> {
+    await this.prisma.client.roomPlayer.update({
+      where: {
+        userId_roomId: {
+          userId,
+          roomId,
+        },
+      },
+      data: { isReady },
+    });
+
     return this.getById(roomId);
   }
 
@@ -636,6 +664,7 @@ export class RoomsService {
           select: {
             userId: true,
             joinedAt: true,
+            isReady: true,
           },
           orderBy: {
             joinedAt: "asc",
@@ -665,7 +694,7 @@ export class RoomsService {
     startedAt: Date | null;
     finishedAt: Date | null;
     games: Array<{ quizId: number }>;
-    players: Array<{ userId: number; joinedAt: Date }>;
+    players: Array<{ userId: number; joinedAt: Date; isReady: boolean }>;
   }): Room {
     const transientConfig = this.transientConfigs.get(room.id);
 
@@ -687,6 +716,7 @@ export class RoomsService {
       players: room.players.map((player) => ({
         userId: player.userId,
         joinedAt: player.joinedAt.toISOString(),
+        isReady: player.isReady,
       })),
       createdAt: room.createdAt.toISOString(),
       startedAt: room.startedAt?.toISOString() ?? null,

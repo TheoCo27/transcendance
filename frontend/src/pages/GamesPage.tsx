@@ -147,7 +147,6 @@ function GamesPage() {
   const [roomClosedReason, setRoomClosedReason] = useState<string | null>(null);
   const [playerNames, setPlayerNames] = useState<Record<number, string>>({});
   const [isRulesOpen, setRulesOpen] = useState(true);
-  const [isPlayerReady, setPlayerReady] = useState(false);
   const hasFinishedWordleRef = useRef(false);
   const lastHydratedWordleKeyRef = useRef<string | null>(null);
 
@@ -480,7 +479,6 @@ function GamesPage() {
       } else {
         store.init(sharedWord);
         setRulesOpen(true);
-        setPlayerReady(false);
         clearPersistedWordleState(room.id, userId);
       }
 
@@ -783,10 +781,32 @@ function GamesPage() {
             <RulesPanel
               onClose={() => setRulesOpen(false)}
               store={store}
-              setReady={() => {
-                setPlayerReady(true);
+              totalPlayers={wordleState?.totalPlayers ?? room?.players.length ?? 1}
+              readyPlayers={wordleState?.playersReady ?? 0}
+              missingPlayers={
+                room?.players
+                  .filter((player) => !player.isReady)
+                  .map(
+                    (player) =>
+                      playerNamesById[player.userId] ?? `Joueur #${player.userId}`,
+                  ) ?? []
+              }
+              setReady={async () => {
+                try {
+                  await connectWs();
+                  emitWs("room:ready", {
+                    roomId: room.id,
+                  });
+                } catch {
+                  setPageError(
+                    "Connexion temps réel impossible pour confirmer votre disponibilité.",
+                  );
+                }
               }}
-              readyFlag={isPlayerReady}
+              readyFlag={Boolean(
+                room?.players.find((player) => player.userId === user?.id)
+                  ?.isReady,
+              )}
             />
           </div>
         ) : (

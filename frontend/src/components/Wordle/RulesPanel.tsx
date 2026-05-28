@@ -4,12 +4,22 @@ import type { PuzzleStoreType } from "./PuzzleStore";
 type RulesPanelProps = {
   onClose: () => void;
   store: PuzzleStoreType;
-  setReady: () => void;
-  readyFlag: boolean
+  setReady: () => void | Promise<void>;
+  readyFlag: boolean;
+  totalPlayers: number;
+  readyPlayers: number;
+  missingPlayers: string[];
 };
 
-export default function RulesPanel({ onClose, store, setReady, readyFlag }: RulesPanelProps) {
-
+export default function RulesPanel({
+  onClose,
+  store,
+  setReady,
+  readyFlag,
+  totalPlayers,
+  readyPlayers,
+  missingPlayers,
+}: RulesPanelProps) {
   const renderWordExample = (
     word: string,
     highlightedLetter: string,
@@ -31,18 +41,18 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
     </div>
   );
 
-  //pull dans le back TEMPORAIRE
-  let playersReady = 0;
-  let numberOfPlayers = 0;
-
   useEffect(() => {
-    if (readyFlag === true && numberOfPlayers === playersReady) {
+    if (store.rulePannelClosed) {
+      return;
+    }
+
+    if (readyFlag === true && readyPlayers === totalPlayers) {
       store.start_time = Math.floor(Date.now() / 1000);
       store.total_time = Math.floor(Date.now() / 1000);
       store.rulePannelClosed = true;
       onClose();
     }
-  }, [readyFlag, numberOfPlayers, playersReady, onClose, store]); // JUSTE numberOfPlayers, playersReady qd back sera connecte qvec front
+  }, [readyFlag, readyPlayers, totalPlayers, onClose, store]);
 
   if (readyFlag === true)
   {
@@ -54,8 +64,19 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
                   <div className="text-pretty text-wrap">
                     EN ATTENTE QUE TOUT LES JOUEURS SOIENT PRÊTS
 
-                    {/*pull dans le back TEMPORAIRE*/}
-                    <div>Joueurs manquants : (pull dans le back leur noms) (afficher en rouge) </div>
+                    <div className="mt-4 text-sm text-text/70">
+                      Joueurs manquants
+                    </div>
+                    <div className="mt-2 flex flex-col gap-1">
+
+                        {missingPlayers.map((playerName) => (
+                          <div key={playerName} className="text-red-400">
+                            {playerName}
+                          </div>
+                        ))
+                      }
+                   
+                    </div>
 
                   </div>
                 </div>
@@ -94,7 +115,7 @@ export default function RulesPanel({ onClose, store, setReady, readyFlag }: Rule
             className="mt-3 rounded-md border border-white/10 bg-background px-4 py-2 text-sm font-semibold text-text"
             type="button"
             onClick={() => {
-              setReady()
+              void setReady();
             }}
           >
             Fermer les règles

@@ -10,5 +10,6 @@ export type WordleState = {
   sharedWord: string | null;
   playersCompleted: number;
   totalPlayers: number;
+  playersReady: number;
   playerStates: WordlePlayerState[];
 };
