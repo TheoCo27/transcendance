@@ -55,9 +55,6 @@ export default function Navbar() {
         <Link className="flex items-center gap-3" to="/">
           <img src={Logo} className="h-10" alt="logo" />
         </Link>
-        <div className="hidden items-center gap-6 text-sm font-medium md:flex">
-          <Link to="/admin">Créer un quiz</Link>
-        </div>
 
         <div className="flex items-center gap-3">
           {currentUser !== null ? (

@@ -16,6 +16,13 @@ export default function Footer() {
             Accueil
           </Link>
 
+          <Link 
+            className="underline decoration-transparent underline-offset-4 transition hover:decoration-current focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+            to="/admin"
+            >
+              Créer un quiz
+            </Link>
+
           <Link
             className="underline decoration-transparent underline-offset-4 transition hover:decoration-current focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
             to="/politique-confidentialite"
