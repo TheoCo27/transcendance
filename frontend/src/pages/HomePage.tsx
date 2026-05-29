@@ -219,7 +219,7 @@ export default function HomePage() {
         await connectWs();
         emitWs("room:list");
       } catch {
-        // Ignore initial sync failures; user actions surface their own feedback.
+        // Ignore les erreures de la syncronisation initiale, les actions des utilisateurs génèrent leurs propres retours
       }
     };
 

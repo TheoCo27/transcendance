@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Card from "../components/Card";
+import Card from "../components/ui/Card";
 import Input from "../components/ui/input";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import { getUserFacingErrorMessage } from "../services/api";

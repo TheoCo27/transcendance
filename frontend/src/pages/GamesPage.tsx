@@ -1,9 +1,9 @@
 import { observer } from "mobx-react-lite";
 import { Link } from "react-router-dom";
 import QuizGameSection from "../components/room/QuizGameSection";
-import Section from "../components/section";
-import SectionHeader from "../components/section-header";
-import SectionLabel from "../components/section-label";
+import Section from "../components/ui/section";
+import SectionHeader from "../components/ui/section-header";
+import SectionLabel from "../components/ui/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
 import Guess from "../components/Wordle/Guess";

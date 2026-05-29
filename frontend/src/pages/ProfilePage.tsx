@@ -1,10 +1,10 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import Avatar from "../components/Avatar";
-import Section from "../components/section";
-import SectionHeader from "../components/section-header";
-import SectionLabel from "../components/section-label";
+import Avatar from "../components/ui/Avatar";
+import Section from "../components/ui/section";
+import SectionHeader from "../components/ui/section-header";
+import SectionLabel from "../components/ui/section-label";
 import Input from "../components/ui/input";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";

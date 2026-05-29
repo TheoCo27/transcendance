@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import Avatar from "../Avatar";
+import Avatar from "../ui/Avatar";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
 import RoomSectionHeader from "./room-section-header";

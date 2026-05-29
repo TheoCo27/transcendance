@@ -226,7 +226,7 @@ export default function FriendsPage() {
 
           if (syncFriendData) {
             void refreshFriendData().catch(() => {
-              // The conversation remains usable even if the side summary refresh fails.
+              // La conversiation reste accessible meme si le refresh de l'autre utilisateur fail
             });
           }
         }

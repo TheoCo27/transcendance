@@ -248,7 +248,7 @@ export function useGamesPage({ roomIdParam }: UseGamesPageOptions = {}) {
           setGameState(gs);
         })
         .catch(() => {
-          // Ignore failures.
+          // Ignore les erreurs
         });
     };
 
@@ -520,7 +520,7 @@ export function useGamesPage({ roomIdParam }: UseGamesPageOptions = {}) {
         });
       })
       .catch(() => {
-        // Local snapshot still keeps latest progress.
+        // La snapshot garde toujours la progession
       });
   }, [
     gameState?.status,

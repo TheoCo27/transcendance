@@ -1,6 +1,6 @@
-import Section from "../section";
-import SectionHeader from "../section-header";
-import SectionLabel from "../section-label";
+import Section from "../ui/section";
+import SectionHeader from "../ui/section-header";
+import SectionLabel from "../ui/section-label";
 import Input from "../ui/input";
 
 type QuizSetupCardProps = {

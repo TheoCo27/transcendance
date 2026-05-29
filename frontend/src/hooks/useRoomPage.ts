@@ -215,7 +215,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       lastConnectedUserId = user.id;
 
       void connectWs().catch(() => {
-        // Action-level flows already surface feedback.
+        // flux des actions fournissent deja un retour d'information.
       });
       return;
     }

@@ -17,7 +17,7 @@ export default observer(function ProgressBar({
         clearInterval(interval);
       }
       setNow(Math.floor(Date.now() / 1000));
-    }, 500); // update every 0.5s for smoother progress
+    }, 500); // update toutes les 0.5s pour progression lisse
     return () => {
       clearInterval(interval);
     };
@@ -34,6 +34,6 @@ export default observer(function ProgressBar({
       style={{ height: 26 }}
       className="w-[min(92vw,28rem)] mb-3 bg-blue-400 my-progress"
     />
-    //rem and vw, for size mesures
+    //rem et vw, pour messures (tailles)
   );
 });

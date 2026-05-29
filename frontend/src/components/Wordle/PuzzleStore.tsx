@@ -1,4 +1,4 @@
-//import words from json file
+//import mots depuis fichier json
 import five_words from "./wordle_5.json";
 import all_five_words from "./wordle_compare_5.json";
 
@@ -39,7 +39,7 @@ export type PuzzleStoreType = {
 
   keyGuessed: string[];
   keyInexact: string[];
-  AllGuessesMashed: string[]; // only used here (in PuzzleStore)
+  AllGuessesMashed: string[]; // seulement utilise ici (dans PuzzleStore)
 
   toast_validWord(guess: string): 1 | 0;
   toast_x_letters(): void;
@@ -87,7 +87,7 @@ export default {
 
   get submittedGuesses() {
     return this.guesses
-      .slice(0, this.currentGuess) // only sent words (from index 0 to, currentGuess)
+      .slice(0, this.currentGuess) // envoi seulement des mots (de l'index 0 => currentGuess)
       .filter(
         (g) =>
           typeof g === "string" &&
@@ -114,7 +114,7 @@ export default {
       .filter((letter) => this.AllGuessesMashed.includes(letter));
   },
 
-  //TIME
+  //TEMPS
   get timeStatus() {
     return (
       Math.floor(Date.now() / 1000) - this.start_time >= this.time_per_word
@@ -174,7 +174,7 @@ export default {
           ];
 
     this.word = resolvedWord;
-    this.guesses = new Array(this.maxAttempts).fill(""); //custom dynamic size, depending on rules settings
+    this.guesses = new Array(this.maxAttempts).fill(""); //taille dynamique, customisee en fonction des parametres dans room
     this.currentGuess = 0;
     this.ToastMessage = "";
     this.validWord = true;
@@ -201,7 +201,7 @@ export default {
       )
         this.toast_lost();
 
-      this.start_time = Date.now() / 1000; //RESET TIMER (takes current time)
+      this.start_time = Date.now() / 1000; //RESET LE TIMER (prend le temps actuel)
     }
   },
 
@@ -234,7 +234,7 @@ export default {
   },
 
   handleKeyboard(key: string) {
-    // good word or 6 trys and bad word, else its skipped
+    // mot correct ou 6 essais (setting de base) et mauvais mot, sinon skip
     if (this.won || this.lost) return;
 
     if (key === "Enter") {
@@ -255,7 +255,7 @@ export default {
   },
 
   handleKeyup(e: KeyboardEvent) {
-    // good word or 6 trys and bad word, else its skipped
+    // mot correct ou 6 essais (setting de base) et mauvais mot, sinon skip
     if (this.rulePannelClosed) {
       if (this.won || this.lost) return;
 

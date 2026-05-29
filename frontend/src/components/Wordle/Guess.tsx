@@ -19,7 +19,7 @@ const Guess = memo(function Guess({ checkerValidWord, lettersCount, flag, word, 
 	7: "grid-cols-7",
 	}[lettersCount] || "grid-cols-5";
 
-	// Pre-calculate colors for all positions
+	// Pre-calculation des couleurs au niveau de toutes les positions
 	const colors: string[] = new Array(lettersCount).fill('bg-gray-500');
 
 	// wordLetterCount prend toutes les lettres, avec leurs nombres de repetitions
@@ -34,13 +34,13 @@ const Guess = memo(function Guess({ checkerValidWord, lettersCount, flag, word, 
 	// et que il reste aumoins une fois cette lettre dans le word dont on recherche, couleure jaune
 
 	if (flag == true && isGuessed) {
-		// Count available letters in word
+		// Compte toutes les lettres avec leurs nombres de repetitions
 		const wordLetterCount: { [key: string]: number } = {};
 		for (let j = 0; j < word.length; j++) {
 			wordLetterCount[word[j]] = (wordLetterCount[word[j]] || 0) + 1;
 		}
 
-		// First pass: mark greens
+		// Premiere passe => Mots en vert
 		for (let j = 0; j < guess.length; j++) {
 			if (guess[j] === word[j]) {
 				colors[j] = 'bg-green-500';
@@ -48,7 +48,7 @@ const Guess = memo(function Guess({ checkerValidWord, lettersCount, flag, word, 
 			}
 		}
 
-		// Second pass: mark yellows
+		// Secoonde passe => Mots en Jaune
 		for (let j = 0; j < guess.length; j++) {
 			if (colors[j] === 'bg-gray-500' && wordLetterCount[guess[j]] > 0) {
 				colors[j] = 'bg-yellow-400';
@@ -57,7 +57,7 @@ const Guess = memo(function Guess({ checkerValidWord, lettersCount, flag, word, 
 		}
 	}
 	else if (!isGuessed)
-		colors.fill('bg-black'); //if neither, color is black
+		colors.fill('bg-black'); //si aucun des deux, la couleur est noire
 
   return (
   <div className={`grid ${gridColsClass} gap-1.5 mb-1.25 flex w-[min(92vw,22rem)]`}>

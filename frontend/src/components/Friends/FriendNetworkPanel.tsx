@@ -5,10 +5,10 @@ import type {
   FriendOverview,
   PrivateConversationSummary,
 } from "../../services/users";
-import Avatar from "../Avatar";
-import Section from "../section";
-import SectionHeader from "../section-header";
-import SectionLabel from "../section-label";
+import Avatar from "../ui/Avatar";
+import Section from "../ui/section";
+import SectionHeader from "../ui/section-header";
+import SectionLabel from "../ui/section-label";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import EmptyCard from "../ui/empty-card";

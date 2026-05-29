@@ -4,9 +4,9 @@ import {
   type SimpleQuizApiCategory,
   type SimpleQuizApiDifficulty,
 } from "../../services/simpleQuizApi";
-import Section from "../section";
-import SectionHeader from "../section-header";
-import SectionLabel from "../section-label";
+import Section from "../ui/section";
+import SectionHeader from "../ui/section-header";
+import SectionLabel from "../ui/section-label";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 

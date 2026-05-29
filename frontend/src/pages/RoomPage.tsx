@@ -23,18 +23,6 @@ import SecondaryButton from "../components/ui/SecondaryButton";
 import { useRoomPage } from "../hooks/useRoomPage";
 import type { Room } from "../services/rooms";
 
-function formatRemainingTime(
-  remainingMs: number | null,
-  fallbackMs: number | null,
-) {
-  if (remainingMs === null && fallbackMs === null) {
-    return "Illimite";
-  }
-
-  const source = remainingMs ?? fallbackMs ?? 0;
-  return `${Math.max(0, Math.ceil(source / 1000))} sec`;
-}
-
 function formatRoomStatus(status: Room["status"]) {
   if (status === "waiting") {
     return "En attente";
@@ -55,11 +43,6 @@ export default function RoomPage() {
     form,
     setForm,
     gameState,
-    currentQuestion,
-    remainingMs,
-    selectedAnswer,
-    setSelectedAnswer,
-    hasAnsweredCurrentQuestion,
     playerNames,
     playerAvatars,
     chatMessages,
@@ -79,13 +62,11 @@ export default function RoomPage() {
     isLoadingQuizzes,
     user,
     isSessionLoading,
-    refreshRoom,
     handleSave,
     joinRoom,
     leaveRoom,
     deleteRoom,
     startRoom,
-    submitAnswer,
     sendChatMessage,
     copyRoomLink,
   } = useRoomPage({ roomIdParam });
@@ -247,9 +228,6 @@ export default function RoomPage() {
                     <Copy className="size-4 rotate-180" />
                   )}
                 </PrimaryButton>
-                {/* <SecondaryButton onClick={() => void refreshRoom()}>
-                  Rafraichir
-                </SecondaryButton> */}
               </div>
             </div>
 
@@ -267,18 +245,6 @@ export default function RoomPage() {
                       `Joueur #${room.ownerUserId}`}
                   </p>
                 </div>
-
-                {/* <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-amber-200">
-                    Timer
-                  </p>
-                  <p className="mt-3 text-base font-medium text-white">
-                    {formatRemainingTime(
-                      gameState?.questionDurationMs ?? null,
-                      null,
-                    )}
-                  </p>
-                </div> */}
 
                 {!user && !isSessionLoading ? (
                   <div className="rounded-3xl border border-white/10 bg-white/5 p-4">

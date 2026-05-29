@@ -1,4 +1,4 @@
-import Avatar from "../Avatar";
+import Avatar from "../ui/Avatar";
 import RoomSectionHeader from "./room-section-header";
 import RoomSectionLabel from "./room-section-label";
 import type { LeaderboardEntry } from "./room-types";
