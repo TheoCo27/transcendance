@@ -170,7 +170,7 @@ export default {
       this.all_words_array_json.includes(sharedWord)
         ? sharedWord
         : this.words_array_json[
-            Math.floor(Math.random() * this.words_array_json.length)
+            Math.floor(Math.random() % this.words_array_json.length)
           ];
 
     this.word = resolvedWord;

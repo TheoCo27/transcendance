@@ -9,7 +9,13 @@ import { RoomJoinEventDto } from "@/modules/realtime/dto/room-join-event.dto";
 import { RoomLeaveDto } from "@/modules/realtime/dto/room-leave.dto";
 import { RoomStartDto } from "@/modules/realtime/dto/room-start.dto";
 import { RoomsService } from "@/modules/rooms/rooms.service";
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { RealtimeGameRuntimeService } from "./realtime-game-runtime.service";
 import { RealtimePresenceService } from "./realtime-presence.service";
@@ -28,6 +34,7 @@ const CHAT_MESSAGE_RATE_LIMITS = [
 @Injectable()
 export class RealtimeRoomEventsService {
   private readonly pendingDisconnectCleanup = new Map<number, NodeJS.Timeout>();
+  private readonly logger = new Logger(RealtimeRoomEventsService.name);
 
   constructor(
     private readonly roomsService: RoomsService,
@@ -88,7 +95,12 @@ export class RealtimeRoomEventsService {
 
     const timeout = setTimeout(() => {
       this.pendingDisconnectCleanup.delete(userId);
-      void this.runDisconnectCleanup(userId, server);
+      void this.runDisconnectCleanup(userId, server).catch((error) => {
+        this.logger.error(
+          `Unexpected error while cleaning up disconnected user ${userId}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      });
     }, DISCONNECT_GRACE_PERIOD_MS);
 
     this.pendingDisconnectCleanup.set(userId, timeout);
@@ -124,7 +136,21 @@ export class RealtimeRoomEventsService {
         continue;
       }
 
-      const updatedRoom = await this.roomsService.leave(room.id, userId);
+      let updatedRoom;
+
+      try {
+        updatedRoom = await this.roomsService.leave(room.id, userId);
+      } catch (error) {
+        if (
+          error instanceof NotFoundException ||
+          error instanceof ConflictException
+        ) {
+          continue;
+        }
+
+        throw error;
+      }
+
       hasRoomStateChanged = true;
 
       server.to(this.roomChannel(room.id)).emit(
