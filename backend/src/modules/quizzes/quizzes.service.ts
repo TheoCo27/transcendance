@@ -53,7 +53,7 @@ export class QuizzesService {
     const quiz = (await this.prisma.client.quiz.create({
       data: {
         title: dto.title.trim(),
-        questionDurationSec: dto.questionDurationSec ?? null,
+        questionDurationSec: 10,
         questions: {
           create: dto.questions.map((question, index) => {
             const answers = question.answers.map((answer) => answer.trim());

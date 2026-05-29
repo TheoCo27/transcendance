@@ -20,7 +20,6 @@ export type Quiz = {
 
 export type CreateQuizPayload = {
   title: string;
-  questionDurationSec?: 10 | 30 | null;
   questions: Array<{
     questionText: string;
     answers: string[];

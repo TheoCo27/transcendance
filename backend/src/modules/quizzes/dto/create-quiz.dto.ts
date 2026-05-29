@@ -7,7 +7,6 @@ import {
   ArrayMinSize,
   IsArray,
   IsInt,
-  IsIn,
   IsOptional,
   IsString,
   Max,
@@ -67,12 +66,6 @@ export class CreateQuizDto {
   @MinLength(2)
   @MaxLength(120)
   title: string;
-
-  // Duree standard d'une question pour ce quiz, ou `null` pour un mode libre.
-  @ApiPropertyOptional({ enum: [10, 30], example: 30, nullable: true })
-  @IsOptional()
-  @IsIn([10, 30, null])
-  questionDurationSec?: 10 | 30 | null;
 
   // Ensemble ordonne des questions qui composent le quiz.
   @ApiProperty({

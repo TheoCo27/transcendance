@@ -54,10 +54,19 @@ async function run() {
     }
     const ownerSession = await createAuthenticatedSession(WS_BASE_URL, "owner");
     const guestSession = await createAuthenticatedSession(WS_BASE_URL, "guest");
-    const outsiderSession = await createAuthenticatedSession(WS_BASE_URL, "outsider");
-    const owner = await connectAuthenticatedSocket(WS_NAMESPACE_URL, ownerSession.cookieHeader);
+    const outsiderSession = await createAuthenticatedSession(
+      WS_BASE_URL,
+      "outsider",
+    );
+    const owner = await connectAuthenticatedSocket(
+      WS_NAMESPACE_URL,
+      ownerSession.cookieHeader,
+    );
     pass(`Connexion WS OK (owner, userId=${owner.userId})`);
-    const guest = await connectAuthenticatedSocket(WS_NAMESPACE_URL, guestSession.cookieHeader);
+    const guest = await connectAuthenticatedSocket(
+      WS_NAMESPACE_URL,
+      guestSession.cookieHeader,
+    );
     pass(`Connexion WS OK (guest, userId=${guest.userId})`);
     const outsider = await connectAuthenticatedSocket(
       WS_NAMESPACE_URL,
@@ -78,7 +87,11 @@ async function run() {
     const quizId = await createSmokeQuiz(WS_BASE_URL);
 
     section("test websocket room lifecycle");
-    const roomId = await createRoomWithOwner(owner, ownerSession.cookieHeader, quizId);
+    const roomId = await createRoomWithOwner(
+      owner,
+      ownerSession.cookieHeader,
+      quizId,
+    );
     await assertOutsiderCannotChat(outsider, roomId);
     await joinRoomAsGuest(guest, roomId);
     const ownerMirror = await connectAuthenticatedSocket(
@@ -131,7 +144,6 @@ async function createSmokeQuiz(baseUrl) {
     },
     body: JSON.stringify({
       title: `WS Smoke Quiz ${Date.now()}`,
-      questionDurationSec: 10,
       questions: [
         {
           questionText: "Quelle est la couleur du ciel par temps clair ?",
@@ -142,7 +154,10 @@ async function createSmokeQuiz(baseUrl) {
       ],
     }),
   });
-  const payload = await assertHealthyJsonResponse(response, "Quiz creation endpoint");
+  const payload = await assertHealthyJsonResponse(
+    response,
+    "Quiz creation endpoint",
+  );
   const quizId = payload?.data?.id;
   if (typeof quizId !== "number") fail("Quiz creation payload missing quiz id");
   pass(`Quiz smoke cree (id=${quizId})`);
@@ -153,7 +168,8 @@ async function createRoomWithOwner(owner, ownerCookieHeader, quizId) {
   const roomCreatedPromise = waitForEvent(
     owner.socket,
     "room:created",
-    (payload) => payload?.success === true && typeof payload?.data?.id === "number",
+    (payload) =>
+      payload?.success === true && typeof payload?.data?.id === "number",
   );
   owner.socket.emit("room:create", {
     name: `WS Smoke ${Date.now()}`,
@@ -164,7 +180,8 @@ async function createRoomWithOwner(owner, ownerCookieHeader, quizId) {
   const roomCreated = await roomCreatedPromise;
   const roomId = roomCreated?.data?.id;
   if (typeof roomId !== "number") fail("room:created payload missing room id");
-  if (roomCreated?.data?.ownerUserId !== owner.userId) fail("room owner mismatch");
+  if (roomCreated?.data?.ownerUserId !== owner.userId)
+    fail("room owner mismatch");
   if (roomCreated?.data?.quizId !== quizId) fail("room quiz mismatch");
   await configureRoomForStart(WS_BASE_URL, roomId, ownerCookieHeader);
   pass(`Room creee par owner (id=${roomId})`);
@@ -197,7 +214,8 @@ async function assertOutsiderCannotChat(outsider, roomId) {
   const chatErrorPromise = waitForEvent(
     outsider.socket,
     "chat:message:error",
-    (payload) => payload?.success === false && payload?.error?.code === "UNAUTHORIZED",
+    (payload) =>
+      payload?.success === false && payload?.error?.code === "UNAUTHORIZED",
   );
   outsider.socket.emit("chat:message", {
     roomId,
@@ -223,7 +241,8 @@ async function assertGuestCannotStartRoom(guest, roomId) {
   const startErrorPromise = waitForEvent(
     guest.socket,
     "room:start:error",
-    (payload) => payload?.success === false && payload?.error?.code === "UNAUTHORIZED",
+    (payload) =>
+      payload?.success === false && payload?.error?.code === "UNAUTHORIZED",
   );
   guest.socket.emit("room:start", { roomId, userId: guest.userId });
   await startErrorPromise;
@@ -274,9 +293,14 @@ async function startRoomAsOwnerAndGetQuestion(owner, roomId) {
   await roomStartedPromise;
   const question = await questionPromise;
   const timer = await timerPromise;
-  if (typeof question?.data?.question?.text !== "string") fail("Missing question text");
-  if (!Array.isArray(question?.data?.question?.options)) fail("Missing question options");
-  if (typeof timer?.data?.remainingMs !== "number" || timer.data.remainingMs <= 0) {
+  if (typeof question?.data?.question?.text !== "string")
+    fail("Missing question text");
+  if (!Array.isArray(question?.data?.question?.options))
+    fail("Missing question options");
+  if (
+    typeof timer?.data?.remainingMs !== "number" ||
+    timer.data.remainingMs <= 0
+  ) {
     fail("Missing first timer tick");
   }
   pass("Start + question payload front-ready OK");
@@ -287,11 +311,18 @@ async function submitAndValidateAnswer(guest, roomId, questionId) {
   const answerPromise = waitForEvent(
     guest.socket,
     "game:answer:result",
-    (payload) => payload?.success === true && payload?.data?.userId === guest.userId,
+    (payload) =>
+      payload?.success === true && payload?.data?.userId === guest.userId,
   );
-  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 0 });
+  guest.socket.emit("game:answer", {
+    roomId,
+    userId: guest.userId,
+    questionId,
+    answerIndex: 0,
+  });
   const answer = await answerPromise;
-  if (typeof answer?.data?.userTotalScore !== "number") fail("Missing userTotalScore");
+  if (typeof answer?.data?.userTotalScore !== "number")
+    fail("Missing userTotalScore");
   pass("Reponse + scoring OK");
 }
 
@@ -299,9 +330,15 @@ async function assertDuplicateAnswerConflict(guest, roomId, questionId) {
   const duplicateErrorPromise = waitForEvent(
     guest.socket,
     "game:answer:error",
-    (payload) => payload?.success === false && payload?.error?.code === "CONFLICT",
+    (payload) =>
+      payload?.success === false && payload?.error?.code === "CONFLICT",
   );
-  guest.socket.emit("game:answer", { roomId, userId: guest.userId, questionId, answerIndex: 0 });
+  guest.socket.emit("game:answer", {
+    roomId,
+    userId: guest.userId,
+    questionId,
+    answerIndex: 0,
+  });
   await duplicateErrorPromise;
   pass("Anti double-reponse OK");
 }
@@ -373,12 +410,18 @@ async function assertScoresLeaderboard(baseUrl, userId, quizId) {
     fail("Quiz leaderboard payload is malformed");
   }
 
-  const quizEntry = quizLeaderboardPayload.data.find((item) => item?.userId === userId);
+  const quizEntry = quizLeaderboardPayload.data.find(
+    (item) => item?.userId === userId,
+  );
   if (!quizEntry) {
     fail("Missing finished game result in quiz leaderboard");
   }
 
-  if (quizEntry.score < 100 || quizEntry.wins < 1 || quizEntry.gamesPlayed < 1) {
+  if (
+    quizEntry.score < 100 ||
+    quizEntry.wins < 1 ||
+    quizEntry.gamesPlayed < 1
+  ) {
     fail("Quiz leaderboard did not aggregate finished game result");
   }
 
@@ -516,18 +559,24 @@ async function assertPrivateMessagingRestFlow(
     "Private conversation endpoint",
   );
 
-  if (!Array.isArray(conversationPayload?.data) || conversationPayload.data.length === 0) {
+  if (
+    !Array.isArray(conversationPayload?.data) ||
+    conversationPayload.data.length === 0
+  ) {
     fail("Private conversation endpoint returned no messages");
   }
 
-  const latestMessage = conversationPayload.data[conversationPayload.data.length - 1];
+  const latestMessage =
+    conversationPayload.data[conversationPayload.data.length - 1];
   if (
     latestMessage?.senderId !== ownerUserId ||
     latestMessage?.receiverId !== outsiderUserId ||
     latestMessage?.content !== dmContent ||
     typeof latestMessage?.readAt !== "string"
   ) {
-    fail("Private conversation payload did not mark the unread message as read");
+    fail(
+      "Private conversation payload did not mark the unread message as read",
+    );
   }
 
   const readConversationSummaries = await requestAuthenticatedJson(
@@ -545,7 +594,9 @@ async function assertPrivateMessagingRestFlow(
   );
 
   if (!readSummary || readSummary.unreadCount !== 0) {
-    fail("Conversation summary did not clear unread count after conversation fetch");
+    fail(
+      "Conversation summary did not clear unread count after conversation fetch",
+    );
   }
 
   pass("Amis + MP REST coherents avec la persistence DB");
@@ -623,26 +674,23 @@ async function assertDisconnectUpdatesPresenceStatus(
   friendSession,
   disconnectedUserId,
 ) {
-  await waitForCondition(
-    async () => {
-      const friendOverviewPayload = await requestAuthenticatedJson(
-        baseUrl,
-        `/users/me/friends`,
-        {
-          method: "GET",
-          cookieHeader: friendSession.cookieHeader,
-        },
-        "Friend overview endpoint for presence status",
-      );
+  await waitForCondition(async () => {
+    const friendOverviewPayload = await requestAuthenticatedJson(
+      baseUrl,
+      `/users/me/friends`,
+      {
+        method: "GET",
+        cookieHeader: friendSession.cookieHeader,
+      },
+      "Friend overview endpoint for presence status",
+    );
 
-      const disconnectedFriend = friendOverviewPayload?.data?.friends?.find(
-        (friend) => friend?.id === disconnectedUserId,
-      );
+    const disconnectedFriend = friendOverviewPayload?.data?.friends?.find(
+      (friend) => friend?.id === disconnectedUserId,
+    );
 
-      return disconnectedFriend?.status === "offline";
-    },
-    "Timed out waiting for the disconnected user to become offline",
-  );
+    return disconnectedFriend?.status === "offline";
+  }, "Timed out waiting for the disconnected user to become offline");
 
   pass("Disconnect owner -> statut offline visible pour les amis");
 }
@@ -679,7 +727,10 @@ async function assertWaitingRoomPersistsAfterLastDisconnect(
       payload?.success === true &&
       Array.isArray(payload?.data) &&
       payload.data.some(
-        (room) => room.id === roomId && Array.isArray(room.players) && room.players.length === 0,
+        (room) =>
+          room.id === roomId &&
+          Array.isArray(room.players) &&
+          room.players.length === 0,
       ),
   );
   safeDisconnect(guest.socket);
@@ -690,7 +741,9 @@ async function assertWaitingRoomPersistsAfterLastDisconnect(
     "Room endpoint after last disconnect",
   );
   if (roomPayload?.data?.id !== roomId) {
-    fail("Room endpoint did not return the expected room after last disconnect");
+    fail(
+      "Room endpoint did not return the expected room after last disconnect",
+    );
   }
 
   if (
@@ -698,13 +751,17 @@ async function assertWaitingRoomPersistsAfterLastDisconnect(
     !Array.isArray(roomPayload?.data?.players) ||
     roomPayload.data.players.length !== 0
   ) {
-    fail("Waiting room should stay available and empty after the last disconnect");
+    fail(
+      "Waiting room should stay available and empty after the last disconnect",
+    );
   }
 
   pass("Disconnect dernier joueur d'une waiting room -> room conservee");
 }
 
 run().catch((error) => {
-  console.error(`[KO] ${error instanceof Error ? error.message : "Unknown error"}`);
+  console.error(
+    `[KO] ${error instanceof Error ? error.message : "Unknown error"}`,
+  );
   process.exit(1);
 });

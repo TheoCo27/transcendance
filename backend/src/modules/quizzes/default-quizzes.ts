@@ -18,7 +18,7 @@ export const DEFAULT_QUIZZES: DefaultQuiz[] = [
   {
     id: 1001,
     title: "Harry Potter",
-    questionDurationSec: 30,
+    questionDurationSec: 10,
     questions: [
       {
         questionText: "Quelle maison accueille Harry à Poudlard ?",
@@ -65,7 +65,7 @@ export const DEFAULT_QUIZZES: DefaultQuiz[] = [
   {
     id: 1002,
     title: "Valorant",
-    questionDurationSec: 20,
+    questionDurationSec: 10,
     questions: [
       {
         questionText: "Quel agent peut poser une tourelle automatique ?",
@@ -108,7 +108,7 @@ export const DEFAULT_QUIZZES: DefaultQuiz[] = [
   {
     id: 1003,
     title: "Cinéma",
-    questionDurationSec: 25,
+    questionDurationSec: 10,
     questions: [
       {
         questionText: "Qui a réalisé “Titanic” ?",

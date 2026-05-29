@@ -28,7 +28,6 @@ export default function QuizAdminPage() {
   const [searchParams] = useSearchParams();
   const { user, isLoading } = useAuthSession();
   const [title, setTitle] = useState("");
-  const [rule, setRule] = useState<10 | 30>(10);
   const [draftQuestion, setDraftQuestion] =
     useState<DraftQuestion>(EMPTY_DRAFT);
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
@@ -116,7 +115,6 @@ export default function QuizAdminPage() {
     try {
       const createdQuiz = await createQuiz({
         title: title.trim(),
-        questionDurationSec: rule,
         questions: questions.map((question) => ({
           questionText: question.questionText,
           answers: question.options,
@@ -161,7 +159,7 @@ export default function QuizAdminPage() {
 
       <section className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
         <QuizSetupCard title={title} onTitleChange={setTitle} />
-        <QuizRulesCard value={rule} onChange={setRule} />
+        <QuizRulesCard />
       </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
