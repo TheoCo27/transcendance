@@ -8,8 +8,6 @@ ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 BREW_ROOT="${HOME}/.linuxbrew/Homebrew"
 BREW_BIN_DIR="${HOME}/.linuxbrew/bin"
 BREW_BIN="${BREW_BIN_DIR}/brew"
-ZSHRC_FILE="${HOME}/.zshrc"
-BREW_SHELLENV_LINE='eval "$($HOME/.linuxbrew/bin/brew shellenv)"'
 COMMENTED_ZSH_BLOCK_START="#if [ -t 1 ]; then"
 COMMENTED_ZSH_BLOCK_EXEC="#exec zsh"
 COMMENTED_ZSH_BLOCK_END="#fi"
@@ -124,9 +122,7 @@ ensure_compose_runtime() {
 }
 
 main() {
-	if [ -x "$HOME/.linuxbrew/bin/brew" ]; then
-		eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"
-	fi
+	ensure_shellenv_loaded
 	ensure_mkcert_ca
 	ensure_nodocker_marker
 	ensure_compose_runtime
