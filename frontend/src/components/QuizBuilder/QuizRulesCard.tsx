@@ -3,8 +3,8 @@ import SectionHeader from "../section-header";
 import SectionLabel from "../section-label";
 
 type QuizRulesCardProps = {
-  value: 10 | 30 | "unlimited";
-  onChange: (value: 10 | 30 | "unlimited") => void;
+  value: 10 | 30 ;
+  onChange: (value: 10 | 30) => void;
 };
 
 export default function QuizRulesCard({ value, onChange }: QuizRulesCardProps) {
@@ -30,12 +30,10 @@ export default function QuizRulesCard({ value, onChange }: QuizRulesCardProps) {
             onChange(Number(nextValue) as 10 | 30);
             return;
           }
-          onChange("unlimited");
         }}
       >
         <option value="10">10 sec</option>
         <option value="30">30 sec</option>
-        <option value="unlimited">Illimité</option>
       </select>
     </Section>
   );

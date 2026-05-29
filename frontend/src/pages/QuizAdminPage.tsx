@@ -28,7 +28,7 @@ export default function QuizAdminPage() {
   const [searchParams] = useSearchParams();
   const { user, isLoading } = useAuthSession();
   const [title, setTitle] = useState("");
-  const [rule, setRule] = useState<10 | 30 | "unlimited">(10);
+  const [rule, setRule] = useState<10 | 30>(10);
   const [draftQuestion, setDraftQuestion] =
     useState<DraftQuestion>(EMPTY_DRAFT);
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
@@ -116,7 +116,7 @@ export default function QuizAdminPage() {
     try {
       const createdQuiz = await createQuiz({
         title: title.trim(),
-        questionDurationSec: rule === "unlimited" ? null : rule,
+        questionDurationSec: rule,
         questions: questions.map((question) => ({
           questionText: question.questionText,
           answers: question.options,
