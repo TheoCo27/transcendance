@@ -220,7 +220,7 @@ export class RealtimeGameRuntimeService {
       const timeoutKey = this.wordleTimeoutKey(roomId, playerState.userId);
 
       let delayMs: number;
-      // If we have a turnStartedAt timestamp we can compute a more accurate remaining ms
+      // Si on a le turnStartedAt, on peux calculer le temps restant en ms avec une plus grande précision
       if (playerState.turnStartedAt) {
         const startedAtMs = Date.parse(playerState.turnStartedAt);
         if (Number.isFinite(startedAtMs)) {
@@ -234,12 +234,12 @@ export class RealtimeGameRuntimeService {
         delayMs = Math.max(0, remainingTurnsRaw) * timePerWordSeconds * 1000;
       }
 
-      // Log scheduling details for diagnostics
+      // Details des logs
       this.logger.debug(
         `Scheduling wordle timeout for room=${roomId} user=${playerState.userId} currentGuess=${currentGuess} maxAttempts=${maxAttempts} remainingTurnsRaw=${remainingTurnsRaw} timePerWordSeconds=${timePerWordSeconds} delayMs=${delayMs}`,
       );
 
-      // Ensure we don't schedule a negative or NaN timeout; use a small non-zero delay to re-evaluate
+      // Verifier que le timeout n'est pas < 0 ou Nan
       if (!Number.isFinite(delayMs) || delayMs < 0) {
         delayMs = 1000;
       }
@@ -449,7 +449,7 @@ export class RealtimeGameRuntimeService {
       return;
     }
 
-    // Sanity checks: ensure enough time has actually elapsed before finishing
+    // Check que le temps s'est bien ecoule normalement avant de finir
     try {
       const timePerWordSeconds = Math.max(1, Number(playerState.timePerWordSeconds) || 1);
       const maxAttempts = Math.max(1, this.getWordleMaxAttempts((room.gameConfig ?? {}) as Record<string, unknown>));
@@ -472,9 +472,9 @@ export class RealtimeGameRuntimeService {
         `Handling wordle timeout for room=${roomId} user=${userId} currentGuess=${currentGuess} maxAttempts=${maxAttempts} elapsedMs=${elapsedMs} expectedTotalMs=${expectedTotalMs}`,
       );
 
-      const graceMs = 500; // small slack to avoid races
+      const graceMs = 500; // eviter race conditions
       if (expectedTotalMs - elapsedMs > graceMs) {
-        // Not yet time to finish — reschedule properly and return.
+        // Pas encore finie => refresh le timer proprement
         this.logger.warn(
           `Wordle timeout fired too early for room=${roomId} user=${userId}; rescheduling. (remainingMs=${expectedTotalMs - elapsedMs})`,
         );
@@ -492,7 +492,7 @@ export class RealtimeGameRuntimeService {
       });
     } catch (err) {
       this.logger.error(`Error while handling wordle timeout for room=${roomId} user=${userId}: ${err}`);
-      // In error case, try to refresh timeouts so we don't leave the room in an inconsistent state
+      // En cas d'erreurs, essayer de refresh le timeout pour ne pas laisser la room dans un mauvais state
       await this.refreshWordleTimeout(roomId, server);
       return;
     }

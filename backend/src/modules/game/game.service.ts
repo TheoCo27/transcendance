@@ -105,8 +105,7 @@ export class GameService {
 
     const existing = this.roomStates.get(roomId);
     if (existing) {
-      // Keep last finished game result visible even if the room has been reset
-      // to waiting, until a new game actually starts.
+      // Laisse les resultats de la game affiche meme si la room a ete reset jusqu'a ce qu'une nouvelle game commence
       if (existing.status === "finished" && room.status === "waiting") {
         existing.totalQuestions = Math.max(existing.totalQuestions, 1);
         existing.startedAt = existing.startedAt ?? room.startedAt;

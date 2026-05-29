@@ -478,7 +478,7 @@ export class AuthService {
           }
         }
       } catch {
-        // Ignore invalid or expired cookies and still clear them.
+        // Ignore les cookies invalides ou expiree et les clear quand meme
       }
     }
 

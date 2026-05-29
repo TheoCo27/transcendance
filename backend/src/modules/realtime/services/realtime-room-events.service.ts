@@ -18,8 +18,7 @@ import { RealtimeResponseService } from "./realtime-response.service";
 import { RealtimeValidationService } from "./realtime-validation.service";
 
 const CHAT_HISTORY_LIMIT = 100;
-// Keep a long grace window so a page refresh does not drop a player from
-// the room before the websocket reconnects.
+// Garder une periode de grace assez eleve pour ne pas deconnecter au simple refresh
 const DISCONNECT_GRACE_PERIOD_MS = 10_000;
 const CHAT_MESSAGE_RATE_LIMITS = [
   { limit: 5, windowMs: 5_000 },
