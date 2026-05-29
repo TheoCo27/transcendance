@@ -157,7 +157,7 @@ User
 - `User.googleId`: `String?`, unique
 - `User.status`: enum `online | offline`
 - `Room.status`: enum `waiting | playing | finished`
-- `Room.gameType`: enum `wordle | memory | quiz`
+- `Room.gameType`: enum `wordle | quiz`
 - `Room.gameConfig`: `Json?`
 - `QuizQuestion.answers`: `Json`
 - `PlayerAnswer.pointsEarned`: `Int`
@@ -361,7 +361,7 @@ The breakdown below reflects the current role split used for the project present
 ## Known Limitations
 
 - The most complete gameplay path currently centers on the **quiz mode**.
-- The room configuration already supports multiple game presets (`quiz`, `wordle`, `memory`), but the production-ready real-time loop is currently strongest on the quiz path.
+- The room configuration already supports multiple game presets (`quiz`, `wordle`), but the production-ready real-time loop is currently strongest on the quiz path.
 - Room chat is persisted in PostgreSQL, but **private direct messages** are currently stored in a local runtime JSON store: `.runtime/private-messages-store.json`.
 - The **global leaderboard** is kept in memory during runtime, while **per-quiz leaderboards** are persisted in PostgreSQL.
 

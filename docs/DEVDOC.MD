@@ -94,7 +94,7 @@ Avant de rentrer module par module, il faut etre tres clair sur ce qui est **com
 - le classement global de `ScoresService` est garde en memoire,
 - le schema Prisma contient `Game`, `GameQuestion`, `PlayerAnswer` et `Leaderboard`,
   mais ces tables ne sont pas encore alimentees par les services actuels,
-- l'architecture multi-jeux existe avec `gameType = quiz | wordle | memory`,
+- l'architecture multi-jeux existe avec `gameType = quiz | wordle`,
   mais **le gameplay complet observe dans ce depot est celui du quiz**.
 
 
@@ -1518,14 +1518,12 @@ Frontend:
 
 #### Types et structures de donnees importants
 
-- `gameType: "wordle" | "memory" | "quiz"`
+- `gameType: "wordle" | "quiz"`
 - `gameConfig: Record<string, unknown> | null`
 - `RoomConfigForm`
 - config Wordle:
   - `wordLength`
   - `maxAttempts`
-- config Memory:
-  - `pairsCount`
 
 #### Librairies et outils utilises
 
@@ -1540,7 +1538,7 @@ Frontend:
 3. Construire un formulaire front capable de changer de type de jeu.
 4. Valider la configuration cote backend avant `start()`.
 5. Garder `quiz` comme branche gameplay complete.
-6. Prevoir des schemas de config differents pour `wordle` et `memory`.
+6. Prevoir des schemas de config differents pour `wordle`.
 
 ### Fichiers et fonctions importants
 
@@ -1549,7 +1547,6 @@ Frontend:
   - `assertStartConfiguration()` valide les prerequis avant lancement:
     - `quiz` exige un `quizId`,
     - `wordle` exige `wordLength` et `maxAttempts`,
-    - `memory` exige `pairsCount`.
 
 - `frontend/src/hooks/useRoomPage.ts`
   - `buildFormFromRoom()` rehydrate le formulaire a partir de `gameType` et `gameConfig`.
@@ -1559,11 +1556,11 @@ Frontend:
 
 - dans ce depot, le vrai module "add another game" est surtout une **architecture extensible de room multi-jeux**;
 - `quiz` est complet;
-- `wordle` et `memory` sont deja modeles dans:
+- `wordle` est deja modele dans:
   - le schema,
   - la validation,
   - la configuration UI;
-- si on te pousse, ne dis pas que `wordle` ou `memory` ont deja un moteur de partie aussi complet que le quiz: ce n'est pas ce que montre le code actuel.
+- si on te pousse, ne dis pas que `wordle` est deja un moteur de partie aussi complet que le quiz: ce n'est pas ce que montre le code actuel.
 
 ---
 
