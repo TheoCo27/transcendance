@@ -32,7 +32,7 @@ export type Room = {
   ownerUserId: number;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
-  gameType: "wordle" | "quiz" | null;
+  gameType: "quiz" | null;
   gameConfig: Record<string, unknown> | null;
   quizId: number | null;
   rounds: number;
@@ -657,7 +657,7 @@ export class RoomsService {
     name: string;
     ownerId: number;
     status: "waiting" | "playing" | "finished";
-    gameType: "wordle" | "memory" | "quiz" | null;
+    gameType: "quiz" | null;
     gameConfig: Prisma.JsonValue | null;
     isPrivate: boolean;
     password: string | null;
@@ -674,10 +674,7 @@ export class RoomsService {
       name: room.name,
       ownerUserId: room.ownerId,
       status: room.status,
-      gameType:
-        room.gameType === "wordle" || room.gameType === "quiz"
-          ? room.gameType
-          : null,
+      gameType: room.gameType === "quiz" ? "quiz" : null,
       gameConfig: this.toObjectRecord(room.gameConfig),
       isPrivate: room.isPrivate,
       quizId: transientConfig?.quizId ?? room.games[0]?.quizId ?? null,
@@ -696,7 +693,7 @@ export class RoomsService {
 
   // Verifie que la config de jeu permet un demarrage.
   private assertStartConfiguration(room: {
-    gameType: "wordle" | "memory" | "quiz" | null;
+    gameType: "quiz" | null;
     gameConfig: Prisma.JsonValue | null;
     quizId: number | null;
   }): void {
@@ -716,43 +713,7 @@ export class RoomsService {
       return;
     }
 
-    const gameConfig = this.toObjectRecord(room.gameConfig);
-    if (!gameConfig) {
-      throw new ConflictException(
-        "La configuration du jeu doit etre un objet valide avant de pouvoir demarrer la partie",
-      );
-    }
-
-    if (room.gameType === "wordle") {
-      const wordLength = gameConfig.wordLength;
-      const maxAttempts = gameConfig.maxAttempts;
-
-      if (
-        typeof wordLength !== "number" ||
-        !Number.isInteger(wordLength) ||
-        wordLength < 5 ||
-        wordLength > 7
-      ) {
-        throw new ConflictException(
-          "La configuration de Wordle necessite un mot de longueur entre 5 et 7 caracteres",
-        );
-      }
-
-      if (
-        typeof maxAttempts !== "number" ||
-        !Number.isInteger(maxAttempts) ||
-        maxAttempts < 3 ||
-        maxAttempts > 8
-      ) {
-        throw new ConflictException(
-          "La configuration de Wordle necessite un nombre de tentatives entre 3 et 8",
-        );
-      }
-
-      return;
-    }
-
-    throw new ConflictException("Ce type de jeu n'est plus pris en charge");
+    throw new ConflictException("Seul le mode Quiz est pris en charge");
   }
 
   // Convertit un JSON Prisma en objet exploitable.

@@ -184,17 +184,6 @@ export class RealtimeGateway
     });
   }
 
-  // Traite la fin d'une partie Wordle.
-  @SubscribeMessage("game:finish")
-  async handleGameFinish(
-    @MessageBody() payload: unknown,
-    @ConnectedSocket() client: Socket,
-  ): Promise<void> {
-    await this.runSafely(client, "game:finish:error", async () => {
-      await this.gameEvents.handleGameFinish(payload, client, this.server);
-    });
-  }
-
   // Traite l'envoi d'un message de chat temps reel.
   @SubscribeMessage("chat:message")
   async handleChatMessage(

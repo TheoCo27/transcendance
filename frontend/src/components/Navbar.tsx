@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { logout } from "../services/auth";
-import Logo from "./img/transcendence_logo.png";
 import PrimaryButton from "./ui/PrimaryButton";
 
 export default function Navbar() {
@@ -53,7 +52,9 @@ export default function Navbar() {
     <nav className="sticky top-0 z-20 border-b border-slate-900/8 bg-surface text-text backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 md:px-10">
         <Link className="flex items-center gap-3" to="/">
-          <img src={Logo} className="h-10" alt="logo" />
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-bg text-sm font-extrabold tracking-[0.2em] text-text-muted">
+            QZ
+          </span>
         </Link>
         <div className="hidden items-center gap-6 text-sm font-medium md:flex">
           <Link to="/admin">Créer un quiz</Link>

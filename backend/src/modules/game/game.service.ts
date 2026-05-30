@@ -9,8 +9,6 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { SubmitAnswerDto } from "./dto/submit-answer.dto";
-import { pickWordleWord } from "./wordle-word-bank";
-import { WordlePlayerState, WordleState } from "./types/wordle.types";
 
 export type GameLeaderboardEntry = {
   userId: number;
@@ -33,7 +31,6 @@ export type GameState = {
   winnerUserId: number | null;
   startedAt: string | null;
   endedAt: string | null;
-  wordle: WordleState | null;
   updatedAt: string;
 };
 
@@ -59,10 +56,6 @@ type RoomRuntime = {
   scoresByUser: Map<number, number>;
   scoresAtGameStart: Map<number, number>;
   totalAnswers: number;
-  wordle: {
-    sharedWord: string | null;
-    playerStates: Map<number, WordlePlayerState>;
-  };
 };
 
 type QuestionEntry = PublicQuestion & {
@@ -84,7 +77,7 @@ export class GameService {
   constructor(
     private readonly roomsService: RoomsService,
     private readonly quizzesService: QuizzesService,
-  ) { }
+  ) {}
 
   // Retourne l'etat courant de la partie pour une room.
   async getRoomState(roomId: number): Promise<GameState> {
@@ -97,11 +90,6 @@ export class GameService {
     }
 
     this.syncScoresWithPlayers(playerIds, runtime);
-    this.syncWordlePlayers(playerIds, runtime);
-    const wordleState =
-      room.gameType === "wordle"
-        ? this.buildWordleState(runtime, playerIds)
-        : null;
 
     const existing = this.roomStates.get(roomId);
     if (existing) {
@@ -113,7 +101,6 @@ export class GameService {
         existing.endedAt = existing.endedAt ?? room.finishedAt;
         existing.leaderboard = this.buildLeaderboard(runtime);
         existing.winnerUserId = this.determineWinner(runtime);
-        existing.wordle = wordleState;
         return existing;
       }
 
@@ -125,7 +112,6 @@ export class GameService {
         existing.status === "finished"
           ? this.buildLeaderboard(runtime)
           : this.buildFrozenLeaderboard(runtime);
-      existing.wordle = wordleState;
       if (existing.status === "finished" && existing.winnerUserId === null) {
         existing.winnerUserId = this.determineWinner(runtime);
       }
@@ -153,11 +139,10 @@ export class GameService {
       answersForCurrentQuestion: 0,
       totalAnswers: runtime.totalAnswers,
       leaderboard,
-  winnerUserId:
-    room.status === "finished" ? this.determineWinner(runtime) : null,
+      winnerUserId:
+        room.status === "finished" ? this.determineWinner(runtime) : null,
       startedAt: room.startedAt,
       endedAt: room.finishedAt,
-      wordle: wordleState,
       updatedAt: new Date().toISOString(),
     };
 
@@ -198,52 +183,6 @@ export class GameService {
     state.winnerUserId = null;
     state.startedAt = room.startedAt ?? now;
     state.endedAt = null;
-    state.updatedAt = now;
-
-    return state;
-  }
-
-  // Initialise une manche Wordle partagee pour tous les joueurs de la room.
-  async startWordleGame(roomId: number): Promise<GameState> {
-    const room = await this.roomsService.getById(roomId);
-    const runtime = this.getRoomRuntime(roomId);
-    const state = await this.getRoomState(roomId);
-    const { wordLength } = this.getWordleConfig(room.gameConfig);
-    const playerIds = room.players.map((player) => player.userId);
-    const now = new Date().toISOString();
-
-    runtime.answeredByQuestion.clear();
-    runtime.totalAnswers = 0;
-    runtime.wordle.sharedWord = pickWordleWord(wordLength);
-    runtime.wordle.playerStates = new Map(
-      playerIds.map((userId) => [
-        userId,
-        {
-          userId,
-          finished: false,
-          won: null,
-          attemptsUsed: null,
-          completedAt: null,
-        } satisfies WordlePlayerState,
-      ]),
-    );
-    this.syncScoresWithPlayers(playerIds, runtime);
-    runtime.scoresAtGameStart = new Map(runtime.scoresByUser);
-
-    state.status = "playing";
-    state.currentQuestionId = null;
-    state.currentQuestionNumber = 0;
-    state.totalQuestions = 1;
-    state.questionDurationMs = null;
-    state.questionStartedAt = null;
-    state.questionEndsAt = null;
-    state.answersForCurrentQuestion = 0;
-    state.totalAnswers = 0;
-    state.leaderboard = this.buildFrozenLeaderboard(runtime);
-    state.winnerUserId = null;
-    state.startedAt = room.startedAt ?? now;
-    state.endedAt = null;
-    state.wordle = this.buildWordleState(runtime, playerIds);
     state.updatedAt = now;
 
     return state;
@@ -354,23 +293,18 @@ export class GameService {
   async finishGame(roomId: number): Promise<GameState> {
     const room = await this.roomsService.getById(roomId);
     const state = await this.getRoomState(roomId);
-    const playerIds = room.players.map((player) => player.userId);
+    const runtime = this.getRoomRuntime(roomId);
 
     state.status = "finished";
-    const runtime = this.getRoomRuntime(roomId);
     state.leaderboard = this.buildLeaderboard(runtime);
     state.winnerUserId = this.determineWinner(runtime);
     state.endedAt = room.finishedAt ?? new Date().toISOString();
-    state.wordle =
-      room.gameType === "wordle"
-        ? this.buildWordleState(this.getRoomRuntime(roomId), playerIds)
-        : null;
     state.updatedAt = state.endedAt;
 
     return state;
   }
 
-  // Termine une partie pour Wordle puis remet la room en attente d'une nouvelle manche.
+  // Termine une partie puis remet la room en attente d'une nouvelle manche.
   async finishRoomGame(roomId: number): Promise<GameState> {
     const room = await this.roomsService.getById(roomId);
     if (room.status === "finished") {
@@ -399,7 +333,9 @@ export class GameService {
     const nextScore = (runtime.scoresByUser.get(userId) ?? 0) + scoreDelta;
     runtime.scoresByUser.set(userId, nextScore);
     this.syncScoresWithPlayers(
-      (await this.roomsService.getById(roomId)).players.map((player) => player.userId),
+      (await this.roomsService.getById(roomId)).players.map(
+        (player) => player.userId,
+      ),
       runtime,
     );
 
@@ -465,93 +401,6 @@ export class GameService {
     return answeredUsers.size >= room.players.length;
   }
 
-  // Enregistre la fin de partie d'un joueur Wordle sans terminer la room.
-  async recordWordlePlayerFinish(params: {
-    roomId: number;
-    userId: number;
-    won: boolean;
-    attemptsUsed: number;
-  }): Promise<{
-    gameState: GameState;
-    leaderboard: GameLeaderboardEntry[];
-    allPlayersFinished: boolean;
-  }> {
-    const room = await this.roomsService.getById(params.roomId);
-    if (room.gameType !== "wordle") {
-      throw new ConflictException("Cette room n'utilise pas Wordle");
-    }
-
-    const { maxAttempts } = this.getWordleConfig(room.gameConfig);
-    if (
-      !Number.isInteger(params.attemptsUsed) ||
-      params.attemptsUsed < 1 ||
-      params.attemptsUsed > maxAttempts
-    ) {
-      throw new BadRequestException(
-        "Le nombre de tentatives utilisees est invalide pour cette partie Wordle",
-      );
-    }
-
-    const runtime = this.getRoomRuntime(params.roomId);
-    const playerIds = room.players.map((player) => player.userId);
-    this.syncScoresWithPlayers(playerIds, runtime);
-    this.syncWordlePlayers(playerIds, runtime);
-
-    const existingState = runtime.wordle.playerStates.get(params.userId);
-    if (!existingState) {
-      throw new UnauthorizedException("User is not in this room");
-    }
-
-    if (!runtime.wordle.sharedWord) {
-      throw new ConflictException("La manche Wordle n'est pas initialisee");
-    }
-
-    if (!existingState.finished) {
-      const completedAt = new Date().toISOString();
-      runtime.wordle.playerStates.set(params.userId, {
-        userId: params.userId,
-        finished: true,
-        won: params.won,
-        attemptsUsed: params.attemptsUsed,
-        completedAt,
-      });
-
-      const scoreDelta = params.won
-        ? Math.max(1, maxAttempts - params.attemptsUsed + 1) * 100
-        : 0;
-      if (scoreDelta > 0) {
-        runtime.scoresByUser.set(
-          params.userId,
-          (runtime.scoresByUser.get(params.userId) ?? 0) + scoreDelta,
-        );
-      }
-    }
-
-    const gameState = await this.getRoomState(params.roomId);
-    gameState.updatedAt = new Date().toISOString();
-    gameState.leaderboard = this.buildFrozenLeaderboard(runtime);
-    gameState.wordle = this.buildWordleState(runtime, playerIds);
-
-    return {
-      gameState,
-      leaderboard: this.buildLeaderboard(runtime),
-      allPlayersFinished: this.haveAllWordlePlayersFinished(runtime, playerIds),
-    };
-  }
-
-  // Verifie si tous les joueurs restants d'une room Wordle ont termine.
-  async areAllWordlePlayersFinished(roomId: number): Promise<boolean> {
-    const room = await this.roomsService.getById(roomId);
-    if (room.gameType !== "wordle") {
-      return false;
-    }
-
-    const runtime = this.getRoomRuntime(roomId);
-    const playerIds = room.players.map((player) => player.userId);
-    this.syncWordlePlayers(playerIds, runtime);
-    return this.haveAllWordlePlayersFinished(runtime, playerIds);
-  }
-
   // Vide tous les caches runtime d'une room.
   clearRoomState(roomId: number): void {
     this.roomStates.delete(roomId);
@@ -571,10 +420,6 @@ export class GameService {
       scoresByUser: new Map<number, number>(),
       scoresAtGameStart: new Map<number, number>(),
       totalAnswers: 0,
-      wordle: {
-        sharedWord: null,
-        playerStates: new Map<number, WordlePlayerState>(),
-      },
     };
 
     this.roomRuntime.set(roomId, runtime);
@@ -588,13 +433,6 @@ export class GameService {
       .sort(
         (left, right) => right.score - left.score || left.userId - right.userId,
       );
-  }
-
-  // Construit un classement masque sans reveler les scores.
-  private buildMaskedLeaderboard(runtime: RoomRuntime): GameLeaderboardEntry[] {
-    return [...runtime.scoresByUser.keys()]
-      .sort((left, right) => left - right)
-      .map((userId) => ({ userId, score: 0 }));
   }
 
   // Fige le classement visible sur les scores du debut de partie.
@@ -611,8 +449,7 @@ export class GameService {
       );
   }
 
-  // Recupere l'ID du Winner
-
+  // Recupere l'ID du winner.
   private determineWinner(runtime: RoomRuntime): number | null {
     let bestUserId: number | null = null;
     let bestDelta = 0;
@@ -637,7 +474,6 @@ export class GameService {
     return bestDelta > 0 ? bestUserId : null;
   }
 
-
   // Synchronise la map des scores avec les joueurs presents.
   private syncScoresWithPlayers(
     playerIds: number[],
@@ -656,106 +492,6 @@ export class GameService {
         runtime.scoresByUser.delete(userId);
       }
     }
-  }
-
-  // Synchronise les etats Wordle avec les joueurs encore presents dans la room.
-  private syncWordlePlayers(playerIds: number[], runtime: RoomRuntime): void {
-    const playerIdSet = new Set(playerIds);
-
-    for (const playerId of playerIds) {
-      if (!runtime.wordle.playerStates.has(playerId)) {
-        runtime.wordle.playerStates.set(playerId, {
-          userId: playerId,
-          finished: false,
-          won: null,
-          attemptsUsed: null,
-          completedAt: null,
-        });
-      }
-    }
-
-    for (const userId of [...runtime.wordle.playerStates.keys()]) {
-      if (!playerIdSet.has(userId)) {
-        runtime.wordle.playerStates.delete(userId);
-      }
-    }
-  }
-
-  // Construit l'etat public Wordle visible par les clients.
-  private buildWordleState(
-    runtime: RoomRuntime,
-    playerIds: number[],
-  ): WordleState {
-    const playerStates = playerIds
-      .map(
-        (userId) =>
-          runtime.wordle.playerStates.get(userId) ?? {
-            userId,
-            finished: false,
-            won: null,
-            attemptsUsed: null,
-            completedAt: null,
-          },
-      )
-      .sort((left, right) => left.userId - right.userId);
-
-    return {
-      sharedWord: runtime.wordle.sharedWord,
-      playersCompleted: playerStates.filter((player) => player.finished).length,
-      totalPlayers: playerIds.length,
-      playerStates,
-    };
-  }
-
-  // Lit et valide la configuration Wordle de la room.
-  private getWordleConfig(gameConfig: Record<string, unknown> | null): {
-    wordLength: number;
-    maxAttempts: number;
-  } {
-    if (!gameConfig) {
-      throw new ConflictException("La configuration Wordle est absente");
-    }
-
-    const wordLength = gameConfig.wordLength;
-    const maxAttempts = gameConfig.maxAttempts;
-
-    if (
-      typeof wordLength !== "number" ||
-      !Number.isInteger(wordLength) ||
-      wordLength < 5 ||
-      wordLength > 7
-    ) {
-      throw new ConflictException(
-        "La configuration de Wordle necessite un mot de longueur entre 5 et 7 caracteres",
-      );
-    }
-
-    if (
-      typeof maxAttempts !== "number" ||
-      !Number.isInteger(maxAttempts) ||
-      maxAttempts < 3 ||
-      maxAttempts > 8
-    ) {
-      throw new ConflictException(
-        "La configuration de Wordle necessite un nombre de tentatives entre 3 et 8",
-      );
-    }
-
-    return { wordLength, maxAttempts };
-  }
-
-  // Indique si tous les joueurs actifs ont termine leur manche Wordle.
-  private haveAllWordlePlayersFinished(
-    runtime: RoomRuntime,
-    playerIds: number[],
-  ): boolean {
-    if (playerIds.length === 0) {
-      return false;
-    }
-
-    return playerIds.every(
-      (userId) => runtime.wordle.playerStates.get(userId)?.finished === true,
-    );
   }
 
   // Charge et met en cache les questions liees a la room.

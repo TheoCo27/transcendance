@@ -141,12 +141,12 @@ async function createRoomWithOwner(owner, ownerCookieHeader, quizId) {
     fail("room:created payload missing room id");
   }
 
-  await configureRoomForStart(roomId, ownerCookieHeader);
+  await configureRoomForStart(roomId, ownerCookieHeader, quizId);
   pass(`Room creee (id=${roomId})`);
   return roomId;
 }
 
-async function configureRoomForStart(roomId, cookieHeader) {
+async function configureRoomForStart(roomId, cookieHeader, quizId) {
   const response = await fetch(`${WS_BASE_URL}/rooms/${roomId}`, {
     method: "PATCH",
     headers: {
@@ -154,21 +154,14 @@ async function configureRoomForStart(roomId, cookieHeader) {
       Cookie: cookieHeader,
     },
     body: JSON.stringify({
-      gameType: "wordle",
-      gameConfig: {
-        wordLength: 5,
-        maxAttempts: 6,
-      },
+      gameType: "quiz",
+      quizId,
     }),
   });
 
   const payload = await assertHealthyJsonResponse(response, "Room configuration");
 
-  if (
-    payload?.data?.gameType !== "wordle" ||
-    payload?.data?.gameConfig?.wordLength !== 5 ||
-    payload?.data?.gameConfig?.maxAttempts !== 6
-  ) {
+  if (payload?.data?.gameType !== "quiz" || payload?.data?.quizId !== quizId) {
     fail("Room configuration payload is malformed");
   }
 }

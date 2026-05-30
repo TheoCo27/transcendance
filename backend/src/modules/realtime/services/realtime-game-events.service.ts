@@ -1,5 +1,4 @@
 // Ce fichier gere les evenements WebSocket lies aux reponses de jeu.
-import { GameFinishEventDto } from "@/modules/realtime/dto/game-finish-event.dto";
 import { SubmitAnswerDto } from "@/modules/game/dto/submit-answer.dto";
 import { GameService } from "@/modules/game/game.service";
 import { RoomsService } from "@/modules/rooms/rooms.service";
@@ -69,53 +68,6 @@ export class RealtimeGameEventsService {
         server,
       );
     }
-  }
-
-  // Termine une partie Wordle et diffuse son etat final.
-  async handleGameFinish(
-    rawPayload: unknown,
-    client: Socket,
-    server: Server,
-  ): Promise<void> {
-    const payload = this.validation.validatePayload(
-      GameFinishEventDto,
-      rawPayload,
-    );
-    const userId = this.presence.resolveSocketUser(client.id);
-
-    const room = await this.roomsService.getById(payload.roomId);
-    if (room.gameType !== "wordle") {
-      throw new ConflictException("Cet evenement est reserve aux parties Wordle");
-    }
-    if (!room.players.some((player) => player.userId === userId)) {
-      throw new UnauthorizedException("User is not in this room");
-    }
-
-    if (room.status === "finished") {
-      return;
-    }
-    if (room.status !== "playing") {
-      throw new ConflictException("La partie Wordle n'est pas en cours");
-    }
-
-    const result = await this.gameService.recordWordlePlayerFinish({
-      roomId: payload.roomId,
-      userId,
-      won: payload.won,
-      attemptsUsed: payload.attemptsUsed,
-    });
-    const channel = this.roomChannel(payload.roomId);
-
-    server.to(channel).emit("game:state", this.response.ok(result.gameState));
-
-    if (result.allPlayersFinished) {
-      await this.gameRuntime.completeWordleIfReady(payload.roomId, server);
-      return;
-    }
-
-    server
-      .to(channel)
-      .emit("game:leaderboard", this.response.ok(result.leaderboard));
   }
 
   // Genere le nom de canal Socket.IO d'une room.

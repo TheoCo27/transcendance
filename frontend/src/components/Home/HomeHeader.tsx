@@ -158,9 +158,8 @@ export default function HomeHeader({
         Joue a des mini-jeux en solo ou multijoueur avec tes amis
       </h1>
       <p className="mt-4 max-w-3xl leading-relaxed text-text-muted">
-        Lance une partie de Wordle ou de quiz, participe à des jeux de mots
-        rapides, discute avec les autres joueurs via le chat de room et grimpe
-        dans le classement.
+        Lance une partie de quiz, discute avec les autres joueurs via le chat
+        de room et grimpe dans le classement.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
         <PrimaryButton

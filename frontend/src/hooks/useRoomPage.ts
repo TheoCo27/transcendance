@@ -76,9 +76,7 @@ let lastConnectedUserId: number | null = null;
 const DEFAULT_FORM: RoomConfigForm = {
   name: "",
   quizId: null,
-  gameType: "wordle",
-  wordleWordLength: 5,
-  wordleMaxAttempts: 6,
+  gameType: "quiz",
 };
 
 type UseRoomPageOptions = {
@@ -123,16 +121,6 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   const roomLinkCopiedTimeoutRef = useRef<number | null>(null);
   const previousUserIdRef = useRef<number | null>(null);
   const requestedChatHistoryKeyRef = useRef<string | null>(null);
-  const cameFromWordleResult = Boolean(
-    location.state &&
-    typeof location.state === "object" &&
-    (location.state as { fromWordleResult?: boolean }).fromWordleResult,
-  );
-  const cameFromWordleTimeout = Boolean(
-    location.state &&
-    typeof location.state === "object" &&
-    (location.state as { fromWordleTimeout?: boolean }).fromWordleTimeout,
-  );
   const requestedQuizSelectionId = useMemo(() => {
     const rawQuizId = new URLSearchParams(location.search).get("selectQuizId");
     const parsedQuizId = Number(rawQuizId);
@@ -248,9 +236,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
     if (
       room?.status === "playing" &&
       Number.isFinite(roomId) &&
-      roomId > 0 &&
-      !cameFromWordleResult &&
-      !cameFromWordleTimeout
+      roomId > 0
     ) {
       if (isSessionLoading) return;
       if (!user) {
@@ -267,8 +253,6 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
       navigate(`/games/${roomId}`);
     }
   }, [
-    cameFromWordleResult,
-    cameFromWordleTimeout,
     isSessionLoading,
     navigate,
     room?.players,
@@ -749,19 +733,10 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
   const saveCurrentForm = useCallback(async () => {
     if (!room) return null;
 
-    const nextConfig =
-      form.gameType === "wordle"
-        ? {
-            wordLength: form.wordleWordLength,
-            maxAttempts: form.wordleMaxAttempts,
-          }
-        : undefined;
-
     const updatedRoom = await updateRoom(room.id, {
       name: form.name.trim(),
       quizId: form.quizId,
       gameType: form.gameType,
-      gameConfig: nextConfig,
     });
 
     setRoom(updatedRoom);
@@ -879,9 +854,7 @@ export function useRoomPage({ roomIdParam }: UseRoomPageOptions) {
         const hasUnsavedChanges =
           persistedForm.name.trim() !== form.name.trim() ||
           persistedForm.gameType !== form.gameType ||
-          persistedForm.quizId !== form.quizId ||
-          persistedForm.wordleWordLength !== form.wordleWordLength ||
-          persistedForm.wordleMaxAttempts !== form.wordleMaxAttempts;
+          persistedForm.quizId !== form.quizId;
 
         if (hasUnsavedChanges) {
           setIsSaving(true);
@@ -1040,36 +1013,9 @@ function getRoomClosedReasonMessage(reason: string): string {
 }
 
 function buildFormFromRoom(room: Room): RoomConfigForm {
-  const gameType =
-    room.gameType === "quiz"
-      ? "quiz"
-      : room.gameType === "wordle"
-        ? "wordle"
-        : room.quizId
-          ? "quiz"
-          : "wordle";
-  const config =
-    room.gameConfig && typeof room.gameConfig === "object"
-      ? room.gameConfig
-      : {};
-
-  const wordLengthRaw = (config as { wordLength?: unknown }).wordLength;
-  const maxAttemptsRaw = (config as { maxAttempts?: unknown }).maxAttempts;
-
-  const wordleWordLength =
-    typeof wordLengthRaw === "number" && Number.isInteger(wordLengthRaw)
-      ? wordLengthRaw
-      : 5;
-  const wordleMaxAttempts =
-    typeof maxAttemptsRaw === "number" && Number.isInteger(maxAttemptsRaw)
-      ? maxAttemptsRaw
-      : 6;
-
   return {
     name: room.name,
     quizId: room.quizId,
-    gameType,
-    wordleWordLength,
-    wordleMaxAttempts,
+    gameType: "quiz",
   };
 }

@@ -749,7 +749,6 @@ export class AuthService {
 
     return `${baseUsername}-${randomBytes(3).toString("hex")}`;
   }
-
   // Retrouve ou cree l'utilisateur lie a un compte Google.
   private async findOrCreateGoogleUser(
     googleUser: VerifiedGoogleIdTokenPayload,

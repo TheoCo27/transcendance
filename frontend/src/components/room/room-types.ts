@@ -1,9 +1,7 @@
 export type RoomConfigForm = {
   name: string;
   quizId: number | null;
-  gameType: "wordle" | "quiz";
-  wordleWordLength: number;
-  wordleMaxAttempts: number;
+  gameType: "quiz";
 };
 
 export type LeaderboardEntry = {

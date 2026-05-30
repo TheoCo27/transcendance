@@ -1,17 +1,11 @@
-import { observer } from "mobx-react-lite";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import QuizGameSection from "../components/room/QuizGameSection";
 import Section from "../components/section";
 import SectionHeader from "../components/section-header";
 import SectionLabel from "../components/section-label";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SecondaryButton from "../components/ui/SecondaryButton";
-import { useToast } from "../components/ui/toast";
-import Guess from "../components/Wordle/Guess";
-import Keyboard from "../components/Wordle/Keyboard";
-import ProgressBar from "../components/Wordle/ProgressBar";
-import PuzzleStore from "../components/Wordle/PuzzleStore";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { getUserFacingErrorMessage } from "../services/api";
 import { getGameState, type GameState } from "../services/game";
@@ -24,31 +18,6 @@ import {
   onWs,
   type WsResponse,
 } from "../services/ws";
-
-function formatGameType(room: Room | null): string {
-  if (!room?.gameType) {
-    return "Aucun jeu";
-  }
-
-  if (room.gameType === "wordle") {
-    return "Wordle";
-  }
-
-  return "Quiz";
-}
-
-export default observer(GamesPage);
-
-function formatConfigValue(value: unknown): string {
-  if (value === null || value === undefined) return "-";
-
-  if (typeof value === "string") return value;
-
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-
-  return JSON.stringify(value);
-}
 
 type PublicQuestion = {
   id: number;
@@ -79,56 +48,8 @@ type TimerPayload = {
   remainingMs: number;
 };
 
-type PersistedWordleState = {
-  sharedWord: string;
-  wordLength: number;
-  maxAttempts: number;
-  guesses: string[];
-  currentGuess: number;
-  startTime: number;
-  totalTime: number;
-  rulePanelClosed: boolean;
-  endedByTimeout: boolean;
-};
-
-function buildWordleStorageKey(roomId: number, userId: number): string {
-  return `wordle:${roomId}:user:${userId}`;
-}
-
-function loadPersistedWordleState(
-  roomId: number,
-  userId: number,
-): PersistedWordleState | null {
-  try {
-    const rawValue = window.localStorage.getItem(
-      buildWordleStorageKey(roomId, userId),
-    );
-    if (!rawValue) return null;
-
-    return JSON.parse(rawValue) as PersistedWordleState;
-  } catch {
-    return null;
-  }
-}
-
-function persistWordleState(
-  roomId: number,
-  userId: number,
-  snapshot: PersistedWordleState,
-): void {
-  window.localStorage.setItem(
-    buildWordleStorageKey(roomId, userId),
-    JSON.stringify(snapshot),
-  );
-}
-
-function clearPersistedWordleState(roomId: number, userId: number): void {
-  window.localStorage.removeItem(buildWordleStorageKey(roomId, userId));
-}
-
-function GamesPage() {
+export default function GamesPage() {
   const { roomId: roomIdParam } = useParams();
-  const navigate = useNavigate();
   const { user, isLoading: isSessionLoading } = useAuthSession();
 
   const roomId = Number(roomIdParam);
@@ -145,73 +66,6 @@ function GamesPage() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [roomClosedReason, setRoomClosedReason] = useState<string | null>(null);
   const [playerNames, setPlayerNames] = useState<Record<number, string>>({});
-  const hasFinishedWordleRef = useRef(false);
-  const lastHydratedWordleKeyRef = useRef<string | null>(null);
-
-  const store = PuzzleStore;
-  const toast = useToast();
-
-  useEffect(() => {
-    const handleKeyup = (e: KeyboardEvent) => store.handleKeyup(e);
-    window.addEventListener("keyup", handleKeyup);
-
-    // The interval is created here, so only once:
-    const intervalId = setInterval(() => {
-      store.checkTimeUp();
-      if (store.currentGuess === store.maxAttempts || store.won) {
-        clearInterval(intervalId);
-      }
-    }, 1000); // update every 1s for progress
-
-    return () => {
-      window.removeEventListener("keyup", handleKeyup);
-      clearInterval(intervalId);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (room?.gameType !== "wordle" || !room?.id) return;
-
-    if (!store.won && !store.lost) return;
-
-    if (hasFinishedWordleRef.current) return;
-
-    hasFinishedWordleRef.current = true;
-
-    const finalizeWordle = async () => {
-      try {
-        await connectWs();
-        emitWs("game:finish", {
-          roomId: room.id,
-          won: store.won,
-          attemptsUsed: store.currentGuess,
-        });
-      } catch (error) {
-        hasFinishedWordleRef.current = false;
-        setPageError(
-          getUserFacingErrorMessage(
-            error,
-            "Impossible de finaliser la partie Wordle.",
-          ),
-        );
-      }
-    };
-
-    void finalizeWordle();
-  }, [room?.gameType, room?.id, store.currentGuess, store.lost, store.won]);
-
-  useEffect(() => {
-    if (store.ToastId === 0 || store.ToastMessage.trim().length === 0) {
-      return;
-    }
-
-    if (store.ToastMessage.startsWith("Bravo,")) {
-      toast.success(store.ToastMessage);
-      return;
-    }
-
-    toast.error(store.ToastMessage);
-  }, [store.ToastId, store.ToastMessage, toast]);
 
   useEffect(() => {
     const loadGamePage = async () => {
@@ -244,7 +98,7 @@ function GamesPage() {
     };
 
     void loadGamePage();
-  }, [navigate, roomId]);
+  }, [roomId]);
 
   useEffect(() => {
     if (!Number.isFinite(roomId) || roomId <= 0) {
@@ -319,11 +173,11 @@ function GamesPage() {
       setGameState((currentState) =>
         currentState
           ? {
-            ...currentState,
-            status: "finished",
-            leaderboard: data.leaderboard,
-            winnerUserId: data.winnerUserId,
-          }
+              ...currentState,
+              status: "finished",
+              leaderboard: data.leaderboard,
+              winnerUserId: data.winnerUserId,
+            }
           : currentState,
       );
     };
@@ -346,13 +200,13 @@ function GamesPage() {
   }, [roomId]);
 
   useEffect(() => {
-    if (!gameState?.questionEndsAt) {
+    const questionEndsAt = gameState?.questionEndsAt;
+    if (!questionEndsAt) {
       return;
     }
 
     const updateTimer = () => {
-      const nextRemainingMs =
-        new Date(gameState.questionEndsAt as string).getTime() - Date.now();
+      const nextRemainingMs = new Date(questionEndsAt).getTime() - Date.now();
       setRemainingMs(Math.max(0, nextRemainingMs));
     };
 
@@ -399,145 +253,6 @@ function GamesPage() {
       isCancelled = true;
     };
   }, [room]);
-
-  const roomGameConfig = useMemo(() => {
-    const config = room?.gameConfig;
-    if (!config || typeof config !== "object" || Array.isArray(config)) {
-      return null;
-    }
-
-    return config as Record<string, number>;
-  }, [room?.gameConfig]);
-  const wordleState = gameState?.wordle ?? null;
-  const sharedWord =
-    room?.gameType === "wordle" && typeof wordleState?.sharedWord === "string"
-      ? wordleState.sharedWord
-      : null;
-
-  const gameTypeLabel = useMemo(() => formatGameType(room), [room]);
-  const roomConfigEntries = useMemo(
-    () => Object.entries(roomGameConfig ?? {}),
-    [roomGameConfig],
-  );
-
-  useEffect(() => {
-    if (room?.gameType === "wordle") {
-      const configuredLength = roomGameConfig?.wordLength ?? store.nbr_letters;
-      const configuredMaxAttempts =
-        roomGameConfig?.maxAttempts ?? store.maxAttempts;
-      const userId = user?.id;
-      const hydrationKey =
-        typeof sharedWord === "string" && typeof userId === "number"
-          ? `${room.id}:${userId}:${sharedWord}:${configuredLength}:${configuredMaxAttempts}`
-          : null;
-
-      if (typeof sharedWord !== "string" || typeof userId !== "number") {
-        return;
-      }
-
-      store.setConfig(configuredLength, configuredMaxAttempts);
-
-      if (lastHydratedWordleKeyRef.current === hydrationKey) {
-        return;
-      }
-
-      const persistedState = loadPersistedWordleState(room.id, userId);
-      const canRestore =
-        persistedState?.sharedWord === sharedWord &&
-        persistedState.wordLength === configuredLength &&
-        persistedState.maxAttempts === configuredMaxAttempts &&
-        Array.isArray(persistedState.guesses) &&
-        persistedState.guesses.length === configuredMaxAttempts;
-
-      if (canRestore && persistedState) {
-        store.init(sharedWord);
-        store.restoreState(
-          sharedWord,
-          persistedState.guesses,
-          persistedState.currentGuess,
-          persistedState.startTime,
-          persistedState.totalTime,
-          persistedState.rulePanelClosed,
-          persistedState.endedByTimeout
-        );
-      } else {
-        store.init(sharedWord);
-        clearPersistedWordleState(room.id, userId);
-      }
-
-      store.checkTimeUp();
-      hasFinishedWordleRef.current = false;
-      lastHydratedWordleKeyRef.current = hydrationKey;
-    }
-  }, [
-    room?.id,
-    room?.gameType,
-    roomGameConfig?.wordLength,
-    roomGameConfig?.maxAttempts,
-    sharedWord,
-    store,
-    user?.id,
-  ]);
-
-  useEffect(() => {
-    if (
-      room?.gameType !== "wordle" ||
-      typeof room.id !== "number" ||
-      typeof user?.id !== "number" ||
-      typeof sharedWord !== "string"
-    ) {
-      return;
-    }
-
-    if (room.status !== "playing" || gameState?.status === "finished") {
-      clearPersistedWordleState(room.id, user.id);
-      return;
-    }
-
-    persistWordleState(room.id, user.id, {
-      sharedWord,
-      wordLength: store.nbr_letters,
-      maxAttempts: store.maxAttempts,
-      guesses: [...store.guesses],
-      currentGuess: store.currentGuess,
-      startTime: store.start_time,
-      totalTime: store.total_time,
-      rulePanelClosed: store.rulePannelClosed,
-      endedByTimeout: store.endedByTimeout,
-    });
-  }, [
-    gameState?.status,
-    room?.gameType,
-    room?.id,
-    room?.status,
-    sharedWord,
-    store.currentGuess,
-    store.endedByTimeout,
-    store.guesses.join("|"),
-    store.maxAttempts,
-    store.nbr_letters,
-    store.rulePannelClosed,
-    store.start_time,
-    store.total_time,
-    user?.id,
-  ]);
-
-  useEffect(() => {
-    if (
-      room?.gameType !== "wordle" ||
-      typeof room?.id !== "number" ||
-      typeof user?.id !== "number"
-    ) {
-      return;
-    }
-
-    if (room.status === "waiting" || gameState?.status === "finished") {
-      clearPersistedWordleState(room.id, user.id);
-      lastHydratedWordleKeyRef.current = null;
-    }
-  }, [gameState?.status, room?.gameType, room?.id, room?.status, user?.id]);
-
-  const playerNamesById = useMemo(() => playerNames, [playerNames]);
 
   const isUserInRoom = Boolean(
     user && room?.players.some((player) => player.userId === user.id),
@@ -641,10 +356,8 @@ function GamesPage() {
             </SectionLabel>
             <SectionHeader className="text-3xl">
               {gameState.winnerUserId
-                ? `Le gagnant est ${playerNamesById[gameState.winnerUserId] ?? `Joueur #${gameState.winnerUserId}`}`
-                : room?.gameType === "wordle"
-                  ? "Aucun Gagnant"
-                  : "La partie est terminée"}
+                ? `Le gagnant est ${playerNames[gameState.winnerUserId] ?? `Joueur #${gameState.winnerUserId}`}`
+                : "La partie est terminée"}
             </SectionHeader>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-white/70">
               Voici le classement final. Tu peux revenir à la room pour relancer
@@ -673,9 +386,7 @@ function GamesPage() {
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-bg/70 px-4 py-3">
                   <span className="text-sm text-white/65">Mode</span>
                   <span className="text-sm font-semibold text-white">
-                    {room?.gameType === "wordle"
-                      ? "Wordle"
-                      : formatGameType(room)}
+                    Quiz
                   </span>
                 </div>
               </div>
@@ -694,7 +405,7 @@ function GamesPage() {
 
               <ol className="mt-4 space-y-3">
                 {gameState.leaderboard.map((entry, index) => {
-                  const isCurrentUser = entry.userId === user?.id;
+                  const isCurrentUser = entry.userId === user.id;
                   const rankTone = isCurrentUser
                     ? "border-amber-300/50 bg-amber-400/10"
                     : "border-slate-200/15 bg-white/6";
@@ -709,8 +420,7 @@ function GamesPage() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-white">
-                          {playerNamesById[entry.userId] ??
-                            `Joueur #${entry.userId}`}
+                          {playerNames[entry.userId] ?? `Joueur #${entry.userId}`}
                         </p>
                         <p className="text-xs text-white/55">
                           {index === 0 ? "Premier" : `${index + 1}eme`}
@@ -739,10 +449,12 @@ function GamesPage() {
     );
   }
 
-  if (!room) return null;
+  if (!room) {
+    return null;
+  }
 
   return (
-    <main className="mx-auto flex flex-col w-full max-w-7xl flex-1 px-6 py-8 md:px-10 md:py-12 justify-center">
+    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-6 py-8 md:px-10 md:py-12">
       {room.gameType === "quiz" ? (
         <QuizGameSection
           roomStatus={room.status}
@@ -755,64 +467,12 @@ function GamesPage() {
           onSelectAnswer={handleSelectAnswer}
           onSubmitAnswer={handleSubmitAnswer}
         />
-      ) : room.gameType === "wordle" ? (
-        !sharedWord ? (
-          <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
-            <SectionLabel className="text-slate-400">Wordle</SectionLabel>
-            <SectionHeader>Synchronisation en cours</SectionHeader>
-            <p className="mt-3 text-sm leading-7 text-white/70">
-              Le mot partagé de la partie est en cours de chargement.
-            </p>
-          </section>
-        ) : (
-          <section className="flex flex-1 flex-col py-1 items-center justify-center">
-            <div className="mb-4 rounded-full border border-white/10 bg-surface px-4 py-2 text-sm text-white/75">
-              {wordleState
-                ? `${wordleState.playersCompleted}/${wordleState.totalPlayers} joueurs ont terminé`
-                : "Partie Wordle en cours"}
-            </div>
-
-            {store.won || store.lost ? (
-              <div className="mb-4 text-center">
-                <p className="text-sm text-white/70">
-                  Ta manche est terminée. Tu restes connecté jusqu'à ce que tous
-                  les joueurs aient fini.
-                </p>
-                {store.lost ? (
-                  <p className="mt-2 text-base font-semibold uppercase tracking-[0.14em] text-amber-300">
-                    Le mot à trouver était {store.word}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
-            <ProgressBar start_time={store.start_time} store={store} />
-
-            <div>
-              {store.guesses.map((_, i) => (
-                <Guess
-                  key={i}
-                  checkerValidWord={store.all_words_array_json}
-                  lettersCount={roomGameConfig?.wordLength ?? 5}
-                  flag={store.validWord}
-                  word={store.word}
-                  guess={store.guesses[i] ?? ""}
-                  isGuessed={i < store.currentGuess}
-                />
-              ))}
-            </div>
-
-            <div className="mt-3">
-              <Keyboard store={store} />
-            </div>
-          </section>
-        )
       ) : (
         <section className="flex flex-1 flex-col rounded-4xl border border-white/10 bg-surface p-6 text-text shadow-[0_24px_70px_rgba(15,23,42,0.07)]">
           <SectionLabel className="text-slate-400">Jeux</SectionLabel>
           <SectionHeader>Jeu indisponible</SectionHeader>
           <p className="mt-3 text-sm leading-7 text-white/70">
-            Cette room utilise un mode qui n'est plus pris en charge.
+            Cette room doit être reconfigurée avant de lancer une partie.
           </p>
         </section>
       )}

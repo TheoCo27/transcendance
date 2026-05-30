@@ -27,7 +27,6 @@ enum RoomStatus {
 }
 
 enum RoomGameType {
-  wordle
   quiz
 }
 

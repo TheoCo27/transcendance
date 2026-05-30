@@ -1,4 +1,4 @@
-import { ChevronDown, PenLine, PlusCircle } from "lucide-react";
+import { PenLine, PlusCircle } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -11,7 +11,6 @@ import type { Quiz } from "../../services/quizzes";
 import Input from "../ui/input";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
-import Select from "../ui/select";
 import RoomSectionHeader from "./room-section-header";
 import RoomSectionLabel from "./room-section-label";
 import type { RoomConfigForm } from "./room-types";
@@ -116,23 +115,8 @@ export default function RoomConfigSection({
 
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium">Type de jeu</span>
-          <div className="relative w-full">
-            <select
-              className="w-full appearance-none rounded-xl border border-white/10 bg-bg px-4 py-3 pr-11 placeholder:text-text/40 transition-colors duration-200 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              value={form.gameType}
-              onChange={(event) => {
-                const gameType = event.target.value as "wordle" | "quiz";
-                setForm((previous) => ({ ...previous, gameType }));
-              }}
-            >
-              <option value="wordle">Wordle</option>
-              <option value="quiz">Quiz</option>
-            </select>
-            <ChevronDown
-              aria-hidden="true"
-              strokeWidth={2}
-              className="pointer-events-none absolute right-4 top-1/2 size-4  -translate-y-1/2 text-white"
-            />
+          <div className="flex min-h-12 items-center rounded-xl border border-white/10 bg-bg px-4 py-3 text-sm font-medium text-text-muted">
+            Quiz
           </div>
         </label>
 
@@ -288,44 +272,6 @@ export default function RoomConfigSection({
               </>
             )}
           </div>
-        ) : form.gameType === "wordle" ? (
-          <>
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Longueur du mot (5-7)</span>
-              <Select
-                className="w-full"
-                name="wordle-word-length"
-                id="wordle-word-length"
-                value={form.wordleWordLength}
-                min={5}
-                max={7}
-                onChange={(event) => {
-                  setForm((previous) => ({
-                    ...previous,
-                    wordleWordLength: Number(event.target.value),
-                  }));
-                }}
-              />
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium ">Essais max (3-8)</span>
-              <Select
-                className="w-full"
-                name="worlde-max-attempts"
-                id="worlde-max-attempts"
-                value={form.wordleMaxAttempts}
-                min={3}
-                max={8}
-                onChange={(event) => {
-                  setForm((previous) => ({
-                    ...previous,
-                    wordleMaxAttempts: Number(event.target.value),
-                  }));
-                }}
-              />
-            </label>
-          </>
         ) : null}
       </div>
 
