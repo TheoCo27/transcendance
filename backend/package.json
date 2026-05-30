@@ -8,7 +8,6 @@
     "prisma:generate": "prisma generate",
     "prisma:generate:if-needed": "sh ./scripts/ensure-prisma-client.sh",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "test:ws-smoke": "NODE_EXTRA_CA_CERTS=../certs/dev-localhost-ca.pem node scripts/ws-smoke-test.mjs",
     "start": "node dist/main.js",
     "start:dev": "npm run prisma:generate:if-needed && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\"",
     "start:docker": "npm run deps:sync && npm run prisma:generate:if-needed && npm run prisma:migrate:deploy && nodemon --watch src --watch prisma --ext ts,prisma --exec \"node -r ts-node/register/transpile-only -r tsconfig-paths/register src/main.ts\"",
@@ -20,10 +19,8 @@
     "@nestjs/core": "^11.1.19",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.1.19",
-    "@nestjs/platform-socket.io": "^11.1.19",
     "@nestjs/swagger": "^11.4.2",
     "@nestjs/throttler": "^6.5.0",
-    "@nestjs/websockets": "^11.1.19",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "bcrypt": "^6.0.0",
@@ -32,7 +29,6 @@
     "cookie-parser": "^1.4.7",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "socket.io": "^4.8.3",
     "swagger-ui-express": "^5.0.1",
     "tsconfig-paths": "^4.2.0"
   },
@@ -44,7 +40,6 @@
     "dotenv": "^16.4.7",
     "nodemon": "^3.1.14",
     "prisma": "^7.5.0",
-    "socket.io-client": "^4.8.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
@@ -52,12 +47,10 @@
     "@hono/node-server": "2.0.3",
     "brace-expansion": "5.0.6",
     "engine.io": "6.6.8",
-    "engine.io-client": "6.6.5",
     "fast-uri": "3.1.2",
     "defu": "6.1.7",
     "hono": "4.12.21",
     "qs": "6.15.2",
-    "socket.io-adapter": "2.5.7",
     "ws": "8.20.1"
   }
 }

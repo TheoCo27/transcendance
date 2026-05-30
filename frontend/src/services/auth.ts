@@ -1,5 +1,4 @@
 import { apiRequest, apiRequestNullable } from "./api";
-import { disconnectWs } from "./ws";
 
 export const AUTH_PASSWORD_MIN_LENGTH = 12;
 export const AUTH_USERNAME_MIN_LENGTH = 2;
@@ -30,7 +29,6 @@ export type GuestLoginPayload = {
 };
 
 function emitAuthChanged() {
-  disconnectWs();
   window.dispatchEvent(new Event("auth-changed"));
 }
 

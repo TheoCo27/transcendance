@@ -1,239 +1,186 @@
-*This project has been created as part of the 42 curriculum by tcohen, mduchauf, smgassa, hucherea, lscheupl.*
+*This project has been created as part of the 42 curriculum by tcohen, hucherea, lscheupl.*
 
 # ft_transcendence
 
-`ft_transcendence` is a full-stack multiplayer web application built during the 42 curriculum. The project combines account management, social features, real-time communication, and browser-based mini-game sessions inside a single platform.
+`ft_transcendence` is a full-stack web application built during the 42 curriculum. The current repository centers on account management, social interactions, quiz authoring, and leaderboard APIs inside a Dockerized local HTTPS stack.
 
-## Description
+## Goal
 
-### Project Name
+The platform currently allows users to:
 
-**ft_transcendence**
-
-### Goal
-
-The goal of the project is to build a modern web platform where users can:
-
-- create an account or log in as a guest,
-- manage a public profile,
+- create an account, log in, or start as a guest,
+- manage their public profile and avatar,
 - add friends and exchange private messages,
-- create or join public and private game rooms,
-- play real-time multiplayer quiz sessions in the browser,
-- track scores and quiz leaderboards.
+- create and browse quizzes,
+- consult quiz leaderboards and global score snapshots.
 
-### Key Features
+## Current Feature Set
 
-- Full-stack architecture with a React frontend and a NestJS backend.
-- PostgreSQL database accessed through Prisma ORM.
-- Real-time room, chat, and game events with Socket.IO.
-- Standard authentication, guest sessions, and Google OAuth 2.0 login.
-- User profile management with avatar and status updates.
-- Friends system with private messaging between accepted friends.
-- Quiz creation workflow and room-based quiz gameplay.
-- Dockerized development stack with local HTTPS enabled through self-signed OpenSSL certificates.
-- Smoke tests, WebSocket smoke tests, and GitHub Actions CI.
+- React frontend with client-side routing
+- NestJS backend with REST APIs
+- PostgreSQL 16 accessed through Prisma ORM
+- JWT authentication stored in HTTP-only cookies
+- Optional Google OAuth 2.0 login
+- Guest sessions
+- Friend requests and private messaging
+- Quiz creation and quiz retrieval APIs
+- Global score snapshots in memory and persistent quiz leaderboards in PostgreSQL
+- Docker Compose local stack with HTTPS certificates
+- HTTP smoke test and GitHub Actions CI
 
 ## Team Information
 
 | Login | Role | Main Responsibilities |
 | --- | --- | --- |
-| `tcohen` | PM | Social and user management: profile, avatar, status, friends/friend requests, private messages |
-| `mduchauf` | Tech Lead | Real-time architecture: WebSocket gateway, presence, live sync, event broadcasting, remote players |
-| `smgassa` | PO | Gameplay and persistence: quiz flow, scoring, leaderboards, match history, additional game |
-| `hucherea` | Developer | Core technical base: Prisma schema/migrations, classic auth + Google OAuth, session security, dev/CI scripts |
-| `lscheupl` | Developer | Rooms and multiplayer: room logic, player management, match lifecycle, multiplayer coordination |
-
-## Presentation Task Distribution
-
-This table reflects the current split used by the team to present the implemented modules. It is separate from the implementation contributor tables documented later in this README.
-
-| Person | Login | Modules to Explain |
-| --- | --- | --- |
-| 1 | `hucherea` | Use an ORM, Remote authentication, devops scripts and CI |
-| 2 | `tcohen` | Allow users to interact with other users, Standard user management |
-| 3 | `mduchauf` | Implement real-time features, Remote players |
-| 4 | `lscheupl` | Web-based game, Multiplayer for more than two players |
-| 5 | `smgassa` | Game statistics and match history, Add another game |
+| `tcohen` | PM | Profiles, social flows, friends, private messages |
+| `hucherea` | Developer | Prisma schema, authentication, OAuth, CI/dev tooling |
+| `lscheupl` | Developer | Quiz experience, frontend pages, gameplay-facing flows |
 
 ## Project Management
 
-The team organized the work around a simple but regular delivery process:
+The team organized delivery around:
 
-- Weekly meetings were used to review progress, unblock pending topics, and reprioritize work.
-- A personal weekly to-do list helped each member keep ownership of short-term objectives.
-- Work was split into feature branches and reviewed through pull requests before merging.
-- Integration was tracked continuously on the shared `dev` branch.
+- feature branches and pull requests,
+- regular sync points for prioritization and unblockers,
+- shared validation through smoke tests and CI.
 
-### Tools Used
+Main tools:
 
-- **GitHub Issues** for task tracking
-- **Pull Requests** for review and integration
-- **Git** branching for parallel feature development
-
-### Communication Channels
-
-- **Discord** for day-to-day communication
-- Weekly sync meetings for planning and review
+- GitHub Issues
+- Pull Requests
+- Git
+- Discord
 
 ## Technical Stack
 
 ### Frontend
 
-- **React 18**
-- **TypeScript**
-- **React Router**
-- **Webpack Dev Server**
-- **Tailwind CSS 4**
-- **Socket.IO Client**
+- React 18
+- TypeScript
+- React Router
+- Webpack Dev Server
+- Tailwind CSS 4
 
 ### Backend
 
-- **NestJS**
-- **TypeScript**
-- **Socket.IO**
-- **JWT authentication in HTTP-only cookies**
-- **Swagger** for development-time API documentation
+- NestJS
+- TypeScript
+- JWT authentication in HTTP-only cookies
+- Swagger in development
 
 ### Database
 
-- **PostgreSQL 16**
-- **Prisma ORM**
+- PostgreSQL 16
+- Prisma ORM
 
-### Other Significant Tools
+### Tooling
 
-- **Docker / Docker Compose or Podman Compose**
-- **OpenSSL** for self-signed local HTTPS certificates
-- **GitHub Actions** for CI
-- Custom smoke-test scripts for HTTP, database, and WebSocket checks
+- Docker / Docker Compose or Podman Compose
+- OpenSSL for local HTTPS certificates
+- GitHub Actions
+- Bash smoke-test scripts
 
-### Justification for Major Technical Choices
+## Architecture Overview
 
-- **React** was chosen to build a component-based SPA with reusable UI blocks and a smooth client-side room/game experience.
-- **NestJS** was chosen for its modular architecture, clear controller/service separation, DTO validation, and built-in WebSocket support.
-- **PostgreSQL** was chosen because the project is strongly relational: users, friendships, rooms, games, questions, answers, and leaderboards all have explicit links.
-- **Prisma** was chosen for typed database access, schema-driven migrations, and simpler maintenance of a growing relational model.
-- **Socket.IO** was chosen because the application depends on real-time synchronization for room presence, chat messages, timers, answer submission, and leaderboard updates.
-- **Dockerized local development** was chosen to reduce setup friction and keep frontend, backend, and database environments consistent across machines.
-
-## Database Schema
-
-### Overview
-
-The database is centered around users, rooms, quiz content, gameplay history, and rankings.
+The current application is built around users, friendships, quizzes, private messages, and scoreboards.
 
 ```text
-User
- ├─< FriendRequests >─ User
- ├─< RoomPlayer >─ Room
- ├─< Messages >─ Room
- ├─< PlayerAnswer >─ GameQuestion >─ Game >─ Room
- ├─< Leaderboard >─ Game
- └─< QuizLeaderboard >─ Quiz >─< QuizQuestion
+Browser
+  -> https://localhost:3000
+  -> frontend React app
+  -> proxy /api /health /auth /users /scores /quizzes
+  -> https://backend:4000
+  -> NestJS + Prisma
+  -> postgresql://db:5432
 ```
 
-### Main Tables and Relationships
+## Database Overview
 
-| Table | Purpose | Key Relationships |
-| --- | --- | --- |
-| `User` | Stores registered and guest accounts | linked to rooms, messages, answers, leaderboards, and friendships |
-| `FriendRequests` | Stores pending/accepted/declined friend relations | `senderId -> User`, `receiverId -> User` |
-| `Room` | Stores game rooms and room configuration | owned by one user, contains players, messages, and games |
-| `RoomPlayer` | Join table between users and rooms | composite key `userId + roomId` |
-| `Messages` | Stores room chat messages | linked to one sender and one room |
-| `Quiz` | Stores quiz metadata | linked to quiz questions, games, and quiz leaderboard entries |
-| `QuizQuestion` | Stores questions and answer sets | linked to one quiz |
-| `Game` | Stores one played match in one room | linked to one room, one quiz, answers, and leaderboard entries |
-| `GameQuestion` | Stores per-game question order and timing | linked to one game and one quiz question |
-| `PlayerAnswer` | Stores a player answer for one game question | linked to one user, one game, and one game question |
-| `Leaderboard` | Stores per-game final results | linked to one game and one user |
-| `QuizLeaderboard` | Stores cumulative statistics for one quiz | linked to one quiz and one user |
+### Main Models
 
-### Key Fields and Data Types
+| Model | Purpose |
+| --- | --- |
+| `User` | Registered and guest accounts |
+| `FriendRequests` | Pending and accepted social relationships |
+| `PrivateMessage` | Direct messages between accepted friends |
+| `Quiz` | Quiz metadata |
+| `QuizQuestion` | Ordered questions and answers for one quiz |
+| `QuizLeaderboard` | Persistent per-quiz ranking data |
 
-- `User.id`: `Int`
-- `User.email`: `String`, unique
-- `User.username`: `String`
-- `User.isGuest`: `Boolean`
-- `User.googleId`: `String?`, unique
-- `User.status`: enum `online | offline`
-- `Room.status`: enum `waiting | playing | finished`
-- `Room.gameType`: enum `wordle | memory | quiz`
-- `Room.gameConfig`: `Json?`
-- `QuizQuestion.answers`: `Json`
-- `PlayerAnswer.pointsEarned`: `Int`
-- `QuizLeaderboard.totalScore`: `Int`
-- Timestamps such as `createdAt`, `startedAt`, and `finishedAt`: `DateTime`
+### Important Notes
 
-## Features List
+- `QuizLeaderboard` is stored in PostgreSQL.
+- The global leaderboard exposed by `ScoresService` is stored in memory at runtime.
+- The room/game/WebSocket stack has been removed from the current codebase.
 
-| Feature | What It Does | Main Contributors |
-| --- | --- | --- |
-| Classic authentication | Register, log in, log out, restore session with JWT cookie | `hucherea` |
-| Guest access | Lets a user enter the platform quickly with a temporary guest account | `tcohen` |
-| Google OAuth 2.0 | Lets users authenticate through Google when credentials are configured | `hucherea` |
-| Profile management | Update username, avatar, and online/offline status | `tcohen` |
-| Friends system | Send requests, accept or decline, and browse friend state | `tcohen` |
-| Private messaging | Exchange direct messages between accepted friends | `tcohen` |
-| Room management | Create, configure, join, leave, and secure public/private rooms | `lscheupl` |
-| Real-time room chat | Broadcast room messages live to connected players | `mduchauf` |
-| Quiz creation | Build quizzes with multiple questions and configurable answer timing | `smgassa` |
-| Real-time multiplayer quiz | Synchronize question start, timer, answers, and leaderboard updates | `mduchauf`, `lscheupl` |
-| Score tracking | Keep global score snapshots and persistent quiz leaderboards | `smgassa` |
-| CI and smoke testing | Verify builds, Docker startup, HTTP flows, DB access, and WebSocket flows | `hucherea` |
+## Main APIs
+
+The backend currently exposes endpoints around:
+
+- `/health`
+- `/api`
+- `/auth/register`
+- `/auth/login`
+- `/auth/logout`
+- `/auth/session`
+- `/auth/guest`
+- `/users/me`
+- `/users/:id`
+- `/users/me/friends`
+- `/users/me/friends/conversations`
+- `/users/me/friends/messages/:friendId`
+- `/scores/leaderboard`
+- `/scores/users/:userId`
+- `/scores/quizzes/:quizId/leaderboard`
+- `/quizzes`
+- `/quizzes/:id`
 
 ## Modules
 
-Total module score: **22 points**
+| Module | Type | Points | Implementation Summary |
+| --- | --- | ---: | --- |
+| Use a framework for both frontend and backend | Major | 2 | React frontend and NestJS backend in TypeScript |
+| Use a frontend framework | Minor | 1 | SPA routing and reusable UI components |
+| Use a backend framework | Minor | 1 | Modular REST API, DTO validation, guards, Swagger |
+| Allow users to interact with other users | Major | 2 | Friends, requests, and private messaging |
+| Use an ORM | Minor | 1 | Prisma schema, generated client, migrations |
+| Support for additional browsers | Minor | 1 | Standard browser APIs and cookie-based auth |
+| Standard user management | Major | 2 | Register, login, logout, guest mode, profile updates |
+| Game statistics and match history | Minor | 1 | Quiz leaderboard persistence and score aggregation |
+| Remote authentication | Minor | 1 | Optional Google OAuth 2.0 login |
+| Web-based game | Major | 2 | Browser-based quiz authoring and quiz consumption |
 
-| Module | Type | Points | Why We Chose It | Implementation Summary | Main Contributors |
-| --- | --- | ---: | --- | --- | --- |
-| Use a framework for both frontend and backend | Major | 2 | To keep the project structured end to end | React frontend and NestJS backend, both written in TypeScript and containerized | `mduchauf`, `smgassa` |
-| Use a frontend framework | Minor | 1 | To build a maintainable SPA | React components, routing, stateful room/game pages, reusable UI blocks | `smgassa` |
-| Use a backend framework | Minor | 1 | To organize APIs and real-time logic clearly | NestJS modules, controllers, services, guards, DTO validation, Swagger | `mduchauf` |
-| Implement real-time features | Major | 2 | Real-time interaction is core to the project | Socket.IO namespace `/ws`, live room state, chat, timers, answer events, leaderboard broadcasts | `mduchauf` |
-| Allow users to interact with other users | Major | 2 | The platform is social, not only game-driven | Friends, room chat, private messages, room sharing | `tcohen` |
-| Use an ORM | Minor | 1 | To manage a growing relational schema safely | Prisma schema, migrations, typed client, generated models | `hucherea` |
-| Support for additional browsers | Minor | 1 | To keep the web app usable beyond a single browser | Standard web APIs, HTTPS local setup, cookie-based auth, Socket.IO transport fallback (`websocket` and `polling`) | `hucherea` |
-| Standard user management | Major | 2 | Identity and profile flows are essential | Register/login/logout, guest mode, session recovery, avatar, status, friends | `tcohen` |
-| Game statistics and match history | Minor | 1 | To make the game state meaningful over time | `Game`, `Leaderboard`, and `QuizLeaderboard` data with score aggregation | `smgassa` |
-| Remote authentication | Minor | 1 | To improve login UX and cover OAuth requirements | Google OAuth 2.0/OpenID Connect login flow with callback handling | `hucherea` |
-| Web-based game | Major | 2 | The project must be playable in the browser | Multiplayer quiz sessions run directly in the web app | `lscheupl` |
-| Remote players | Major | 2 | Players must be able to join from separate machines | HTTPS local stack, cookie auth, Socket.IO synchronization, room joins over the network | `mduchauf` |
-| Multiplayer for more than two players | Major | 2 | The project targets group play, not only duels | Room player lists, answer aggregation, live ranking for multiple participants | `lscheupl` |
-| Add another game | Major | 2 | To design the platform as a mini-game hub and not a single-use app | Room configuration supports several mini-game presets (`quiz`, `wordle`), with quiz mode being the most complete gameplay path at the moment | `smgassa` |
-
-## Instructions
+## Setup
 
 ### Prerequisites
 
-To run the project as documented here, you need:
-
 - `make`
-- a compatible container runtime with Compose support:
-  - Docker + Docker Compose, or
-  - Podman + Podman Compose
-- `openssl` for generating local self-signed HTTPS certificates
+- Docker + Docker Compose, or Podman + Podman Compose
+- `openssl`
 - Bash-compatible shell
 
-For contributors who want to build apps outside containers:
+Optional local app builds:
 
-- **Node.js 20** for the frontend
-- **Node.js 22** for the backend
-- **PostgreSQL 16** if running the database manually
+- Node.js 20 for the frontend
+- Node.js 22 for the backend
+- PostgreSQL 16 if running the database manually
 
-### Environment Configuration
+### Environment
 
-The project reads its configuration from the root `.env` file.
-
-1. Create the file:
+Create the root `.env` file:
 
 ```bash
 make env-init
 ```
 
-2. Review and adjust the values copied from `.env.example`.
+Check host prerequisites and configuration:
 
-Main variables:
+```bash
+make setup-host
+make env-check
+```
+
+Important variables:
 
 | Variable | Required | Description |
 | --- | --- | --- |
@@ -244,78 +191,42 @@ Main variables:
 | `DATABASE_URL` | Yes | Prisma connection string |
 | `BACKEND_PORT` | Yes | Backend exposed port |
 | `FRONTEND_PORT` | Yes | Frontend exposed port |
-| `JWT_SECRET` | Yes | Secret used to sign session tokens |
+| `JWT_SECRET` | Yes | JWT signing secret |
 | `JWT_EXPIRES_IN` | Yes | JWT lifetime |
-| `FRONTEND_ORIGIN` | Yes | Allowed frontend origin for CORS/cookies |
-| `GAME_QUESTION_DURATION_MS` | Yes | Default question timer |
-| `PRISMA_STUDIO_PORT` | Optional | Local Prisma Studio port |
+| `FRONTEND_ORIGIN` | Yes | Allowed frontend origin |
+| `GAME_QUESTION_DURATION_MS` | Yes | Default quiz question duration |
+| `PRISMA_STUDIO_PORT` | Optional | Prisma Studio port in dev mode |
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret |
 | `GOOGLE_REDIRECT_URI` | Optional | Google OAuth callback URL |
 
-### Step-by-Step Startup
+## Run The Project
 
-1. Initialize the environment file:
-
-```bash
-make env-init
-```
-
-2. Check host prerequisites for local HTTPS:
-
-```bash
-make setup-host
-```
-
-3. If you want to understand the browser warning behavior:
-
-```bash
-make tls-trust
-```
-
-4. Check that the `.env` file is complete:
-
-```bash
-make env-check
-```
-
-5. Start the full stack:
+Start the standard stack:
 
 ```bash
 make up
 ```
 
-6. Open the application:
-
-- Frontend: `https://localhost:3000`
-- Backend health endpoint: `https://localhost:4000/health`
-
-### Development Mode
-
-To run the stack with development extras such as Swagger and Prisma Studio:
+Development mode with Swagger and Prisma Studio:
 
 ```bash
 make dev
 ```
 
-Useful development URLs:
+Useful URLs:
 
 - Frontend: `https://localhost:3000`
-- Swagger: `https://localhost:4000/docs`
-- Prisma Studio: `http://127.0.0.1:5555`
+- Backend health: `https://localhost:4000/health`
+- Swagger in dev: `https://localhost:4000/docs`
+- Prisma Studio in dev: `http://127.0.0.1:5555`
 
-### Testing
+## Testing
 
-Smoke tests:
+Smoke test:
 
 ```bash
 make smoke-test
-```
-
-WebSocket smoke test:
-
-```bash
-make smoke-test-ws
 ```
 
 Quick stack status:
@@ -324,92 +235,24 @@ Quick stack status:
 make test-stack
 ```
 
-### Important Notes
-
-- If you change PostgreSQL credentials after the first startup, clean the existing volume before restarting:
-
-```bash
-make fclean
-```
-
-- Google login remains optional. The classic and guest flows work without Google OAuth credentials.
-- The Makefile automatically checks the host environment and generates the local development certificate before startup.
-
-## Individual Contributions
-
-The breakdown below reflects the current role split used for the project presentation and core module ownership.
-
-### `tcohen` (PM)
-
-- Scope: Allow users to interact with other users + Standard user management.
-- Coverage: profile, avatar, status, friends/friend requests, and chat/private messages.
-
-### `mduchauf` (Tech Lead)
-
-- Scope: Implement real-time features + Remote players.
-- Coverage: WebSocket gateway, presence, live synchronization, event broadcasting, and cross-machine updates.
-
-### `smgassa` (PO)
-
-- Scope: Game statistics and match history + Add another game.
-- Coverage: gameplay/persistence, quiz flow, scoring, leaderboards, and match history.
-
-### `hucherea` (Developer)
-
-- Scope: Use an ORM + Remote authentication (OAuth 2.0) + devops scripts/CI.
-- Coverage: Prisma schema/migrations, classic auth plus Google OAuth, session security, and dev/CI pipeline.
-
-### `lscheupl` (Developer)
-
-- Scope: Web-based game + Real-time multiplayer + Multiplayer (>2 players).
-- Coverage: room logic, player management, match start, waiting/playing/finished cycle, and multiplayer coordination.
-
 ## Known Limitations
 
-- The most complete gameplay path currently centers on the **quiz mode**.
-- The room configuration already supports multiple game presets (`quiz`, `wordle`, `memory`), but the production-ready real-time loop is currently strongest on the quiz path.
-- Room chat is persisted in PostgreSQL, but **private direct messages** are currently stored in a local runtime JSON store: `.runtime/private-messages-store.json`.
-- The **global leaderboard** is kept in memory during runtime, while **per-quiz leaderboards** are persisted in PostgreSQL.
+- There is no room, matchmaking, or WebSocket gameplay stack in the current repository state.
+- The global leaderboard is runtime-only and resets when the backend restarts.
+- Private messaging is available only between accepted non-guest friends.
+- Google login is optional and depends on local credential configuration.
 
-## Resources
+## Project Documentation
 
-### Official Documentation
+- [TECH](./TECH.md)
+- [DEVDOC](./DEVDOC.MD)
 
-- React: <https://react.dev/>
-- NestJS: <https://docs.nestjs.com/>
-- Prisma ORM: <https://www.prisma.io/docs>
-- Socket.IO: <https://socket.io/docs/v4/>
-- PostgreSQL: <https://www.postgresql.org/docs/>
-- Docker Compose: <https://docs.docker.com/compose/>
-- OpenSSL: <https://www.openssl.org/>
-- Google OpenID Connect: <https://developers.google.com/identity/openid-connect/openid-connect>
+## AI Usage
 
-### Project-Specific Documentation
-
-- [API front/back contract](docs/api-front-contract.md)
-- [WebSocket event contract](docs/ws-event-contract.md)
-- [Realtime frontend integration notes](docs/front2-realtime-integration.md)
-
-### Tutorials and Video References
-
-- <https://www.youtube.com/watch?v=yL1f1gt0ZbE&list=PLNEpbO9HTVNQVPu4uUOqGVVKiHoIl4_xR&index=8>
-- <https://www.youtube.com/watch?v=-pbT0uKRWX8>
-
-### AI Usage
-
-AI was used as an **assistant**, not as an unquestioned source of truth.
-
-It helped the team mainly with:
-
-- reducing repetitive work such as documentation drafting, wording cleanup, and command/syntax checks,
-- exploring implementation options for authentication, WebSocket behavior, testing strategies, and configuration details,
-- generating explanations, debugging hypotheses, and validation ideas during development.
+AI was used as an assistant for drafting, wording cleanup, debugging ideas, and validation support.
 
 Rules followed by the team:
 
-- AI-generated suggestions were reviewed, tested, and discussed with teammates before being kept.
-- The team did not treat AI output as authoritative documentation.
-- Only code and explanations that the team understood and could defend were integrated.
-- Peer review remained mandatory for important decisions and complex changes.
-
-This README itself was also improved with AI assistance for structure and English phrasing, then aligned with the repository content and project requirements.
+- generated suggestions were reviewed before being kept,
+- no AI output was treated as authoritative without verification,
+- only code and explanations the team could explain were integrated.

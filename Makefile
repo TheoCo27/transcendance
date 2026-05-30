@@ -37,8 +37,7 @@ help:
 	@echo "  make test-stack          -> Check frontend, backend and database status quickly"
 	@echo "  make test_http           -> Curl all local HTTP endpoints exposed by the stack"
 	@echo "  make test_https          -> Curl all local HTTPS endpoints exposed by the stack"
-	@echo "  make smoke-test          -> Run the general smoke test (dev op, db, websocket api, authentifcation, front end)"
-	@echo "  make smoke-test-ws       -> Run only the backend WebSocket smoke test"
+	@echo "  make smoke-test          -> Run the general smoke test (dev ops, db, authentication, frontend)"
 	@echo "  make setup-host          -> Verify host prerequisites for local HTTPS with OpenSSL"
 	@echo "  make env-init            -> Create .env from .env.example if missing"
 	@echo "  make env-check           -> Check required variables in .env"
@@ -193,9 +192,6 @@ https://localhost:$${BACKEND_PORT:-4000}/health"; \
 
 smoke-test: env-check compose-check
 	bash scripts/smoke-test.sh
-
-smoke-test-ws: compose-check
-	bash scripts/ws-smoke-test.sh
 
 env-init:
 	@if [ -f .env ]; then \
@@ -436,6 +432,6 @@ push-file-dev:
 .PHONY: help \
 	all \
 	compose-check \
-	up down clean fclean prune-build-cache fclean_all re restart logs logs-back logs-front logs-db page ps test-stack smoke-test smoke-test-ws \
+	up down clean fclean prune-build-cache fclean_all re restart logs logs-back logs-front logs-db page ps test-stack smoke-test \
 	shell-back shell-front shell-db \
 	push push-dev branch branch-create branch-create-push duplicate_branch status pull-dev pull-branch merge-dev rebase-dev push-file-dev

@@ -1,6 +1,6 @@
 import { HTMLAttributes } from "react";
 
-interface RoomSectionHeaderProps extends HTMLAttributes<HTMLHeadingElement> {
+interface SectionHeaderProps extends HTMLAttributes<HTMLHeadingElement> {
   className?: string;
   children: React.ReactNode;
 }
@@ -9,7 +9,7 @@ export default function SectionHeader({
   className = "",
   children,
   ...props
-}: RoomSectionHeaderProps) {
+}: SectionHeaderProps) {
   return (
     <h2
       className={`mt-3 text-2xl font-semibold text-text-muted ${className}`}

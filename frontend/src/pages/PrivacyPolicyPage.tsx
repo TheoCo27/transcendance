@@ -8,7 +8,7 @@ export default function PrivacyPolicyPage() {
       eyebrow="Protection des donnees"
       title="Politique de confidentialite"
       updatedAt="22 mai 2026"
-      intro="Cette politique de confidentialite explique quelles donnees sont traitees par Quiz Room, dans quel but et avec quelles garanties. Elle s'applique aux comptes utilisateurs, aux parties, aux rooms, aux quizzes, aux interactions sociales et aux mecanismes de connexion proposes dans l'application."
+      intro="Cette politique de confidentialite explique quelles donnees sont traitees par Quiz Room, dans quel but et avec quelles garanties. Elle s'applique aux comptes utilisateurs, aux parties, aux quizzes, aux interactions sociales et aux mecanismes de connexion proposes dans l'application."
     >
       <LegalSection id="privacy-data" title="1. Donnees traitees">
         <p>
@@ -30,12 +30,11 @@ export default function PrivacyPolicyPage() {
             fonctionnement ;
           </li>
           <li>
-            donnees d'usage : rooms creees ou rejointes, quiz, scores,
-            reponses, classements, dates de debut et de fin des parties ;
+            donnees d'usage : quiz, scores, reponses, classements, dates de
+            debut et de fin des parties ;
           </li>
           <li>
-            donnees de communication : messages de room, messages prives et
-            relations d'amitie.
+            donnees de communication : messages prives et relations d'amitie.
           </li>
         </ul>
       </LegalSection>
@@ -45,7 +44,6 @@ export default function PrivacyPolicyPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>creer et securiser votre compte ;</li>
           <li>vous authentifier et maintenir votre session active ;</li>
-          <li>vous permettre de creer, rejoindre et gerer des rooms ;</li>
           <li>
             enregistrer le deroulement des parties, calculer les scores et
             afficher les classements ;
@@ -74,9 +72,9 @@ export default function PrivacyPolicyPage() {
         <p>
           Les donnees sont conservees pendant la duree utile au fonctionnement
           du projet et a son suivi technique. Les donnees de compte, de quiz,
-          de scores, de rooms et de messagerie peuvent donc rester stockees
-          tant que le projet est actif ou jusqu'a suppression manuelle du
-          compte ou des contenus concernes lorsque cela est possible.
+          de scores et de messagerie peuvent donc rester stockees tant que le
+          projet est actif ou jusqu'a suppression manuelle du compte ou des
+          contenus concernes lorsque cela est possible.
         </p>
         <p>
           Les journaux techniques et traces de diagnostic sont conserves pour
@@ -91,8 +89,7 @@ export default function PrivacyPolicyPage() {
           techniques strictement necessaires a son fonctionnement. Certaines
           informations sont naturellement visibles par d'autres utilisateurs,
           par exemple votre pseudo, votre avatar, votre statut, votre presence
-          dans une room, vos scores et vos messages dans les espaces ou vous
-          choisissez d'interagir.
+          et vos messages dans les espaces ou vous choisissez d'interagir.
         </p>
       </LegalSection>
 
@@ -124,8 +121,8 @@ export default function PrivacyPolicyPage() {
         <p>
           L'application utilise principalement un cookie de session pour vous
           authentifier et maintenir votre connexion. Sans ce cookie, certaines
-          fonctionnalites comme l'acces au compte, aux rooms privees ou aux
-          interactions sociales peuvent ne pas fonctionner correctement.
+          fonctionnalites comme l'acces au compte ou aux interactions sociales
+          peuvent ne pas fonctionner correctement.
         </p>
       </LegalSection>
     </LegalPageLayout>

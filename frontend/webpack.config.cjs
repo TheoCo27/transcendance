@@ -17,11 +17,8 @@ const proxyPaths = [
   "/health",
   "/auth",
   "/users",
-  "/rooms",
-  "/game",
   "/scores",
   "/quizzes",
-  "/socket.io",
 ];
 
 module.exports = {
@@ -91,20 +88,11 @@ module.exports = {
             return false;
           }
 
-          if (
-            (pathname === "/rooms" || pathname.startsWith("/rooms/")) &&
-            req.headers.accept &&
-            req.headers.accept.includes("text/html")
-          ) {
-            return false;
-          }
-
           return true;
         },
         target: backendTarget,
         changeOrigin: true,
         secure: fs.existsSync(trustedCaPath),
-        ws: true,
       },
     ],
   },

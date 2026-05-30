@@ -1,13 +1,13 @@
 import { HTMLAttributes } from "react";
 
-interface RoomSectionProps extends HTMLAttributes<HTMLElement> {
+interface SectionProps extends HTMLAttributes<HTMLElement> {
   className?: string;
 }
 
 export default function Section({
   className = "",
   ...props
-}: RoomSectionProps) {
+}: SectionProps) {
   return (
     <section
       className={[

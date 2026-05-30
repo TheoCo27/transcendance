@@ -463,7 +463,7 @@ export default function ProfilePage() {
               <PrimaryButton>Ouvrir la page amis</PrimaryButton>
             </Link>
             <Link to="/">
-              <SecondaryButton>Retourner aux rooms</SecondaryButton>
+              <SecondaryButton>Retourner a l'accueil</SecondaryButton>
             </Link>
           </div>
         </Section>

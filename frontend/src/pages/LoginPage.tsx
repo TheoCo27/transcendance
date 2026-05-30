@@ -26,10 +26,7 @@ export default function LoginPage() {
 
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const joinRoomParam = searchParams.get("joinRoom");
   const oauthErrorParam = searchParams.get("oauthError");
-  const joinRoomId = Number(joinRoomParam);
-  const shouldJoinRoomAfterAuth = Number.isFinite(joinRoomId) && joinRoomId > 0;
   const oauthError =
     oauthErrorParam && oauthErrorMsg[oauthErrorParam]
       ? oauthErrorMsg[oauthErrorParam]
@@ -42,12 +39,10 @@ export default function LoginPage() {
   const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
 
   const navigateAfterAuth = () => {
-    navigate(shouldJoinRoomAfterAuth ? `/rooms/${joinRoomId}?join=1` : "/");
+    navigate("/");
   };
 
-  const googleAuthUrl = shouldJoinRoomAfterAuth
-    ? `/auth/google/start?returnTo=${encodeURIComponent(`/rooms/${joinRoomId}?join=1`)}`
-    : "/auth/google/start?returnTo=%2F";
+  const googleAuthUrl = "/auth/google/start?returnTo=%2F";
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -96,13 +91,10 @@ export default function LoginPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-[10%] py-6">
       <Card className="w-full px-8 py-8">
-        <h1 className="mb-3 text-3xl font-semibold text-text">
-          {shouldJoinRoomAfterAuth ? "Rejoindre la room" : "Se connecter"}
-        </h1>
+        <h1 className="mb-3 text-3xl font-semibold text-text">Se connecter</h1>
         <p className="mb-6 text-sm leading-7 text-text/70">
-          {shouldJoinRoomAfterAuth
-            ? `Connecte-toi ou continue en invite pour rejoindre directement la room #${joinRoomId}.`
-            : "Connecte-toi avec ton compte ou entre rapidement en invite avec un pseudo unique."}
+          Connecte-toi avec ton compte ou entre rapidement en invite avec un
+          pseudo unique.
         </p>
         {oauthError ? (
           <p className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -164,11 +156,7 @@ export default function LoginPage() {
             disabled={isSubmitting}
             type="submit"
           >
-            {isSubmitting
-              ? "Connexion..."
-              : shouldJoinRoomAfterAuth
-                ? "Se connecter et rejoindre la room"
-                : "Se connecter"}
+            {isSubmitting ? "Connexion..." : "Se connecter"}
           </PrimaryButton>
         </form>
 
@@ -221,9 +209,7 @@ export default function LoginPage() {
           >
             {isGuestSubmitting
               ? "Connexion invite..."
-              : shouldJoinRoomAfterAuth
-                ? "Continuer en invité et rejoindre la room"
-                : "Continuer en invité"}
+              : "Continuer en invité"}
           </SecondaryButton>
         </form>
 

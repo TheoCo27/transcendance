@@ -35,9 +35,7 @@ print_test_catalog() {
 	printf '\nTypologies de test executees:\n'
 	printf ' - test dev op\n'
 	printf ' - test db\n'
-	printf ' - test websocket api\n'
-	printf ' - test websocket front proxy\n'
-	printf ' - test authentifcation\n'
+	printf ' - test authentication\n'
 	printf ' - test front end\n'
 }
 
@@ -252,7 +250,7 @@ cleanup_user_by_id() {
 }
 
 cleanup_smoke_users() {
-	run_database_query "DELETE FROM \\\"User\\\" WHERE email LIKE 'smoke-%@test.com' OR email LIKE 'ws-smoke-%@test.com' OR username LIKE 'guest-smoke-%';" \
+	run_database_query "DELETE FROM \\\"User\\\" WHERE email LIKE 'smoke-%@test.com' OR username LIKE 'guest-smoke-%';" \
 		>/dev/null 2>&1 || true
 }
 
@@ -316,7 +314,7 @@ else
 	check_http_inside_container quiz_frontend "${FRONTEND_BASE_URL}/health" '"database":{"configured":true,"ok":true}'
 fi
 
-section "test authentifcation"
+section "test authentication"
 
 TEST_EMAIL="smoke-$(date +%s)@test.com"
 TEST_PASSWORD="longsecuredpassword123!"
@@ -547,13 +545,5 @@ assert_body_contains '"success":true'
 assert_body_contains '"data":null'
 assert_body_contains '"error":null'
 pass "Session invite anonyme apres logout"
-
-section "test websocket api"
-bash scripts/ws-smoke-test.sh
-pass "Smoke WebSocket backend OK"
-
-section "test websocket front proxy"
-WS_BASE_URL="https://frontend:3000" bash scripts/ws-smoke-test.sh
-pass "Smoke WebSocket frontend proxy OK"
 
 pass "Smoke test termine avec succes"

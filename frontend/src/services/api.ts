@@ -10,7 +10,6 @@ type ApiResponse<T> = {
 };
 
 const INTERNAL_SERVER_ERROR_PATTERN = /^internal serv(?:e|o)r error\.?$/i;
-const ROOM_NOT_FOUND_PATTERN = /^room\s+.+\s+not found\.?$/i;
 const QUIZ_NOT_FOUND_PATTERN = /^quiz\s+\d+\s+not found\.?$/i;
 const REQUEST_FAILED_PATTERN = /^request failed \((\d+)\)$/i;
 
@@ -19,10 +18,6 @@ function normalizeUserFacingMessage(message: string): string {
 
   if (trimmedMessage.length === 0) {
     return trimmedMessage;
-  }
-
-  if (ROOM_NOT_FOUND_PATTERN.test(trimmedMessage)) {
-    return "Room introuvable.";
   }
 
   if (QUIZ_NOT_FOUND_PATTERN.test(trimmedMessage)) {
@@ -35,34 +30,6 @@ function normalizeUserFacingMessage(message: string): string {
 
   if (/^invalid session payload\.?$/i.test(trimmedMessage)) {
     return "Session invalide.";
-  }
-
-  if (/^websocket authentication failed\.?$/i.test(trimmedMessage)) {
-    return "Authentification temps réel impossible.";
-  }
-
-  if (/^websocket connection timeout\.?$/i.test(trimmedMessage)) {
-    return "Le délai de connexion au temps réel a été dépassé.";
-  }
-
-  if (/^websocket disconnected\.?$/i.test(trimmedMessage)) {
-    return "La connexion temps réel a été interrompue.";
-  }
-
-  if (/^socket user mismatch\.?$/i.test(trimmedMessage)) {
-    return "La session temps réel ne correspond pas à cet utilisateur.";
-  }
-
-  if (/^owneruserid is required to create a room\.?$/i.test(trimmedMessage)) {
-    return "Impossible de créer la room sans utilisateur propriétaire.";
-  }
-
-  if (/^user is not in this room\.?$/i.test(trimmedMessage)) {
-    return "Vous n'êtes pas dans cette room.";
-  }
-
-  if (/^game is not running for this room\.?$/i.test(trimmedMessage)) {
-    return "La partie n'est pas en cours dans cette room.";
   }
 
   if (/^question is not active\.?$/i.test(trimmedMessage)) {

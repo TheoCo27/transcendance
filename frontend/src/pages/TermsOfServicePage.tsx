@@ -13,10 +13,9 @@ export default function TermsOfServicePage() {
       <LegalSection id="tos-eligibility" title="1. Acces au service">
         <p>
           Quiz Room est un service de jeu et d'interaction autour de quizzes,
-          de rooms multijoueurs, de scores et de fonctionnalites sociales. Vous
-          pouvez y acceder avec un compte classique, un compte relie a Google
-          lorsqu'il est disponible, ou un profil invite si cette option est
-          proposee.
+          de scores et de fonctionnalites sociales. Vous pouvez y acceder avec
+          un compte classique, un compte relie a Google lorsqu'il est
+          disponible, ou un profil invite si cette option est proposee.
         </p>
       </LegalSection>
 
@@ -32,7 +31,7 @@ export default function TermsOfServicePage() {
       <LegalSection id="tos-acceptable-use" title="3. Usage acceptable">
         <p>Vous vous engagez a ne pas :</p>
         <ul className="list-disc space-y-2 pl-5">
-          <li>perturber le fonctionnement des rooms, du chat ou des parties ;</li>
+          <li>perturber le fonctionnement du service, du chat ou des parties ;</li>
           <li>
             publier des contenus illicites, haineux, diffamatoires, violents ou
             manifestement contraires au respect des autres utilisateurs ;

@@ -1,8 +1,5 @@
 // Ce fichier contient toute la logique metier d'authentification:
 // login classique, guest login, session JWT et OAuth Google.
-import { GameService } from "@/modules/game/game.service";
-import { RealtimeBroadcastService } from "@/modules/realtime/services/realtime-broadcast.service";
-import { RoomsService } from "@/modules/rooms/rooms.service";
 import { LoginDto } from "@/modules/users/dto/login.dto";
 import { RegisterDto } from "@/modules/users/dto/register.dto";
 import { GuestLoginDto } from "@/modules/users/dto/guest-login.dto";
@@ -87,9 +84,6 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-    private readonly roomsService: RoomsService,
-    private readonly gameService: GameService,
-    private readonly realtimeBroadcast: RealtimeBroadcastService,
   ) {}
 
   // Verifie les identifiants classiques d'un utilisateur.
@@ -365,14 +359,8 @@ export class AuthService {
   // Construit l'URL de retour frontend en cas d'echec Google.
   buildGoogleFailureRedirect(returnTo: string, errorCode: string): string {
     const loginUrl = new URL("/login", this.getFrontendOrigin());
-    const joinRoomMatch =
-      /^\/rooms\/(\d+)(?:\?(?:.*&)?join=1(?:&.*)?)?$/.exec(returnTo);
 
     loginUrl.searchParams.set("oauthError", errorCode);
-
-    if (joinRoomMatch) {
-      loginUrl.searchParams.set("joinRoom", joinRoomMatch[1]);
-    }
 
     return loginUrl.toString();
   }
@@ -460,10 +448,6 @@ export class AuthService {
         const user = await this.usersService.findUser({ id: auth.sub });
 
         if (user) {
-          const hasRoomStateChanged = await this.cleanupUserRoomsOnLogout(
-            user.id,
-          );
-
           if (user.isGuest) {
             await this.archiveGuestIdentity(user.id);
           } else {
@@ -471,10 +455,6 @@ export class AuthService {
               where: { id: auth.sub },
               data: { status: "offline" },
             });
-          }
-
-          if (hasRoomStateChanged) {
-            await this.realtimeBroadcast.broadcastRoomList();
           }
         }
       } catch {
@@ -510,32 +490,6 @@ export class AuthService {
       res.clearCookie("access_token", this.getAuthCookieOptions());
       return null;
     }
-  }
-
-  // Retire immediatement l'utilisateur de toutes ses rooms au logout.
-  private async cleanupUserRoomsOnLogout(userId: number): Promise<boolean> {
-    const rooms = await this.roomsService.list();
-    let hasRoomStateChanged = false;
-
-    for (const room of rooms) {
-      if (!room.players.some((player) => player.userId === userId)) {
-        continue;
-      }
-
-      try {
-        const updatedRoom = await this.roomsService.leave(room.id, userId);
-        hasRoomStateChanged = true;
-
-        if (updatedRoom.players.length === 0) {
-          this.gameService.clearRoomState(room.id);
-          await this.roomsService.closeIfEmpty(room.id);
-        }
-      } catch {
-        // La room a pu etre supprimee ou mise a jour entre temps.
-      }
-    }
-
-    return hasRoomStateChanged;
   }
 
   // Retourne l'utilisateur associe a la session courante.
